@@ -363,7 +363,8 @@ def publish(plan: TicketPlan, actions: list[SyncAction], gh: GitHubTool) -> Publ
 
 
 def read_sub_issues(gh: GitHubTool, plan: TicketPlan, listing: ListResult) -> dict[int, set[int]]:
-    """Current native sub-issues of every open managed parent in the plan (the epic and the stories), read-only."""
+    """Current native sub-issues of every managed parent in the plan (the epic and the stories), read-only. Closed
+    parents are read too: a story that comes back keeps the links it had when it was closed, so they are not
+    posted again (GitHub rejects a duplicate sub-issue with 422)."""
     parents = {plan.project.key, *(s.key for s in plan.stories)}
-    return {i.number: gh.list_sub_issue_ids(i.number) for k, i in listing.issues.items()
-            if k in parents and i.state == "open"}
+    return {i.number: gh.list_sub_issue_ids(i.number) for k, i in listing.issues.items() if k in parents}

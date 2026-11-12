@@ -58,6 +58,7 @@ from schemas import (
     UserStory,
     Verdict,
     assign_requirement_ids,
+    normalize_quote,
     slugify,
 )
 from tools import renderer, state_store, validators
@@ -101,6 +102,9 @@ class AgentState(TypedDict, total=False):
     best_plan: dict | None
     feedback_findings: Findings
     reviewer_decisions: Findings
+    anchor: list
+    anchor_epic: str | None
+    carried: list[str]
     reports: list[ReviewReport]
     reference_findings: Findings
     sync_actions: list[SyncAction]
@@ -307,7 +311,8 @@ def _dedupe(key: str, taken: set[str]) -> str:
     return candidate
 
 
-def requirements_user_message(requirements: list[Requirement], previous_plan: TicketPlan | None) -> str:
+def requirements_user_message(requirements: list[Requirement], previous_plan: TicketPlan | None,
+                              anchor: list[tuple[str, str]] | None = None) -> str:
     lines = [
         f"[{r.id}] ({r.kind.value}) {' > '.join(r.section_path[1:]) or 'Document'}: {r.statement}"
         f'  | quote: "{r.source_quote}"'
@@ -317,9 +322,145 @@ def requirements_user_message(requirements: list[Requirement], previous_plan: Ti
     if previous_plan is not None:
         prev = "\n".join(f"{s.key}: {s.title} (requirements: {', '.join(s.requirement_ids)})" for s in previous_plan.stories)
         msg += "\n\nPrevious plan (reuse these keys for unchanged or modified scope):\n" + prev
+    elif anchor:
+        prev = "\n".join(f"{key}: {title}" for key, title in anchor)
+        msg += ("\n\nNo previous plan file, but these stories already exist as issues (reuse their keys where the "
+                "scope matches):\n" + prev)
     else:
         msg += "\n\nPrevious plan: none (first run)."
     return msg
+
+
+# --------------------------------------------------------------------------- update runs (SPEC §6 S4, §10)
+
+RECONCILE_MIN_OVERLAP = 0.5  # Jaccard overlap of requirement IDs (changed requirements count as the same)
+RECONCILE_MIN_TITLE = 60.0  # rapidfuzz token_set_ratio of the titles
+RECONCILE_TITLE_ONLY = 85.0  # anchor rebuilt from issues: titles only (no requirement IDs are known)
+
+
+def requirement_diff(old: list[Requirement], new: list[Requirement], threshold: float = 85.0) -> RequirementDiff:
+    """Added / changed / removed requirements. IDs are content-derived, so a rephrased requirement shows up as one
+    removed and one added ID; a pair whose normalized quotes fuzzy-match (>= threshold) is reported as changed."""
+    old_by, new_by = {r.id: r for r in old}, {r.id: r for r in new}
+    added = [r.id for r in new if r.id not in old_by]
+    removed = [r.id for r in old if r.id not in new_by]
+    pairs = sorted(((fuzz.ratio(normalize_quote(old_by[o].source_quote), normalize_quote(new_by[a].source_quote)), o, a)
+                    for o in removed for a in added), key=lambda x: (-x[0], x[1], x[2]))
+    changed, used_old, used_new = [], set(), set()
+    for score, o, a in pairs:
+        if score < threshold:
+            break
+        if o in used_old or a in used_new:
+            continue
+        changed.append((o, a))
+        used_old.add(o)
+        used_new.add(a)
+    return RequirementDiff(added=[a for a in added if a not in used_new], changed=changed,
+                           removed=[o for o in removed if o not in used_old])
+
+
+def reconcile_story_keys(skeletons: list[StorySkeleton], old: list[StorySkeleton], diff: RequirementDiff | None,
+                         findings: Findings) -> list[StorySkeleton]:
+    """Deterministic key reconcile after S4: a new key is mapped to an unused old key when requirement overlap and
+    title similarity both pass (title only when the old stories come from issues and have no requirement IDs)."""
+    changed = dict(diff.changed) if diff else {}
+    old_by = {s.key: s for s in old}
+    taken = {s.key for s in skeletons}
+    out = []
+    for sk in skeletons:
+        if sk.key in old_by:
+            out.append(sk)
+            continue
+        best = None
+        for ok, o in old_by.items():
+            if ok in taken:
+                continue
+            title = fuzz.token_set_ratio(sk.title.lower(), o.title.lower())
+            if o.requirement_ids:
+                old_reqs = {changed.get(r, r) for r in o.requirement_ids}
+                new_reqs = set(sk.requirement_ids)
+                overlap = len(old_reqs & new_reqs) / max(len(old_reqs | new_reqs), 1)
+                ok_match = overlap >= RECONCILE_MIN_OVERLAP and title >= RECONCILE_MIN_TITLE
+            else:
+                overlap, ok_match = 0.0, title >= RECONCILE_TITLE_ONLY
+            if ok_match and (best is None or (overlap, title) > (best[0], best[1])):
+                best = (overlap, title, ok)
+        if best is None:
+            out.append(sk)
+            continue
+        findings.append(_finding("REF-KEY", f"New story key {sk.key!r} reconciled to existing key {best[2]!r} "
+                                 f"(requirement overlap {best[0]:.2f}, title similarity {best[1]:.0f}).", item_key=best[2]))
+        taken.discard(sk.key)
+        taken.add(best[2])
+        out.append(sk.model_copy(update={"key": best[2]}))
+    return out
+
+
+def stabilize_update(skeletons: list[StorySkeleton], requirements: list[Requirement], previous: TicketPlan,
+                     diff: RequirementDiff, findings: Findings) -> tuple[list[StorySkeleton], list[Requirement]]:
+    """Update runs: keep the previous plan's structure for everything the PRD did not change.
+
+    Unchanged requirements keep their previous story and (for constraints) their previous scope; removed
+    requirements drop out; changed requirements take the place of their old version. The S4 output decides only
+    where ADDED requirements go (an existing story, or a new story key) and the scope of new constraints. This
+    stops an LLM re-planning of unchanged content (a regrouped story, a constraint re-scoped from 5 requirements to
+    global) from turning every story into an update."""
+    changed = dict(diff.changed)
+    removed = set(diff.removed)
+    added = set(diff.added)
+    llm_home: dict[str, list[str]] = {}
+    for sk in skeletons:
+        for rid in sk.requirement_ids:
+            if rid in added:
+                llm_home.setdefault(rid, []).append(sk.key)
+    prev_keys = [st.key for st in previous.stories]
+    llm_title = {sk.key: sk.title for sk in skeletons}
+    out: list[StorySkeleton] = []
+    for st in previous.stories:
+        reqs = [changed.get(r, r) for r in st.requirement_ids if r not in removed]
+        reqs += [rid for rid, homes in llm_home.items() if st.key in homes and rid not in reqs]
+        if not reqs:
+            findings.append(_finding("REF-KEY", f"Story {st.key} has no requirements left in the new PRD; it is removed.",
+                                     item_key=st.key))
+            continue
+        # Unchanged scope keeps its title (no rephrasing noise); changed scope takes S4's new title, so a story never
+        # keeps promising something the PRD removed.
+        title = st.title if reqs == list(st.requirement_ids) else llm_title.get(st.key, st.title)
+        out.append(StorySkeleton(key=st.key, title=title, requirement_ids=reqs))
+    for sk in skeletons:
+        if sk.key in prev_keys:
+            continue
+        reqs = [r for r in sk.requirement_ids if r in added]
+        if reqs:
+            out.append(StorySkeleton(key=sk.key, title=sk.title, requirement_ids=reqs))
+    prev_req = {r.id: r for r in previous.requirements}
+    new_by = {r.id: r for r in requirements}
+    stable = []
+    for r in requirements:
+        old = prev_req.get(r.id)
+        if r.kind is ReqKind.constraint and old is not None and old.kind is ReqKind.constraint:
+            scope = [changed.get(x, x) for x in old.applies_to_requirement_ids if x not in removed]
+            if old.applies_to_requirement_ids:  # a scoped constraint also covers added requirements S4 put in scope
+                scope += [x for x in r.applies_to_requirement_ids if x in added and x not in scope]
+            r = r.model_copy(update={"applies_to_requirement_ids": [x for x in scope if x in new_by]})
+        stable.append(r)
+    return out, stable
+
+
+def carried_story_keys(skeletons: list[StorySkeleton], previous: TicketPlan, requirements: list[Requirement]) -> set[str]:
+    """SPEC §6 S4: a story is unchanged when its requirements AND its applicable constraints are unchanged."""
+    prev = {s.key: s for s in previous.stories}
+    out = set()
+    for sk in skeletons:
+        old = prev.get(sk.key)
+        if old is None or set(old.requirement_ids) != set(sk.requirement_ids):
+            continue
+        old_sk = StorySkeleton(key=old.key, title=old.title, requirement_ids=old.requirement_ids)
+        new_c = {r.id: sorted(r.applies_to_requirement_ids) for r in applicable_constraints(sk, requirements)}
+        old_c = {r.id: sorted(r.applies_to_requirement_ids) for r in applicable_constraints(old_sk, previous.requirements)}
+        if new_c == old_c:
+            out.add(sk.key)
+    return out
 
 
 def _known_only(ids: list[str], known: set[str], check_id: str, item_key: str | None, what: str,
@@ -402,7 +543,8 @@ def _task_line(t: TechnicalTask) -> str:
 
 def story_user_message(skeleton: StorySkeleton, requirements: list[Requirement], skeletons: list[StorySkeleton],
                        feedback: Findings | None = None, current: tuple[UserStory, list[TechnicalTask]] | None = None,
-                       other_tasks: list[TechnicalTask] | None = None, decisions: list[str] | None = None) -> str:
+                       other_tasks: list[TechnicalTask] | None = None, decisions: list[str] | None = None,
+                       keep_keys: bool = False) -> str:
     reqs = {r.id: r for r in requirements}
     own = [reqs[i] for i in skeleton.requirement_ids if i in reqs and reqs[i].kind is not ReqKind.constraint]
     constraints = applicable_constraints(skeleton, requirements)
@@ -429,6 +571,10 @@ def story_user_message(skeleton: StorySkeleton, requirements: list[Requirement],
         acs = "\n".join(f"  AC: Given {a.given}; When {a.when}; Then {a.then}" for a in story.acceptance_criteria)
         msg += (f"\n\nCurrent version of this story:\n{story.title}\n{acs}\n"
                 + "\n".join(f"  TASK {_task_line(t)}" for t in tasks))
+    if keep_keys:
+        msg += ("\n\nThe PRD changed and this story is affected. Update it: keep the key_slug of every task that "
+                "still applies (its current key without the FE-/BE-/QA- prefix) so its issue is updated instead of "
+                "replaced, change only what the new requirements need, and drop tasks whose requirements are gone.")
     if decisions:
         msg += "\n\n" + _decisions_block(decisions)
     if feedback:
@@ -503,7 +649,7 @@ def apply_story_detail(skeleton: StorySkeleton, draft: StoryDetailDraft, known_r
     tasks = []
     for t in draft.tasks:
         prefix = _TRACK_PREFIX[t.track]
-        slug = slugify(t.key_slug, max_words=5)
+        slug = slugify(re.sub(r"^(?:fe|be|qa)[-_ ]+", "", t.key_slug.strip(), flags=re.IGNORECASE), max_words=5)
         key = f"{prefix}-{slug}"
         if key in taken_task_keys or not TASK_KEY_RE.match(key):
             key = f"{prefix}-{story_slug}-{slug}"
@@ -519,17 +665,39 @@ def apply_story_detail(skeleton: StorySkeleton, draft: StoryDetailDraft, known_r
 
 
 def detail_stories(skeletons: list[StorySkeleton], requirements: list[Requirement], llm: StructuredLLM,
-                   findings: Findings | None = None):
+                   findings: Findings | None = None, previous: TicketPlan | None = None,
+                   carried: set[str] | None = None, decisions: Findings | None = None):
+    """S5 for new and affected stories only. Carried (unchanged) stories are copied from the previous plan with their
+    tasks and skip the LLM; affected stories see their previous version and keep their task keys where possible."""
     findings = findings if findings is not None else []
+    carried = carried or set()
     system = system_prompt("detail_stories")
-    drafts = _parallel(lambda s: llm.structured(StoryDetailDraft, system, story_user_message(s, requirements, skeletons)),
-                       skeletons, _workers(llm))
-    known = {r.id for r in requirements}
+    prev_story = {s.key: s for s in previous.stories} if previous else {}
+    prev_tasks = [t for t in previous.tasks if t.story_key in carried] if previous else []
     story_keys = {s.key for s in skeletons}
-    taken: set[str] = set()
+    todo = [s for s in skeletons if s.key not in carried]
+
+    def call(sk: StorySkeleton) -> StoryDetailDraft:
+        current = None
+        if sk.key in prev_story:
+            current = (prev_story[sk.key], [t for t in previous.tasks if t.story_key == sk.key])
+        mine = decisions_for(decisions or [], {sk.key, *(t.key for t in (current[1] if current else []))})
+        user = story_user_message(sk, requirements, skeletons, None, current, prev_tasks or None, mine or None,
+                                  keep_keys=current is not None)
+        return llm.structured(StoryDetailDraft, system, user)
+
+    drafts = dict(zip([s.key for s in todo], _parallel(call, todo, _workers(llm))))
+    known = {r.id for r in requirements}
+    taken: set[str] = {t.key for t in prev_tasks}
     stories, tasks = [], []
-    for skeleton, draft in zip(skeletons, drafts):  # sequential, in story order -> deterministic keys
-        story, story_tasks = apply_story_detail(skeleton, draft, known, story_keys, taken, findings)
+    for skeleton in skeletons:  # sequential, in story order -> deterministic keys
+        if skeleton.key in carried:
+            story = prev_story[skeleton.key]
+            deps = _known_only(story.dependencies, story_keys, "REF-STORY", story.key, "story dependency key(s)", findings)
+            stories.append(story.model_copy(update={"dependencies": deps}))
+            tasks.extend(t for t in prev_tasks if t.story_key == skeleton.key)
+            continue
+        story, story_tasks = apply_story_detail(skeleton, drafts[skeleton.key], known, story_keys, taken, findings)
         stories.append(story)
         tasks.extend(story_tasks)
     return stories, tasks
@@ -619,14 +787,18 @@ def compact_plan(plan: TicketPlan) -> str:
 
 
 def critic_user_message(plan: TicketPlan, parsed: ParsedPRD, focus: list[str] | None,
-                        decisions: list[str] | None = None) -> list[dict]:
+                        decisions: list[str] | None = None, update_run: bool = False) -> list[dict]:
     """Two text blocks: the PRD (stable across rounds, so it carries the prompt-cache breakpoint) and the plan
     (changes every round, so it is sent as ordinary input instead of being written to the cache)."""
     prd = "PRD:\n" + _prd_block(parsed.markdown) + "\n\n"
     plan_text = "Plan:\n" + _prd_block(compact_plan(plan), "plan")
     if decisions:
         plan_text += "\n\n" + _decisions_block(decisions)
-    if focus:
+    if focus and update_run:
+        plan_text += ("\n\nThe PRD changed since the plan was last approved. Review ONLY these new or changed items "
+                      "(use the whole plan as context, for example to find overlap with other stories): "
+                      f"{', '.join(focus)}")
+    elif focus:
         plan_text += ("\n\nThis is a repair round. Review ONLY these repaired items (use the whole plan as context, "
                       f"for example to find overlap with other stories): {', '.join(focus)}")
     else:
@@ -635,10 +807,10 @@ def critic_user_message(plan: TicketPlan, parsed: ParsedPRD, focus: list[str] | 
 
 
 def run_critic(plan: TicketPlan, parsed: ParsedPRD, llm: StructuredLLM, round_no: int,
-               focus: list[str] | None = None, decisions: list[str] | None = None) -> Findings:
+               focus: list[str] | None = None, decisions: list[str] | None = None, update_run: bool = False) -> Findings:
     """One structured call (response_format = ReviewReport) on the whole PRD and the whole plan."""
-    report = llm.structured(ReviewReport, system_prompt("critic"), critic_user_message(plan, parsed, focus, decisions),
-                            role="critic")
+    report = llm.structured(ReviewReport, system_prompt("critic"),
+                            critic_user_message(plan, parsed, focus, decisions, update_run), role="critic")
     keys = {plan.project.key, *(s.key for s in plan.stories), *(t.key for t in plan.tasks)}
     req_ids = {r.id for r in plan.requirements}
     out = []
@@ -803,10 +975,24 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         previous = state_store.load_plan(Path(state["out_dir"]))
         sections = sum(1 for _ in iter_sections(parsed.root)) - 1
         console.print(f"{len(parsed.units)} units in {sections} sections · prd_hash {parsed.prd_hash[:12]}")
-        console.print("Update run: previous plan loaded." if previous else "First run: no previous plan.")
+        anchor: list[tuple[str, str]] = []
+        anchor_epic = None
+        if previous is not None:
+            console.print(f"Update run: previous plan loaded ({len(previous.stories)} stories, "
+                          f"{len(previous.reviewer_decisions)} reviewer decision(s)).")
+        elif github is not None and state.get("publish"):
+            listing = github.list_marked_issues()  # SPEC §10: no plan.json -> anchor from the existing issues
+            anchor = [(k, i.title) for k, i in listing.issues.items() if k.startswith("US-") and i.state == "open"]
+            anchor_epic = next((k for k in listing.issues if k.startswith("EPIC-")), None)
+            console.print(f"No previous plan file; anchor rebuilt from {len(anchor)} existing story issue(s)."
+                          if anchor else "First run: no previous plan.")
+        else:
+            console.print("First run: no previous plan.")
         return {"parsed": parsed, "units": parsed.units, "previous_plan": previous, "reference_findings": [],
                 "reports": [], "req_rounds": 0, "req_blocking_history": [], "plan_rounds": 0,
-                "plan_blocking_history": [], "repaired_keys": [], "best_plan": None, "feedback_findings": [], "reviewer_decisions": [], "approval": None,
+                "plan_blocking_history": [], "repaired_keys": [], "best_plan": None, "feedback_findings": [],
+                "reviewer_decisions": list(previous.reviewer_decisions) if previous else [], "approval": None,
+                "anchor": anchor, "anchor_epic": anchor_epic, "requirement_diff": None, "carried": [],
                 "started_at": state.get("started_at") or time.monotonic()}
 
     def n_extract(state: AgentState) -> AgentState:
@@ -843,23 +1029,60 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
     def n_plan(state: AgentState) -> AgentState:
         stage("S4 plan_stories")
         found: Findings = []
-        project, skeletons, reqs = plan_stories(state["requirements"], llm, state.get("previous_plan"), found)
+        previous = state.get("previous_plan")
+        anchor = state.get("anchor") or []
+        draft = llm.structured(StoryPlanDraft, system_prompt("plan_stories"),
+                               requirements_user_message(state["requirements"], previous, anchor))
+        project, skeletons, reqs = apply_story_plan(draft, state["requirements"], found)
+        diff, carried = None, set()
+        if previous is not None:
+            diff = requirement_diff(previous.requirements, reqs)
+            old = [StorySkeleton(key=s.key, title=s.title, requirement_ids=s.requirement_ids) for s in previous.stories]
+            skeletons = reconcile_story_keys(skeletons, old, diff, found)
+            skeletons, reqs = stabilize_update(skeletons, reqs, previous, diff, found)
+            carried = carried_story_keys(skeletons, previous, reqs)
+            # The epic is the same project: keep its key and text (only its story list follows the plan), so an LLM
+            # rephrasing of the overview does not cause a noisy update.
+            project = previous.project.model_copy(update={"story_keys": [s.key for s in skeletons]})
+            removed = [s.key for s in previous.stories if s.key not in {k.key for k in skeletons}]
+            console.print(f"Requirement diff: {len(diff.added)} added · {len(diff.changed)} changed · "
+                          f"{len(diff.removed)} removed")
+            console.print(f"Stories: {len(carried)} unchanged (carried over) · "
+                          f"{sum(s.key in {p.key for p in previous.stories} for s in skeletons) - len(carried)} affected · "
+                          f"{sum(s.key not in {p.key for p in previous.stories} for s in skeletons)} new · "
+                          f"{len(removed)} removed")
+        elif anchor:
+            old = [StorySkeleton(key=k, title=t) for k, t in anchor]
+            skeletons = reconcile_story_keys(skeletons, old, None, found)
+            if state.get("anchor_epic"):
+                project = project.model_copy(update={"key": state["anchor_epic"]})
+        project = project.model_copy(update={"story_keys": [s.key for s in skeletons]})
         console.print(f"Epic {project.key} · {len(skeletons)} stories")
         plan = TicketPlan(prd_hash=state["parsed"].prd_hash, project=project, requirements=reqs)
-        return {"skeletons": skeletons, "requirements": reqs, "plan": plan, "reference_findings": refs(state, found)}
+        return {"skeletons": skeletons, "requirements": reqs, "plan": plan, "requirement_diff": diff,
+                "carried": sorted(carried), "reference_findings": refs(state, found)}
 
     def n_detail(state: AgentState) -> AgentState:
         stage("S5 detail_stories")
         found: Findings = []
-        stories, tasks = detail_stories(state["skeletons"], state["requirements"], llm, found)
-        console.print(f"{len(stories)} stories detailed · {len(tasks)} tasks")
+        carried = set(state.get("carried") or [])
+        stories, tasks = detail_stories(state["skeletons"], state["requirements"], llm, found, state.get("previous_plan"),
+                                        carried, state.get("reviewer_decisions") or [])
+        console.print(f"{len(stories) - len(carried)} stories detailed · {len(carried)} carried over · {len(tasks)} tasks")
         plan = state["plan"].model_copy(update={"stories": stories, "tasks": tasks})
         return {"plan": TicketPlan.model_validate(plan.model_dump()), "reference_findings": refs(state, found)}
 
     def n_map_dependencies(state: AgentState) -> AgentState:
         stage("S6 map_dependencies")
         found: Findings = []
-        plan = map_dependencies(state["plan"], llm, found)
+        carried = set(state.get("carried") or [])
+        editable = None
+        if state.get("previous_plan") is not None:
+            # Carried tasks keep their edges (edges to keys that no longer exist are removed); only new and affected
+            # tasks get new blockers, and edges from carried tasks to them may be added.
+            editable = {t.key for t in state["plan"].tasks if t.story_key not in carried}
+        plan = map_dependencies(state["plan"], llm, found, editable) if editable is None or editable else \
+            apply_dependencies(state["plan"], DependencyPlanDraft(edges=[]), found, editable)
         console.print(f"{sum(len(t.blocked_by) for t in plan.tasks)} blocked_by edges")
         return {"plan": plan, "reference_findings": refs(state, found)}
 
@@ -870,8 +1093,17 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         round_no = state["plan_rounds"] + 1
         deterministic = validators.check_plan(plan, duplicate_threshold)
         focus = (state.get("repaired_keys") or None) if round_no > 1 else None
-        critic = run_critic(plan, state["parsed"], llm, round_no, focus,
-                            decisions_for(state.get("reviewer_decisions") or []))
+        skip_critic = False
+        if round_no == 1 and state.get("previous_plan") is not None:
+            # Update run: carried stories were already reviewed and approved; review only what changed (the whole
+            # plan is still the context), and nothing at all when nothing changed.
+            carried = set(state.get("carried") or [])
+            focus = [s.key for s in plan.stories if s.key not in carried]
+            focus += [t.key for t in plan.tasks if t.story_key not in carried]
+            skip_critic = not focus
+        update_round = round_no == 1 and state.get("previous_plan") is not None
+        critic = [] if skip_critic else run_critic(plan, state["parsed"], llm, round_no, focus,
+                                                   decisions_for(state.get("reviewer_decisions") or []), update_round)
         if focus and state.get("plan_report") is not None:  # carry earlier critic findings on untouched items
             keys = {plan.project.key, *(s.key for s in plan.stories), *(t.key for t in plan.tasks)}
             carried = [f for f in state["plan_report"].findings
@@ -894,8 +1126,11 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             update.update(plan=best["plan"], skeletons=best["skeletons"])
             report = best["report"]
         n_crit = sum(f.check_id.startswith("CRIT-") for f in report.findings)
+        scope_note = (", critic skipped: nothing changed" if skip_critic else
+                      ", new/affected items only" if focus and round_no == 1 else
+                      ", repaired items only" if focus else "")
         console.print(f"round {round_no}: {report.blocking_count} blocking, {report.warning_count} warnings "
-                      f"({n_crit} from the critic{', repaired items only' if focus else ''})"
+                      f"({n_crit} from the critic{scope_note})"
                       + (f" · {reason}" if reason else ""))
         reports = state["reports"] + [ReviewReport(stage="check_plan", round=round_no, verdict=Verdict.pass_,
                                                    findings=deterministic + critic)]
@@ -928,11 +1163,14 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         status = plan_status(state)
         reports = state["reports"] + [reference_report(state.get("reference_findings", []))]
         stop = {"check_requirements": state.get("req_stop_reason"), "check_plan": state.get("plan_stop_reason")}
-        written = renderer.write_outputs(state["plan"], Path(state["out_dir"]), reports=reports, status=status.value,
-                                         stop_reasons=stop)
-        console.print(renderer.plan_tree(state["plan"]))
+        plan = state["plan"].model_copy(update={"reviewer_decisions": list(state.get("reviewer_decisions") or [])})
+        previous = state.get("previous_plan")
+        written = renderer.write_outputs(plan, Path(state["out_dir"]), reports=reports, status=status.value,
+                                         stop_reasons=stop, requirement_diff=state.get("requirement_diff"),
+                                         previous_requirements=previous.requirements if previous else None)
+        console.print(renderer.plan_tree(plan))
         console.print(f"Status: [bold]{status.value}[/]")
-        return {"outputs": [str(p) for p in written], "status": status}
+        return {"outputs": [str(p) for p in written], "status": status, "plan": plan}
 
     def n_approve(state: AgentState) -> AgentState:
         stage("G1 approve_plan")
@@ -949,6 +1187,7 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             "blocking": [f.model_dump(mode="json") for f in (report.findings if report else []) if f.severity is Severity.blocking],
             "warnings": report.warning_count if report else 0,
             "out_dir": state["out_dir"],
+            "requirement_diff": state["requirement_diff"].model_dump() if state.get("requirement_diff") else None,
         })
         action = (answer or {}).get("action", "abort") if isinstance(answer, dict) else str(answer)
         if action == "feedback":

@@ -2635,5 +2635,15 @@
       "applies_to_requirement_ids": [],
       "context_reason": null
     }
+  ],
+  "reviewer_decisions": [
+    {
+      "check_id": "G1-FEEDBACK",
+      "severity": "blocking",
+      "item_key": "US-create-task",
+      "requirement_ids": [],
+      "message": "US-create-task: the backend sets Creation Date and Last Updated Date on create.",
+      "suggested_fix": null
+    }
   ]
 }

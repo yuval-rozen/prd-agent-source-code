@@ -136,7 +136,24 @@ def render_plan_md(plan: TicketPlan) -> str:
     return _tidy("\n".join(parts))
 
 
-def render_requirements_md(plan: TicketPlan) -> str:
+def render_requirement_diff(diff, plan: TicketPlan, previous_requirements) -> list[str]:
+    new_by = {r.id: r for r in plan.requirements}
+    old_by = {r.id: r for r in previous_requirements or []}
+    lines = ["", "## Requirement diff (update run)", "",
+             f"{len(diff.added)} added · {len(diff.changed)} changed · {len(diff.removed)} removed", ""]
+    if diff.added or diff.changed or diff.removed:
+        lines += ["| Change | Old | New |", "|---|---|---|"]
+    for rid in diff.added:
+        lines.append(f"| added | — | `{rid}` {_md_cell(new_by[rid].source_quote)} |")
+    for old, new in diff.changed:
+        lines.append(f"| changed | `{old}` {_md_cell(old_by[old].source_quote if old in old_by else '')} "
+                     f"| `{new}` {_md_cell(new_by[new].source_quote)} |")
+    for rid in diff.removed:
+        lines.append(f"| removed | `{rid}` {_md_cell(old_by[rid].source_quote if rid in old_by else '')} | — |")
+    return lines
+
+
+def render_requirements_md(plan: TicketPlan, diff=None, previous_requirements=None) -> str:
     cited = citations(plan)
     by_kind: dict[ReqKind, list] = defaultdict(list)
     for req in plan.requirements:
@@ -154,6 +171,8 @@ def render_requirements_md(plan: TicketPlan) -> str:
     ]
     counts = Counter(r.kind for r in plan.requirements)
     lines += [f"| {kind.value} | {counts[kind]} |" for kind in ReqKind if counts[kind]]
+    if diff is not None:
+        lines += render_requirement_diff(diff, plan, previous_requirements)
     for kind in ReqKind:
         reqs = by_kind.get(kind)
         if not reqs:
@@ -236,7 +255,8 @@ def render_validation_report(plan: TicketPlan, reports: list[ReviewReport] | Non
 
 
 def write_outputs(plan: TicketPlan, out_dir: Path, reports: list[ReviewReport] | None = None, status: str | None = None,
-                  stop_reasons: dict[str, str | None] | None = None) -> list[Path]:
+                  stop_reasons: dict[str, str | None] | None = None, requirement_diff=None,
+                  previous_requirements=None) -> list[Path]:
     out_dir = Path(out_dir)
     payload_dir = out_dir / "payloads"
     payload_dir.mkdir(parents=True, exist_ok=True)
@@ -245,7 +265,7 @@ def write_outputs(plan: TicketPlan, out_dir: Path, reports: list[ReviewReport] |
     written = [save_plan(plan, out_dir)]
     files = {
         "plan.md": render_plan_md(plan),
-        "requirements.md": render_requirements_md(plan),
+        "requirements.md": render_requirements_md(plan, requirement_diff, previous_requirements),
         "validation_report.md": render_validation_report(plan, reports, status, stop_reasons),
     }
     for name, text in files.items():

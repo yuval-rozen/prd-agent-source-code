@@ -146,6 +146,10 @@ def _ask_approval(payload: dict) -> dict:
                   f"{len(payload['blocking'])} blocking, {payload['warnings']} warnings")
     for f in payload["blocking"]:
         console.print(f"  [red]{f['check_id']}[/] {f.get('item_key') or '-'}: {f['message']}")
+    diff = payload.get("requirement_diff")
+    if diff:
+        console.print(f"Requirement diff: {len(diff['added'])} added · {len(diff['changed'])} changed · "
+                      f"{len(diff['removed'])} removed (see requirements.md)")
     console.print(f"Review {payload['out_dir']}/plan.md and validation_report.md.")
     try:
         choice = input("approve / feedback / abort [abort]: ").strip().lower() or "abort"

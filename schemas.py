@@ -295,6 +295,9 @@ class TicketPlan(_Model):
     stories: list[UserStory] = Field(default_factory=list)
     tasks: list[TechnicalTask] = Field(default_factory=list)
     requirements: list[Requirement] = Field(default_factory=list)
+    # G1 feedback, kept so a reviewer decision survives the next PRD version (it is context, not ticket content,
+    # so it does not enter any content hash).
+    reviewer_decisions: list[ReviewFinding] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _unique_keys(self) -> TicketPlan:
@@ -443,3 +446,6 @@ class DependencyEdgeDraft(_Model):
 
 class DependencyPlanDraft(_Model):
     edges: list[DependencyEdgeDraft]
+
+
+TicketPlan.model_rebuild()
