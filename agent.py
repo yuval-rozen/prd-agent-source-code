@@ -97,6 +97,7 @@ class AgentState(TypedDict, total=False):
     repaired_keys: list[str]
     best_plan: dict | None
     feedback_findings: Findings
+    reviewer_decisions: Findings
     reports: list[ReviewReport]
     reference_findings: Findings
     sync_actions: list[SyncAction]
@@ -396,7 +397,7 @@ def _task_line(t: TechnicalTask) -> str:
 
 def story_user_message(skeleton: StorySkeleton, requirements: list[Requirement], skeletons: list[StorySkeleton],
                        feedback: Findings | None = None, current: tuple[UserStory, list[TechnicalTask]] | None = None,
-                       other_tasks: list[TechnicalTask] | None = None) -> str:
+                       other_tasks: list[TechnicalTask] | None = None, decisions: list[str] | None = None) -> str:
     reqs = {r.id: r for r in requirements}
     own = [reqs[i] for i in skeleton.requirement_ids if i in reqs and reqs[i].kind is not ReqKind.constraint]
     constraints = applicable_constraints(skeleton, requirements)
@@ -423,9 +424,23 @@ def story_user_message(skeleton: StorySkeleton, requirements: list[Requirement],
         acs = "\n".join(f"  AC: Given {a.given}; When {a.when}; Then {a.then}" for a in story.acceptance_criteria)
         msg += (f"\n\nCurrent version of this story:\n{story.title}\n{acs}\n"
                 + "\n".join(f"  TASK {_task_line(t)}" for t in tasks))
+    if decisions:
+        msg += "\n\n" + _decisions_block(decisions)
     if feedback:
         msg += "\n\nReview findings to fix in this story:\n" + _feedback_block(feedback)
     return msg
+
+
+def _decisions_block(decisions: list[str]) -> str:
+    return ("Reviewer decisions made by the human reviewer at the review gate. They are authoritative: treat them like "
+            "PRD text where the PRD is silent. Follow them; do not report them as unrequested, misrepresented or as "
+            "assumptions; and report anything that contradicts them:\n" + "\n".join(f"- {d}" for d in decisions))
+
+
+def decisions_for(decisions: list[ReviewFinding], keys: set[str] | None = None) -> list[str]:
+    """Reviewer decisions (G1 feedback) that concern the given items; decisions without an item apply everywhere."""
+    out = [f.message for f in decisions if keys is None or f.item_key is None or f.item_key in keys]
+    return list(dict.fromkeys(out))
 
 
 _GWT_PREFIX = {part: re.compile(rf"^\s*\**{part}\**\s*[:,]?\s+", re.IGNORECASE) for part in ("given", "when", "then")}
@@ -598,11 +613,14 @@ def compact_plan(plan: TicketPlan) -> str:
     return "\n".join(lines)
 
 
-def critic_user_message(plan: TicketPlan, parsed: ParsedPRD, focus: list[str] | None) -> list[dict]:
+def critic_user_message(plan: TicketPlan, parsed: ParsedPRD, focus: list[str] | None,
+                        decisions: list[str] | None = None) -> list[dict]:
     """Two text blocks: the PRD (stable across rounds, so it carries the prompt-cache breakpoint) and the plan
     (changes every round, so it is sent as ordinary input instead of being written to the cache)."""
     prd = "PRD:\n" + _prd_block(parsed.markdown) + "\n\n"
     plan_text = "Plan:\n" + _prd_block(compact_plan(plan), "plan")
+    if decisions:
+        plan_text += "\n\n" + _decisions_block(decisions)
     if focus:
         plan_text += ("\n\nThis is a repair round. Review ONLY these repaired items (use the whole plan as context, "
                       f"for example to find overlap with other stories): {', '.join(focus)}")
@@ -612,9 +630,10 @@ def critic_user_message(plan: TicketPlan, parsed: ParsedPRD, focus: list[str] | 
 
 
 def run_critic(plan: TicketPlan, parsed: ParsedPRD, llm: StructuredLLM, round_no: int,
-               focus: list[str] | None = None) -> Findings:
+               focus: list[str] | None = None, decisions: list[str] | None = None) -> Findings:
     """One structured call (response_format = ReviewReport) on the whole PRD and the whole plan."""
-    report = llm.structured(ReviewReport, system_prompt("critic"), critic_user_message(plan, parsed, focus), role="critic")
+    report = llm.structured(ReviewReport, system_prompt("critic"), critic_user_message(plan, parsed, focus, decisions),
+                            role="critic")
     keys = {plan.project.key, *(s.key for s in plan.stories), *(t.key for t in plan.tasks)}
     req_ids = {r.id for r in plan.requirements}
     out = []
@@ -686,7 +705,8 @@ def resolve_repair_targets(findings: Findings, plan: TicketPlan, skeletons: list
 
 
 def repair_plan(plan: TicketPlan, skeletons: list[StorySkeleton], findings: Findings, llm: StructuredLLM,
-                ref_findings: Findings) -> tuple[TicketPlan, list[StorySkeleton], list[str], Findings]:
+                ref_findings: Findings, decisions: Findings | None = None
+                ) -> tuple[TicketPlan, list[StorySkeleton], list[str], Findings]:
     """Regenerate ONLY the stories (and their tasks) that blocking findings point to; merge back by key."""
     targets, skeletons, unroutable = resolve_repair_targets(findings, plan, skeletons)
     if not targets:
@@ -699,7 +719,8 @@ def repair_plan(plan: TicketPlan, skeletons: list[StorySkeleton], findings: Find
     def call(key: str) -> StoryDetailDraft:
         others = [t for t in plan.tasks if t.story_key not in targets]
         current = (story_by_key[key], [t for t in plan.tasks if t.story_key == key])
-        user = story_user_message(sk_by_key[key], plan.requirements, skeletons, targets[key], current, others)
+        mine = decisions_for(decisions or [], {key, *(t.key for t in current[1])})
+        user = story_user_message(sk_by_key[key], plan.requirements, skeletons, targets[key], current, others, mine)
         return llm.structured(StoryDetailDraft, system, user)
 
     drafts = _parallel(call, order, _workers(llm))
@@ -779,7 +800,7 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         console.print("Update run: previous plan loaded." if previous else "First run: no previous plan.")
         return {"parsed": parsed, "units": parsed.units, "previous_plan": previous, "reference_findings": [],
                 "reports": [], "req_rounds": 0, "req_blocking_history": [], "plan_rounds": 0,
-                "plan_blocking_history": [], "repaired_keys": [], "best_plan": None, "feedback_findings": [], "approval": None,
+                "plan_blocking_history": [], "repaired_keys": [], "best_plan": None, "feedback_findings": [], "reviewer_decisions": [], "approval": None,
                 "started_at": state.get("started_at") or time.monotonic()}
 
     def n_extract(state: AgentState) -> AgentState:
@@ -843,7 +864,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         round_no = state["plan_rounds"] + 1
         deterministic = validators.check_plan(plan, duplicate_threshold)
         focus = (state.get("repaired_keys") or None) if round_no > 1 else None
-        critic = run_critic(plan, state["parsed"], llm, round_no, focus)
+        critic = run_critic(plan, state["parsed"], llm, round_no, focus,
+                            decisions_for(state.get("reviewer_decisions") or []))
         if focus and state.get("plan_report") is not None:  # carry earlier critic findings on untouched items
             keys = {plan.project.key, *(s.key for s in plan.stories), *(t.key for t in plan.tasks)}
             carried = [f for f in state["plan_report"].findings
@@ -886,7 +908,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         stage("repair_plan")
         found: Findings = []
         findings = list(state["plan_report"].findings) + list(state.get("feedback_findings") or [])
-        plan, skeletons, repaired, unroutable = repair_plan(state["plan"], state["skeletons"], findings, llm, found)
+        plan, skeletons, repaired, unroutable = repair_plan(state["plan"], state["skeletons"], findings, llm, found,
+                                                            state.get("reviewer_decisions") or [])
         console.print(f"regenerated {sum(k.startswith('US-') for k in repaired)} story(ies): "
                       f"{', '.join(k for k in repaired if k.startswith('US-')) or 'none'}"
                       + (f" · {len(unroutable)} finding(s) not tied to a story" if unroutable else ""))
@@ -924,7 +947,12 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         if action == "feedback":
             text = (answer or {}).get("text", "") if isinstance(answer, dict) else ""
             fb = feedback_to_findings(text, state["plan"]) if text.strip() else []
-            return {"approval": "feedback", "feedback_findings": fb}
+            # Feedback is a reviewer decision: it stays authoritative for the critic and every later repair, and it
+            # starts a fresh repair cycle (rounds, history and the best-round baseline reset), so an earlier round
+            # without the decision can never be restored over it.
+            return {"approval": "feedback", "feedback_findings": fb,
+                    "reviewer_decisions": (state.get("reviewer_decisions") or []) + fb,
+                    "plan_rounds": 0, "plan_blocking_history": [], "best_plan": None}
         return {"approval": "approve" if action == "approve" else "abort"}
 
     def route_approval(state: AgentState) -> str:

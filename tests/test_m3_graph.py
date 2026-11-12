@@ -272,3 +272,26 @@ def test_critic_request_caches_only_the_prd_prefix(tmp_path):
     assert content[0]["cache_control"] == {"type": "ephemeral"} and "<prd>" in content[0]["text"]
     assert "cache_control" not in content[1] and "<plan>" in content[1]["text"]
     assert payload["system"][-1]["cache_control"] == {"type": "ephemeral"}
+
+
+def test_g1_feedback_is_authoritative_and_never_rolled_back(prd_file, tmp_path):
+    clean = _run_to_gate(prd_file, tmp_path / "clean", FakeLLM())[2]
+    story = clean["plan"].stories[0].key
+    decision = f"{story}: the backend sets the loan date on create."
+    rounds = [[_blocking("CRIT-MISSING", story)],                                   # round 1: 1 blocking
+              [_blocking("CRIT-MISSING", story)],                                   # round 2: 1 (no decrease -> stop)
+              [_blocking("CRIT-UNREQUESTED", story), _blocking("CRIT-UNTESTABLE-AC", story)],  # after feedback: 2
+              []]                                                                   # feedback repair round 2: clean
+    llm = FakeLLM(critic_findings=rounds)
+    graph, config, first = _run_to_gate(prd_file, tmp_path / "out", llm)
+    assert first["plan_report"].blocking_count == 1 and first["__interrupt__"]
+    second = graph.invoke(Command(resume={"action": "feedback", "text": decision}), config)
+    # The feedback round had MORE blocking findings than round 1, but it is a fresh cycle: it is repaired, not rolled back.
+    assert "kept the plan of round" not in (second.get("plan_stop_reason") or "")
+    assert second["plan_blocking_history"] == [2, 0] and second["status"] is Status.PASS
+    critic_after = [u for (n, u), role in zip(llm.calls, llm.roles) if role == "critic"][2:]
+    assert critic_after and all("Reviewer decisions" in u and decision in u for u in critic_after)
+    repairs_after = [u for n, u in llm.calls if n == "StoryDetailDraft" and "Reviewer decisions" in u]
+    assert len(repairs_after) == 2  # the feedback repair and the critic-driven repair both carry the decision
+    final = graph.invoke(Command(resume={"action": "approve"}), config)
+    assert final["status"] is Status.PASS

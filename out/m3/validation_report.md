@@ -1,16 +1,10 @@
 # Validation report
 
-**Final status:** NEEDS_REVIEW
-
-- check_plan: stopped: blocking findings did not decrease (1 -> 2); kept the plan of round 2 (1 blocking) instead of round 3 (2 blocking)
+**Final status:** PASS
 
 ## Remaining findings
 
-Every finding still open in the final round of each stage, with the reason it remains.
-
-| Stage | Check | Severity | Item | Finding | Why it remains |
-|---|---|---|---|---|---|
-| check_plan | CRIT-MISSING | blocking | US-create-task | The PRD requires a Last Updated Date on each task, but no create AC or task sets it on creation. The Creation Date is also never set by the backend; ACs assume it is supplied by the form. The PRD does not say how it is populated. Suggested fix: In BE-create-task-endpoint, state that Creation Date and Last Updated Date are set by the backend on create. Add an AC for both. | Not resolved: stopped: blocking findings did not decrease (1 -> 2); kept the plan of round 2 (1 blocking) instead of round 3 (2 blocking). Needs a human decision at G1 (approve, feedback or abort). |
+None.
 
 ## Findings per round
 
@@ -48,6 +42,8 @@ Every finding still open in the final round of each stage, with the reason it re
 |---|---|---|---|---|
 | CRIT-MISSING | blocking | US-create-task | The PRD requires a Last Updated Date on each task, but no create AC or task sets it on creation. The Creation Date is also never set by the backend; ACs assume it is supplied by the form. The PRD does not say how it is populated. | In BE-create-task-endpoint, state that Creation Date and Last Updated Date are set by the backend on create. Add an AC for both. |
 
+### check_plan — round 2: pass (0 blocking, 0 warnings)
+
 ### reference_normalization — round 0: pass (0 blocking, 0 warnings)
 
 ## Coverage matrix
@@ -64,7 +60,7 @@ Every finding still open in the final round of each stage, with the reason it re
 | `R-2304218f` | functional | `US-change-task-status`, `BE-status-change-endpoint`, `FE-status-toggle-control`, `QA-status-change-test-suite` |
 | `R-959e2960` | functional | `US-change-task-status`, `BE-status-change-endpoint`, `FE-status-toggle-control`, `QA-status-change-test-suite` |
 | `R-82fe7dda` | context_only | — |
-| `R-9675bb49` | data_model | `US-create-task`, `BE-tasks-table-migration` |
+| `R-9675bb49` | data_model | `US-create-task`, `BE-tasks-table-migration`, `BE-create-task-endpoint` |
 | `R-aaf23206` | data_model | `US-create-task`, `BE-tasks-table-migration` |
 | `R-c9046f7a` | data_model | `US-create-task`, `BE-tasks-table-migration` |
 | `R-576b7e59` | data_model | `US-create-task`, `BE-tasks-table-migration` |
@@ -76,16 +72,16 @@ Every finding still open in the final round of each stage, with the reason it re
 | `R-03df7815` | validation_rule | `US-create-task`, `US-update-task`, `BE-create-task-endpoint`, `QA-create-task-test-suite`, `BE-task-update-endpoint`, `QA-task-update-tests` |
 | `R-efe1e5d4` | validation_rule | `US-create-task`, `US-update-task`, `BE-create-task-endpoint`, `QA-create-task-test-suite`, `BE-task-update-endpoint`, `QA-task-update-tests` |
 | `R-8ef41ba1` | frontend | `US-delete-task`, `FE-delete-confirmation-prompt`, `QA-delete-task-test-suite` |
-| `R-d57336f7` | frontend | `US-create-task`, `US-update-task`, `US-delete-task`, `FE-create-task-form`, `FE-task-edit-form`, `QA-task-update-tests`, `FE-delete-result-feedback`, `QA-delete-task-test-suite` |
-| `R-ab9e9cb0` | constraint | `US-create-task`, `US-update-task`, `US-delete-task`, `US-change-task-status`, `FE-create-task-form`, `FE-task-edit-form`, `QA-task-update-tests`, `FE-delete-result-feedback`, `QA-delete-task-test-suite`, `FE-status-toggle-control`, `QA-status-change-test-suite` |
+| `R-d57336f7` | frontend | `US-create-task`, `US-update-task`, `US-delete-task`, `FE-create-task-form`, `QA-create-task-test-suite`, `FE-task-edit-form`, `QA-task-update-tests`, `FE-delete-result-feedback`, `QA-delete-task-test-suite` |
+| `R-ab9e9cb0` | constraint | `US-create-task`, `US-update-task`, `US-delete-task`, `US-change-task-status`, `FE-create-task-form`, `QA-create-task-test-suite`, `FE-task-edit-form`, `QA-task-update-tests`, `FE-delete-result-feedback`, `QA-delete-task-test-suite`, `FE-status-toggle-control`, `QA-status-change-test-suite` |
 | `R-60e02b8e` | frontend | `US-view-task-list`, `FE-task-list-view` |
 | `R-9b30a145` | frontend | `US-create-task`, `US-update-task`, `FE-create-task-form`, `FE-task-edit-form`, `QA-task-update-tests` |
 | `R-48c89e9e` | frontend | `US-view-task-list`, `FE-task-list-view` |
 | `R-d7e6667f` | frontend | `US-view-task-list`, `FE-task-list-view`, `QA-task-list-qa` |
 | `R-6a73fa71` | frontend | `US-view-task-list`, `FE-task-list-auto-refresh`, `QA-task-list-qa` |
 | `R-c55a77b3` | backend | `US-create-task`, `BE-tasks-table-migration` |
-| `R-244669c0` | backend | `US-create-task`, `US-view-task-list`, `US-update-task`, `US-delete-task`, `US-change-task-status`, `BE-create-task-endpoint`, `BE-tasks-read-endpoints`, `BE-task-update-endpoint`, `QA-task-update-tests`, `BE-delete-task-endpoint`, `QA-delete-task-test-suite`, `BE-status-change-endpoint`, `QA-status-change-test-suite` |
-| `R-9dc414dc` | backend | `US-create-task`, `US-view-task-list`, `US-update-task`, `US-delete-task`, `US-change-task-status`, `BE-create-task-endpoint`, `BE-tasks-read-endpoints`, `BE-task-update-endpoint`, `QA-task-update-tests`, `BE-delete-task-error-handling`, `QA-delete-task-test-suite`, `BE-status-change-error-handling`, `QA-status-change-test-suite` |
+| `R-244669c0` | backend | `US-create-task`, `US-view-task-list`, `US-update-task`, `US-delete-task`, `US-change-task-status`, `BE-tasks-read-endpoints`, `BE-task-update-endpoint`, `QA-task-update-tests`, `BE-delete-task-endpoint`, `QA-delete-task-test-suite`, `BE-status-change-endpoint`, `QA-status-change-test-suite` |
+| `R-9dc414dc` | backend | `US-create-task`, `US-view-task-list`, `US-update-task`, `US-delete-task`, `US-change-task-status`, `BE-tasks-read-endpoints`, `BE-task-update-endpoint`, `QA-task-update-tests`, `BE-delete-task-error-handling`, `QA-delete-task-test-suite`, `BE-status-change-error-handling`, `QA-status-change-test-suite` |
 | `R-d0e0fe7a` | frontend | `US-view-task-report`, `FE-task-report-page-table`, `QA-task-report-test-suite` |
 | `R-a1b267a3` | frontend | `US-view-task-report`, `FE-task-report-page-table`, `QA-task-report-test-suite` |
 | `R-5f4ef76c` | functional | `US-filter-report-tasks`, `FE-report-filter-controls`, `QA-report-filter-tests` |

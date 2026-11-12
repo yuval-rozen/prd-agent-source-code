@@ -115,6 +115,7 @@ S8 render_preview (code: tools/renderer.py)
 G1 approve_plan (human, interrupt)
 - Show the requirements summary (and the requirement diff in an update run), the ticket tree, the status, and the findings.
 - Answers: approve | feedback (sent to repair_plan as extra findings) | abort.
+- Feedback is a reviewer decision: it stays in the state, is given to the critic and to every later repair as authoritative context (treated like PRD text), and starts a fresh repair cycle (round count, blocking history and best-round baseline reset), so a round without the decision is never restored over it. Ticket keys in the feedback target those items; feedback without a key applies to every story.
 - `--yes` auto-approves only when the status is PASS.
 
 S9 sync_diff (code: github_tool read-only)

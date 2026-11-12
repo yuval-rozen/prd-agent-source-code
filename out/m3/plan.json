@@ -30,30 +30,35 @@
       "key": "US-create-task",
       "title": "Create a new task with required fields",
       "as_a": "user",
-      "i_want": "create a new task with its required fields",
-      "so_that": "I can record a piece of work in my personal task list",
-      "business_description": "Users need to add tasks to their personal to-do list. Each new task stores a unique ID, a Title, a Description, a Status, a Priority, a Creation Date, a Due Date, a Last Updated Date and a Completion Date. The task is saved in the persistence database, in a new tasks table.",
-      "business_value": "Without task creation, no other to-do capability (viewing, editing, status changes, reporting) has data to work on. Mandatory titles and date validation keep stored tasks complete and consistent.",
+      "i_want": "to create a new task with its required fields",
+      "so_that": "I can record a piece of work and track it in my personal task list",
+      "business_description": "The user can create a new task. The backend stores each task with a unique ID, a Title, a Description, a Status, a Priority, a Creation Date, a Due Date, a Last Updated Date and a Completion Date. The backend sets the Creation Date and the Last Updated Date when the task is created. The Title is mandatory. The Due Date cannot be earlier than the Creation Date. The form shows a success or error message after each create attempt.",
+      "business_value": "Users can capture tasks with consistent data that later stories can list, edit, complete, delete and report on. Mandatory titles and date checks keep stored tasks usable.",
       "acceptance_criteria": [
         {
-          "given": "A user opens the task creation form",
-          "when": "The user submits the form with a non-empty title and all other required inputs valid",
-          "then": "The backend stores exactly one new task with a unique ID, and the form shows a success message"
+          "given": "A user opens the task creation form and enters a non-empty title and other valid inputs",
+          "when": "The user submits the form",
+          "then": "The backend stores exactly one new task with a unique ID and the form shows a success message"
         },
         {
-          "given": "A user opens the task creation form",
-          "when": "The user submits the form with an empty title",
-          "then": "The backend rejects the task, no task is stored, and the form shows an error message that names the title field as mandatory"
+          "given": "A user opens the task creation form and leaves the title empty",
+          "when": "The user submits the form",
+          "then": "The backend rejects the task, no task is stored, and the form shows an error message that names the Title field as mandatory"
         },
         {
-          "given": "A user opens the task creation form with a Creation Date of 2024-05-10",
-          "when": "The user submits a Due Date of 2024-05-09",
+          "given": "The backend sets the Creation Date of a new task to 2024-05-10",
+          "when": "The user submits a Due Date of 2024-05-09 for that task",
           "then": "The backend rejects the task with an error stating that the Due Date cannot be earlier than the Creation Date, and no task is stored"
         },
         {
-          "given": "A user opens the task creation form with a Creation Date of 2024-05-10",
-          "when": "The user submits a Due Date of 2024-05-10",
+          "given": "The backend sets the Creation Date of a new task to 2024-05-10",
+          "when": "The user submits a Due Date of 2024-05-10 for that task",
           "then": "The backend accepts the task because the Due Date is not earlier than the Creation Date"
+        },
+        {
+          "given": "A create request is received with valid inputs",
+          "when": "The backend stores the new task",
+          "then": "The backend sets the Creation Date and the Last Updated Date of the task, and the task has a Completion Date that is empty"
         },
         {
           "given": "A new task has been stored",
@@ -72,20 +77,21 @@
         }
       ],
       "edge_cases": [
-        "The PRD does not state the exact wording of the success message; the wording is an open question.",
-        "The PRD does not state whether Due Date is mandatory; if it is left empty, the behaviour is an open question.",
-        "The PRD does not say whether a title containing only spaces counts as empty; this is an open question.",
-        "The PRD does not state the default values of Status and Priority on creation; this is an open question.",
-        "A Due Date equal to the Creation Date is valid.",
-        "Completion Date stays empty on creation because the task is not completed yet."
+        "A title that contains only spaces: the PRD says empty titles are rejected but does not say whether whitespace-only titles count as empty. This is an open question.",
+        "The PRD does not state the default Status or Priority of a new task. This is an open question.",
+        "The PRD does not state whether Due Date is mandatory on create. The stories assume it is optional. This is an open question.",
+        "The PRD does not state the time zone or time precision of the backend-set Creation Date and Last Updated Date. This is an open question.",
+        "A Due Date equal to the Creation Date is accepted; a Due Date one day earlier is rejected.",
+        "A create request that fails on the backend must not leave a partially stored task."
       ],
       "dependencies": [],
       "definition_of_done": [
-        "The tasks table migration creates every task data-model field, including the unique ID and Completion Date.",
-        "POST /tasks rejects an empty title and a Due Date earlier than the Creation Date, with clear error responses.",
-        "The form shows a success message only after the backend confirms the save, and an error message on failure.",
-        "The form does not add the task to any list before the backend responds.",
-        "Automated tests cover the valid, empty-title and date-order cases."
+        "The tasks table migration creates every task data-model field listed in the PRD.",
+        "POST /tasks rejects an empty title and a Due Date earlier than the Creation Date, with clear error messages.",
+        "The backend sets Creation Date and Last Updated Date on every successful create.",
+        "The creation form shows a success message only after the backend confirms the create.",
+        "The creation form shows an error message on validation failure and on database failure.",
+        "The test suite covers the title, Due Date, field storage, Creation Date, Last Updated Date and error paths and passes."
       ],
       "requirement_ids": [
         "R-22f28530",
@@ -751,7 +757,7 @@
       "story_key": "US-create-task",
       "title": "[BE] Add migration that creates the tasks table with all task data-model fields",
       "track": "backend",
-      "description": "Create the new tasks table in the existing persistence database with the unique ID, Title, Description, Status, Priority, Creation Date, Due Date, Last Updated Date and Completion Date columns.",
+      "description": "Create the new tasks table in the existing persistence database with columns for ID (unique), Title, Description, Status (Open, In Progress, Completed), Priority (Low, Medium, High), Creation Date, Due Date, Last Updated Date and Completion Date (nullable).",
       "size": "S",
       "consumes_api": false,
       "touches_db": true,
@@ -770,9 +776,9 @@
       ],
       "derived_reason": null,
       "definition_of_done": [
-        "Migration creates the tasks table with all nine data-model fields.",
-        "Migration runs and rolls back cleanly on the existing database.",
-        "Status and Priority columns accept only the allowed values."
+        "Migration creates the tasks table with every data-model field listed in the PRD.",
+        "ID is unique and Completion Date is nullable.",
+        "Migration runs on the existing database and can be reverted."
       ],
       "labels": [
         "type:task",
@@ -785,7 +791,7 @@
       "story_key": "US-create-task",
       "title": "[BE] Add POST /tasks endpoint with title and Due Date validation",
       "track": "backend",
-      "description": "Add the create operation of the tasks endpoint. Reject an empty title, reject a Due Date earlier than the Creation Date, store the task with a unique ID, and return clear errors for invalid input and database failures.",
+      "description": "Add POST /tasks. The backend sets the unique ID, Creation Date and Last Updated Date on create; the client does not supply them. The endpoint rejects an empty title and a Due Date earlier than the Creation Date, returns a clear error for each, and stores nothing on rejection. Completion Date is stored empty.",
       "size": "M",
       "consumes_api": false,
       "touches_db": true,
@@ -796,16 +802,15 @@
         "R-22f28530",
         "R-03df7815",
         "R-efe1e5d4",
-        "R-9dc414dc",
-        "R-244669c0"
+        "R-9675bb49"
       ],
       "derived_reason": null,
       "definition_of_done": [
-        "POST /tasks stores one task with a unique ID when input is valid.",
-        "An empty title is rejected and no task is stored.",
-        "A Due Date earlier than the Creation Date is rejected and no task is stored.",
-        "A database failure returns an internal error response and no task is stored.",
-        "Error responses use one simple format."
+        "POST /tasks stores one task per successful request with a unique ID.",
+        "Creation Date and Last Updated Date are set by the backend on create.",
+        "Empty title returns an error that names the Title field as mandatory.",
+        "Due Date earlier than the backend Creation Date returns an error and stores nothing.",
+        "Database failures return a server error and store nothing."
       ],
       "labels": [
         "type:task",
@@ -818,7 +823,7 @@
       "story_key": "US-create-task",
       "title": "[FE] Add task creation form with title, description, priority and due date",
       "track": "frontend",
-      "description": "Build the create form with title, description, priority and due date inputs. Call POST /tasks on submit. Show a success message only after the backend confirms the save, and an error message naming the failed field or reason otherwise.",
+      "description": "Add the create mode of the task form with inputs for Title, Description, Priority and Due Date. The form does not collect Creation Date or Last Updated Date, because the backend sets them. The form calls POST /tasks and shows a success or error message only after the backend responds. It does not add the task to any list before the backend confirms the create.",
       "size": "M",
       "consumes_api": true,
       "touches_db": false,
@@ -832,10 +837,10 @@
       ],
       "derived_reason": null,
       "definition_of_done": [
-        "The form shows a success message only after the backend confirms the save.",
-        "The form shows an error message when the backend rejects the task or fails.",
-        "The task is not added to any list while the request is pending.",
-        "The title field is marked as mandatory."
+        "Form has Title, Description, Priority and Due Date inputs.",
+        "Success message is shown only after the backend confirms the create.",
+        "Validation errors from the backend are shown next to the relevant input or as a clear message.",
+        "No task is shown as created while the request is pending or after it fails."
       ],
       "labels": [
         "type:task",
@@ -848,7 +853,7 @@
       "story_key": "US-create-task",
       "title": "[QA] Add test suite for task creation across API, database and form",
       "track": "qa_general",
-      "description": "Test task creation end to end: valid create, empty title, Due Date earlier than Creation Date, Due Date equal to Creation Date, database failure, and the pending state of the form.",
+      "description": "Automated tests for task creation covering the POST /tasks endpoint, the stored database row and the creation form.",
       "size": "S",
       "consumes_api": true,
       "touches_db": true,
@@ -860,13 +865,17 @@
       "requirement_ids": [
         "R-22f28530",
         "R-03df7815",
-        "R-efe1e5d4"
+        "R-efe1e5d4",
+        "R-d57336f7",
+        "R-ab9e9cb0"
       ],
       "derived_reason": null,
       "definition_of_done": [
-        "Tests cover every acceptance criterion of this story.",
-        "Tests check the stored fields and that rejected tasks are not stored.",
-        "Tests pass in the CI pipeline."
+        "Tests cover a valid create, an empty title, a Due Date earlier than the Creation Date, and a Due Date equal to the Creation Date.",
+        "Tests check that Creation Date and Last Updated Date are set by the backend and Completion Date is empty.",
+        "Tests check that a database failure shows an error and no task is shown as created.",
+        "Tests check that no success message is shown while the request is pending.",
+        "All tests pass in the CI pipeline."
       ],
       "labels": [
         "type:task",

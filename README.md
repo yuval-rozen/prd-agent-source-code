@@ -158,7 +158,7 @@ Same PRD, `claude-haiku-5-5` for S2 / S4 / S5 / S6 / repairs and `claude-sonnet-
 Runs 5 and 6 reuse cached responses for the stages whose prompts did not change. Each run stopped at G1
 (no terminal attached); outputs are written before the gate.
 
-| | Run 4 | Run 5 | Run 6 (committed: [`out/m3/`](out/m3/)) |
+| | Run 4 | Run 5 | Run 6 (+ run 7: G1 feedback → PASS, committed in [`out/m3/`](out/m3/)) |
 |---|---|---|---|
 | Change before the run | first M3 run | overlap findings route to every named task's story; Given/When/Then dedup | S4/S5: shared requirements split per story, one complete table; critic caches only the PRD; keep the best round |
 | PRD units covered | 45 / 45 | 45 / 45 | 45 / 45 |
@@ -185,11 +185,14 @@ Run 6, time and cost per stage:
 
 S2 was served from the cache in run 6. Its first live run (run 4) took 8.6 s and $0.0032 for 11 calls.
 
-The one remaining finding (CRIT-MISSING on `US-create-task`): the PRD lists Creation Date and Last
-Updated Date as task fields but does not say who sets them. The plan's ACs assume the form sends the
-Creation Date, and the critic proposes that the backend sets both on create. That is a product decision,
-so it is left to the reviewer at G1 (feedback such as "US-create-task: the backend sets Creation Date and
-Last Updated Date on create") instead of being guessed.
+Run 6 ended with one finding (CRIT-MISSING on `US-create-task`): the PRD lists Creation Date and Last
+Updated Date as task fields but does not say who sets them. That is a product decision, so it was left to
+the reviewer at G1 instead of being guessed. The reviewer answered with the feedback
+"US-create-task: the backend sets Creation Date and Last Updated Date on create." (run 7, the committed
+`out/m3/`): everything up to G1 was served from the cache, one repair and one critic call applied the
+decision ($0.0389, 21 s), and the run ended **PASS**. Reviewer decisions are passed to the critic and to
+every later repair as authoritative context, and feedback starts a fresh repair cycle, so the loop can
+never restore an earlier round that lacks the decision.
 
 ## Design decisions & trade-offs
 
