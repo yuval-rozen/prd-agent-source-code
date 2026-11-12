@@ -1,0 +1,29 @@
+**Parent:** {{ ref(task.story_key) }}
+
+**Track:** {{ task.track.value }} · **Size:** {{ task.size.value }}{% if task.consumes_api %} · consumes API{% endif %}{% if task.touches_db %} · touches DB{% endif %}
+
+## Description
+
+{{ task.description }}
+
+## Blocked by
+
+{% for key in task.blocked_by %}
+- {{ ref(key) }}
+{% else %}
+- Nothing.
+{% endfor %}
+
+## Definition of Done
+
+{% for item in task.definition_of_done %}
+- [ ] {{ item }}
+{% endfor %}
+
+## Requirements
+
+{% for req in requirements %}
+- `{{ req.id }}` ({{ req.kind.value }}) {{ req.statement }}
+{% else %}
+- Derived task: {{ task.derived_reason.value if task.derived_reason else "no direct requirement" }}.
+{% endfor %}

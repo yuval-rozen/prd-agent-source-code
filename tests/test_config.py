@@ -1,23 +1,41 @@
 import pytest
 
-from config import DEFAULT_CRITIC_MODEL, DEFAULT_GENERATION_MODEL, ConfigError, load_settings
+from config import DEFAULT_MODELS, ConfigError, load_settings
 
 FAKE_KEY = "sk-test-not-a-real-key-123"
 
 
 def test_defaults_without_env():
     s = load_settings(env_file=None)
-    assert s.generation_model == DEFAULT_GENERATION_MODEL
-    assert s.critic_model == DEFAULT_CRITIC_MODEL
+    assert s.llm_provider == "anthropic"
     assert s.max_repair_rounds == 3
     assert s.anthropic_api_key is None
+    assert s.models() == ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-sonnet-5-5"]
+    assert s.max_run_cost_usd == 0.50
+
+
+def test_budget_and_models_from_env(monkeypatch):
+    monkeypatch.setenv("MAX_RUN_COST_USD", "0.10")
+    monkeypatch.setenv("EXTRACT_MODEL", "claude-sonnet-5-5")
+    monkeypatch.setenv("CRITIC_EFFORT", "high")
+    s = load_settings(env_file=None)
+    assert s.max_run_cost_usd == 0.10 and s.model_for("extract") == "claude-sonnet-5-5"
+    assert s.effort_for("critic") == "high"
+
+
+def test_invalid_budget_and_effort_are_rejected(monkeypatch):
+    monkeypatch.setenv("MAX_RUN_COST_USD", "-1")
+    monkeypatch.setenv("GENERATION_EFFORT", "turbo")
+    with pytest.raises(ConfigError) as info:
+        load_settings(env_file=None)
+    assert "MAX_RUN_COST_USD" in str(info.value) and "GENERATION_EFFORT" in str(info.value)
 
 
 def test_empty_values_mean_defaults(monkeypatch):
     monkeypatch.setenv("GENERATION_MODEL", "")
     monkeypatch.setenv("MAX_REPAIR_ROUNDS", "  ")
     s = load_settings(env_file=None)
-    assert s.generation_model == DEFAULT_GENERATION_MODEL
+    assert s.model_for("generation") == DEFAULT_MODELS["anthropic"]["generation"]
     assert s.max_repair_rounds == 3
 
 
@@ -74,3 +92,47 @@ def test_invalid_threshold_names_variable_not_value(monkeypatch):
         load_settings(env_file=None)
     assert "GROUNDING_THRESHOLD" in str(info.value)
     assert FAKE_KEY not in str(info.value) and "250" not in str(info.value)
+
+
+# --------------------------------------------------------------------------- provider
+
+
+def test_google_provider_defaults(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "Google")
+    s = load_settings(env_file=None)
+    assert s.llm_provider == "google"
+    assert s.models() == ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.8-flash"]
+    assert s.parallel_calls == 1
+    s.require_models()
+
+
+def test_unknown_provider_rejected(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    with pytest.raises(ConfigError, match="LLM_PROVIDER"):
+        load_settings(env_file=None)
+
+
+def test_model_of_other_provider_rejected(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "google")
+    monkeypatch.setenv("EXTRACT_MODEL", "claude-haiku-5-5")
+    with pytest.raises(ConfigError, match="another provider"):
+        load_settings(env_file=None).require_models()
+
+
+def test_billable_gemini_model_refused(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "google")
+    monkeypatch.setenv("GENERATION_MODEL", "gemini-4-carbon")  # no free tier -> not in PRICING
+    with pytest.raises(ConfigError, match="pricing"):
+        load_settings(env_file=None).require_models()
+
+
+def test_google_key_required_unless_replay(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "google")
+    with pytest.raises(ConfigError, match="GOOGLE_API_KEY"):
+        load_settings(env_file=None).require_llm_key()
+
+
+def test_parallel_override(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "google")
+    monkeypatch.setenv("MAX_PARALLEL_CALLS", "2")
+    assert load_settings(env_file=None).parallel_calls == 2

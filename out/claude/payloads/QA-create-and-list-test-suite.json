@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Add end-to-end test suite for task create and list",
+  "body": "**Parent:** `US-create-and-view-tasks`\n\n**Track:** qa_general · **Size:** M · consumes API\n## Description\n\nAutomated tests covering create, list, validation rules, success and error messages, and the rule that the UI never shows success before the backend confirms.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Tests cover valid create, empty title, Due Date before Creation Date, and database failure.\n- [ ] Tests cover list with tasks and empty list.\n- [ ] Tests confirm no success message appears when the backend fails.\n- [ ] Test suite runs in CI and passes.\n\n## Requirements\n\n- Derived task: testing.\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

@@ -29,8 +29,17 @@ Required ticket content:
 - Secrets never appear in code, logs, outputs, or the repository.
 
 ## 4. Stack
-Python 3.11+, uv, LangGraph (StateGraph, conditional edges for the repair loops, interrupt() + MemorySaver for the human gates, a prebuilt ReAct agent for the critic: `langchain.agents.create_agent` with `response_format=ProviderStrategy(ReviewReport)`, the successor of the deprecated `create_react_agent`), langchain-anthropic (`with_structured_output(PydanticModel, method="json_schema")` for every LLM call — native structured outputs, because current models reject forced `tool_choice`), Pydantic v2, Typer + Rich, Jinja2, pymupdf4llm (PDF→Markdown), python-docx, rapidfuzz, httpx + tenacity, python-dotenv, pytest.
-Model IDs come from config: GENERATION_MODEL and a stronger CRITIC_MODEL. Verify current model IDs and LangGraph/LangChain APIs in the official docs.
+Python 3.11+, uv, LangGraph (StateGraph, conditional edges for the repair loops, interrupt() + MemorySaver for the human gates, a prebuilt ReAct agent for the critic: `langchain.agents.create_agent` with `response_format=ProviderStrategy(ReviewReport)`, the successor of the deprecated `create_react_agent`), langchain-anthropic and langchain-google-genai (`with_structured_output(PydanticModel, method="json_schema")` for every LLM call — native structured outputs: Anthropic `output_config.format`, Gemini `response_json_schema`; never tool-based, because current Claude models reject forced `tool_choice`), Pydantic v2, Typer + Rich, Jinja2, pymupdf4llm (PDF→Markdown), python-docx, rapidfuzz, httpx + tenacity, python-dotenv, pytest.
+Provider: LLM_PROVIDER=anthropic|google (default anthropic). Both stay supported; llm.py has one factory that builds ChatAnthropic or ChatGoogleGenerativeAI behind the same cache, cost and retry layer.
+Model IDs come from config, one per stage: EXTRACT_MODEL (S2 and repair_requirements), GENERATION_MODEL (S4, S5, S6 and repair_plan) and CRITIC_MODEL (S7 critic). Empty means the provider's default:
+- anthropic: claude-haiku-5-5 / claude-sonnet-5-5 / claude-sonnet-5-5. During development all three can be set to claude-haiku-5-5.
+- google (free tier only): gemini-3.5-flash-lite / gemini-3.8-flash / gemini-3.8-flash.
+A model must belong to the selected provider and have an entry in the price table, otherwise the run is refused.
+Provider-specific features: prompt caching and reasoning effort are Anthropic-only and are not sent to Google (no clear equivalent is enabled; Gemini context caching is not used). Sampling parameters are sent to neither (for Gemini the library's temperature default is removed explicitly).
+Critic on Gemini (decision pending, made by the user before M3): langchain-google-genai 3.2.0 ignored the `response_format` that `create_agent` + `ProviderStrategy` binds. 4.5.0 (now used; it needs tenacity < 9.2) maps it to the native `response_json_schema`, verified offline only. The critic must not fall back to tool-based structured output.
+Request timeout: 180 s per LLM call. Google: HTTP 503 / 504 / timeout is retried twice (after 15 s and 45 s); the Anthropic SDK retries 5xx and timeouts itself. GOOGLE_THINKING_LEVEL (minimal | low | medium | high; empty = model default) sets Gemini's native thinking level for the generation and critic stages only.
+Every run writes out/<dir>/run_stats.json (provider, models, time per stage, cost, calls, retries, errors; no secrets), also when it fails.
+Verify current model IDs and LangGraph/LangChain APIs in the official docs.
 
 ## 5. Pipeline overview
 
@@ -87,7 +96,8 @@ S6 map_dependencies (LLM proposes, code verifies)
 - Code then checks that all keys exist and that there are no cycles.
 
 S7 check_plan (code validators P1–P11 + LLM critic)
-- The critic is a bounded ReAct agent (CRITIC_MODEL, the read-only PRD tools from Section 12, response_format = ReviewReport, recursion limit ~10). Per PRD section it looks for missing or misrepresented requirements, unrequested features, untestable ACs, and constraints that are cited but not reflected in the ACs.
+- The critic is a bounded ReAct agent (CRITIC_MODEL, the read-only PRD tools from Section 12, response_format = ReviewReport, recursion limit 6). Per PRD section it looks for missing or misrepresented requirements, unrequested features, untestable ACs, and constraints that are cited but not reflected in the ACs.
+- In repair rounds 2-3 the critic reviews only the repaired items (the stories/tasks that repair_plan regenerated), not the whole plan. The deterministic validators still run on the whole plan every round.
 - Deterministic findings and critic findings are merged into one ReviewReport.
 - Fail → repair_plan regenerates ONLY the failing stories/tasks, using their findings, and merges them back by key.
 
@@ -117,7 +127,7 @@ S10 publish (code: github_tool write)
 - Close removed issues with a comment. Never delete issues.
 
 S11 summary (code)
-- Counts, final status, issue links, and where the outputs were saved. Every stage logs its progress to the console (Rich); `--debug` adds details and tracebacks.
+- Counts, final status, issue links, where the outputs were saved, and the total LLM cost of the run. Every stage logs its progress to the console (Rich); `--debug` adds details and tracebacks.
 
 ## 7. Review/repair loop (shared by S3 and S7)
 - check → if pass: continue.
@@ -127,6 +137,7 @@ S11 summary (code)
 
 ## 8. Validation checks (tools/validators.py; each returns ReviewFindings with check_id + severity)
 All checks are blocking unless marked (warning).
+- REF-* (warning, recorded by S2/S4/S5 code, not a separate check stage): whenever code drops or replaces something the LLM returned, it records a finding instead of doing it silently: REF-UNIT (unknown unit ID, attached to the best-matching unit), REF-REQ (unknown requirement ID dropped), REF-CONSTRAINT (scope given for a non-constraint), REF-STORY (unknown or self dependency dropped), REF-KEY (story key normalized), REF-AREA (area that does not fit the track replaced). They appear in validation_report.md and the S11 summary.
 - R1 grounding: every source_quote fuzzy-matches the PRD (≥ 90).
 - R2 unit coverage: every unit is in a requirement, or that requirement is context_only with a reason.
 - P1 every non-context requirement is cited by ≥ 1 story or task.
@@ -188,8 +199,13 @@ AgentState (agent.py): prd_path, units, requirements, requirement_diff, req_repo
 - Known limitation (document in the README): manual edits to an issue in GitHub are kept while its ticket is unchanged, and overwritten when the PRD changes that ticket.
 
 ## 11. Secrets & configuration
-- config.py reads the environment / .env: ANTHROPIC_API_KEY, GITHUB_TOKEN, GITHUB_REPO, GENERATION_MODEL, CRITIC_MODEL, and the thresholds. .env is in .gitignore from the first commit; .env.example ships with empty values.
-- ANTHROPIC_API_KEY is required unless --replay is used. GITHUB_TOKEN is required only with --publish; dry runs work without it. If a required key is missing, fail with a clear message.
+- config.py reads the environment / .env: LLM_PROVIDER, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GITHUB_TOKEN, GITHUB_REPO, EXTRACT_MODEL, GENERATION_MODEL, CRITIC_MODEL, MAX_RUN_COST_USD, MAX_PARALLEL_CALLS, and the thresholds.
+- Cost control: MAX_RUN_COST_USD (default 0.50). The cost of every live LLM call is computed from the response usage (input, cache read, cache write, output tokens) and a per-model price table in config.py; a model without a known price is refused. No new call starts once the run has spent the limit, and the run aborts with a clear message (its own exit code) as soon as a response pushes the total over it. Calls already in flight in parallel can finish, so the overshoot is bounded by their cost. Paid responses are cached before the abort, so a re-run does not pay for them again. Cached (replayed) responses cost nothing. Free-tier Gemini models are priced at $0 (the cap stays active); Gemini models without a free tier are not in the price table and are refused. S11 shows the total.
+- Prompt caching is enabled on every Anthropic call: a cache breakpoint on the system prompt plus top-level automatic caching.
+- Google free tier: only free-tier models are allowed; nothing billable is enabled (no context caching, no grounding). The key's Google Cloud project should have no billing account, because the code cannot detect billing and a billed project is charged for the same models. Free-tier prompts and responses may be used by Google to improve its products, so only non-confidential PRDs should be sent. Limits are per project and small (Google publishes the exact numbers only in AI Studio): LLM calls run one at a time by default (MAX_PARALLEL_CALLS, default 4 for Anthropic and 1 for Google), a 429 is retried after the delay the API returns (RetryInfo / "retry in Ns", at most 5 times, at most 120 s each), and a per-day quota error stops the run immediately with a clear message.
+- The LLM response cache key includes the provider and the exact provider request.
+- .env is in .gitignore from the first commit; .env.example ships with empty values.
+- The key of the selected provider (ANTHROPIC_API_KEY or GOOGLE_API_KEY) is required unless --replay is used. GITHUB_TOKEN is required only with --publish; dry runs work without it. If a required key is missing, fail with a clear message.
 - Recommended token: fine-grained, limited to the test repo, Issues read/write only, short expiry.
 - `--replay` runs the full pipeline from the LLM cache in .cache/llm/ (committed for the sample PRD and for v2), with no Anthropic key and no cost. The cache key is hash(model, messages, tools, schema) per LLM call, so the critic's tool-calling steps replay as well.
 - Secrets are never printed, logged, written to out/, or included in error messages.

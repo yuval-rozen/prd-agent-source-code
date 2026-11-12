@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Return simple not-found and internal error responses from DELETE /tasks/{id}",
+  "body": "**Parent:** `US-delete-task-with-confirmation`\n\n**Track:** backend · **Size:** S · touches DB\n## Description\n\nMake the delete endpoint return a simple not-found error when the task does not exist and a simple internal error when the database or server fails. Stored data must stay unchanged on error.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Deleting a non-existent task returns a simple not-found error response\n- [ ] Database or server failure returns a simple internal error response\n- [ ] No stored task is changed when an error is returned\n- [ ] Error responses are covered by tests\n\n## Requirements\n\n- `R-9dc414dc` (backend) The backend returns simple error responses for task not found, invalid input, missing mandatory fields, updating or deleting non-existent tasks, and internal server or database errors.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

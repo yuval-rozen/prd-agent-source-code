@@ -1,0 +1,15 @@
+## Scope
+
+{{ project.scope }}
+
+## Business goals
+
+{% for goal in project.business_goals %}
+- {{ goal }}
+{% endfor %}
+
+## User stories
+
+{% for story in stories %}
+- [ ] {{ ref(story.key) }} {{ story.title }}
+{% endfor %}

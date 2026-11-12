@@ -1,0 +1,43 @@
+{
+ "llm_output": {
+  "prompt_feedback": {
+   "block_reason": 0,
+   "safety_ratings": []
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": [
+     {
+      "extras": {
+       "signature": "EmAKXgFpFH0TUqdZoQpFM09qeCuchxstKiG/n0okxfm2oqhU/FFlGYIE9aF1redWGWDShRtjA8tzRPGNcrTsyjV733IUzHWoAtZwt4KbnPMDv2eeobLlJfVDzJ6H1RcGVWg="
+      },
+      "text": "{\n  \"requirements\": [\n    {\n      \"unit_ids\": [\"U-2d1f94-eed06908\"],\n      \"source_quote\": \"This page allows the user to manage their personal task list.\",\n      \"kind\": \"context_only\",\n      \"statement\": \"The page allows the user to manage their personal task list.\",\n      \"context_reason\": \"Introductory descriptive text stating the overall purpose of the page without specifying a testable requirement.\"\n    }\n  ]\n}",
+      "type": "text"
+     }
+    ],
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "google_genai"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_read": 0
+     },
+     "input_tokens": 881,
+     "output_tokens": 116,
+     "total_tokens": 997
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "models/gemini-3.5-flash-lite",
+ "provider": "google"
+}

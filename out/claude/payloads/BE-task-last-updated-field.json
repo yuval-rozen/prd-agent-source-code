@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add Last Updated Date column to the task model",
+  "body": "**Parent:** `US-update-task-details`\n\n**Track:** backend · **Size:** S · touches DB\n## Description\n\nAdd the Last Updated Date field to the task data model and its storage, with a migration for existing tasks.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Task model includes a Last Updated Date field\n- [ ] Migration adds the column to existing task records\n- [ ] Existing tasks have a defined Last Updated Date value after migration\n\n## Requirements\n\n- `R-31569dba` (data_model) Each task has a Last Updated Date field.\n",
+  "labels": [
+    "type:task",
+    "area:db",
+    "prd-agent"
+  ]
+}

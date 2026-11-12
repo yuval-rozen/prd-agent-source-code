@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Remove task from list and show delete result message after backend response",
+  "body": "**Parent:** `US-delete-task-with-confirmation`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nAfter the delete request completes, show a success message and remove the task only when the backend confirms. On error, show an error message and keep the task in the list. No success state is shown before the backend responds.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Task is removed from the list only after a success response\n- [ ] Success message is shown after a successful delete\n- [ ] Error message is shown after a failed delete and the task stays in the list\n- [ ] No optimistic removal or success state is shown before backend confirmation\n\n## Requirements\n\n- `R-d57336f7` (frontend) A success or error message must be displayed after each create, update, or delete task action.\n- `R-ab9e9cb0` (constraint) The frontend must not show a successful state for a task change before the backend confirms it, and must not show success when a backend action fails.\n- `R-8523b9ec` (functional) Users can delete a task.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

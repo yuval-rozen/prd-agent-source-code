@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011CgyMDTo2xYajMsHWRMcKs",
+  "model": "claude-haiku-5-5",
+  "model_name": "claude-haiku-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 2206
+   },
+   "cache_creation_input_tokens": 2206,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 771,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"requirements\":[{\"unit_ids\":[\"U-261460-82fe7dda\"],\"source_quote\":\"Each task must contain:\",\"kind\":\"context_only\",\"statement\":\"Lead-in sentence listing the fields each task must contain; the listed items are the requirements.\",\"context_reason\":\"Lead-in sentence for the list of task fields; the individual fields are captured as separate requirements.\"},{\"unit_ids\":[\"U-261460-9675bb49\"],\"source_quote\":\"Unique ID\",\"kind\":\"data_model\",\"statement\":\"Each task has a unique ID field.\",\"context_reason\":null},{\"unit_ids\":[\"U-261460-aaf23206\"],\"source_quote\":\"Title\",\"kind\":\"data_model\",\"statement\":\"Each task has a Title field.\",\"context_reason\":null},{\"unit_ids\":[\"U-261460-c9046f7a\"],\"source_quote\":\"Description\",\"kind\":\"data_model\",\"statement\":\"Each task has a Description field.\",\"context_reason\":null},{\"unit_ids\":[\"U-261460-576b7e59\"],\"source_quote\":\"Status (Open, In Progress, Completed)\",\"kind\":\"data_model\",\"statement\":\"Each task has a Status field whose allowed values are Open, In Progress and Completed.\",\"context_reason\":null},{\"unit_ids\":[\"U-261460-9fb58566\"],\"source_quote\":\"Priority (Low, Medium, High)\",\"kind\":\"data_model\",\"statement\":\"Each task has a Priority field whose allowed values are Low, Medium and High.\",\"context_reason\":null},{\"unit_ids\":[\"U-261460-1c2262bc\"],\"source_quote\":\"Creation Date\",\"kind\":\"data_model\",\"statement\":\"Each task has a Creation Date field.\",\"context_reason\":null},{\"unit_ids\":[\"U-261460-71bdd372\"],\"source_quote\":\"Due Date\",\"kind\":\"data_model\",\"statement\":\"Each task has a Due Date field.\",\"context_reason\":null},{\"unit_ids\":[\"U-261460-31569dba\"],\"source_quote\":\"Last Updated Date\",\"kind\":\"data_model\",\"statement\":\"Each task has a Last Updated Date field.\",\"context_reason\":null},{\"unit_ids\":[\"U-261460-34e41747\"],\"source_quote\":\"Completion Date (if completed)\",\"kind\":\"data_model\",\"statement\":\"Each task has a Completion Date field, populated when the task is completed.\",\"context_reason\":null}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 2206
+     },
+     "input_tokens": 2210,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 771,
+     "total_tokens": 2981
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-haiku-5-5",
+ "provider": "anthropic"
+}

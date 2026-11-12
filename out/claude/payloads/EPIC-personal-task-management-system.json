@@ -1,0 +1,8 @@
+{
+  "title": "Personal task management system",
+  "body": "## Scope\n\nA personal task management system that lets a user manage a personal task list (create, view, update, delete, complete and reopen tasks) and view an aggregated task report. The report supports filtering, searching, sorting, metric counts and Excel export. The backend stores tasks in a new table in the existing database and exposes API endpoints for task management and reporting.\n\n## Business goals\n\n- Let users track their daily tasks\n- Let users generate status reports from their tasks\n\n## User stories\n\n- [ ] `US-create-and-view-tasks` Create a task and view the task list\n- [ ] `US-update-task-details` Update the details of an existing task\n- [ ] `US-delete-task-with-confirmation` Delete a task after confirming the deletion\n- [ ] `US-complete-and-reopen-task` Mark a task as Completed or revert it to Open\n- [ ] `US-review-task-report` Review the task report with task counts\n- [ ] `US-filter-search-sort-task-report` Filter, search and sort the task report\n- [ ] `US-export-task-report-to-excel` Export the current task report view to Excel\n",
+  "labels": [
+    "type:epic",
+    "prd-agent"
+  ]
+}

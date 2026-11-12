@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add tasks table migration with ID, Title, Description, Status, Priority and date fields",
+  "body": "**Parent:** `US-create-and-view-tasks`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nCreate a new table in the existing database with a unique ID, Title, Description, Status (Open, In Progress, Completed), Priority (Low, Medium, High), Creation Date and Due Date. Add a check constraint for the allowed Status and Priority values.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Migration runs on the existing database and creates the tasks table.\n- [ ] Unique ID is the primary key.\n- [ ] Status and Priority columns reject values outside the allowed sets.\n- [ ] Migration has a tested rollback.\n\n## Requirements\n\n- `R-c55a77b3` (backend) Todos are persisted in the existing database in a new table created for them.\n- `R-9675bb49` (data_model) Each task has a unique ID field.\n- `R-aaf23206` (data_model) Each task has a Title field.\n- `R-c9046f7a` (data_model) Each task has a Description field.\n- `R-576b7e59` (data_model) Each task has a Status field whose allowed values are Open, In Progress and Completed.\n- `R-9fb58566` (data_model) Each task has a Priority field whose allowed values are Low, Medium and High.\n- `R-1c2262bc` (data_model) Each task has a Creation Date field.\n- `R-71bdd372` (data_model) Each task has a Due Date field.\n",
+  "labels": [
+    "type:task",
+    "area:db",
+    "prd-agent"
+  ]
+}

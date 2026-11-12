@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Show Total, Open and Completed counts on the reporting page",
+  "body": "**Parent:** `US-review-task-report`\n\n**Track:** frontend · **Size:** S · consumes API\n## Description\n\nDisplay the Total Tasks, Open Tasks and Completed Tasks counts from the report API response on the reporting page.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Page shows Total Tasks, Open Tasks and Completed Tasks with values from the API.\n- [ ] Counts show 0 when the API returns zero.\n- [ ] Component tests verify the displayed values.\n\n## Requirements\n\n- `R-4ffbfafa` (functional) The task report shows the counts of Total Tasks, Open Tasks, and Completed Tasks.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

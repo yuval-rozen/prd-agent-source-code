@@ -1,0 +1,43 @@
+{
+ "llm_output": {
+  "prompt_feedback": {
+   "block_reason": 0,
+   "safety_ratings": []
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": [
+     {
+      "extras": {
+       "signature": "EmAKXgFpFH0TG1lwYU5EGaKX/oe+GZTXQB83ivyNSPV71/cvbwV37gV7UYiYPzU8u40wz0LtK2i+9MRL5GL7gKf3QM+JqtTckJNFBfNI5bBug+JqY+vBTg5DiMMP6M5WMEA="
+      },
+      "text": "{\n  \"requirements\": [\n    {\n      \"unit_ids\": [\n        \"U-261460-82fe7dda\"\n      ],\n      \"source_quote\": \"Each task must contain:\",\n      \"kind\": \"context_only\",\n      \"statement\": \"Each task must contain the specified fields.\",\n      \"context_reason\": \"Lead-in sentence for the task data model fields.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-9675bb49\"\n      ],\n      \"source_quote\": \"Unique ID\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Unique ID.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-aaf23206\"\n      ],\n      \"source_quote\": \"Title\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Title.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-c9046f7a\"\n      ],\n      \"source_quote\": \"Description\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Description.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-576b7e59\"\n      ],\n      \"source_quote\": \"Status (Open, In Progress, Completed)\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Status with allowed values Open, In Progress, and Completed.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-9fb58566\"\n      ],\n      \"source_quote\": \"Priority (Low, Medium, High)\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Priority with allowed values Low, Medium, and High.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-1c2262bc\"\n      ],\n      \"source_quote\": \"Creation Date\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Creation Date.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-71bdd372\"\n      ],\n      \"source_quote\": \"Due Date\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Due Date.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-31569dba\"\n      ],\n      \"source_quote\": \"Last Updated Date\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Last Updated Date.\"\n    },\n    {\n      \"unit_ids\": [\n        \"U-261460-34e41747\"\n      ],\n      \"source_quote\": \"Completion Date (if completed)\",\n      \"kind\": \"data_model\",\n      \"statement\": \"Each task must contain a Completion Date if completed.\"\n    }\n  ]\n}",
+      "type": "text"
+     }
+    ],
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "google_genai"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_read": 0
+     },
+     "input_tokens": 1082,
+     "output_tokens": 783,
+     "total_tokens": 1865
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "models/gemini-3.5-flash-lite",
+ "provider": "google"
+}

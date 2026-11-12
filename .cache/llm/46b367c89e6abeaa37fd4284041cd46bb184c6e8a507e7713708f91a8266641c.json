@@ -1,0 +1,43 @@
+{
+ "llm_output": {
+  "prompt_feedback": {
+   "block_reason": 0,
+   "safety_ratings": []
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": [
+     {
+      "extras": {
+       "signature": "EmAKXgFpFH0TpXkloZDZgPg63jjTCZIxIlbPTzmw06KEG4PmtJYFPLmzSyDXpna0TlAGNXLsFxSy38vZXiSHncmlVdQyC6SDwml/nXN8Cwq8wlvwR+aP3Yt834Dl2fuTMMo="
+      },
+      "text": "{\n  \"requirements\": [\n    {\n      \"unit_ids\": [\"U-5f2cc4-03df7815\"],\n      \"source_quote\": \"Task titles are mandatory; cannot be empty.\",\n      \"kind\": \"validation_rule\",\n      \"statement\": \"Task titles are mandatory and cannot be empty.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5f2cc4-efe1e5d4\"],\n      \"source_quote\": \"Due Date cannot be earlier than the Creation Date.\",\n      \"kind\": \"validation_rule\",\n      \"statement\": \"Due Date cannot be earlier than the Creation Date.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5f2cc4-8ef41ba1\"],\n      \"source_quote\": \"Deleting a task requires a prompt confirmation.\",\n      \"kind\": \"frontend\",\n      \"statement\": \"Deleting a task requires a prompt confirmation.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5f2cc4-d57336f7\"],\n      \"source_quote\": \"Success or error messages must be displayed after create/update/delete actions.\",\n      \"kind\": \"frontend\",\n      \"statement\": \"Success or error messages must be displayed after create, update, or delete actions.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5f2cc4-ab9e9cb0\"],\n      \"source_quote\": \"Optimistic UI updates are not allowed: if a Backend action fails, the Frontend must not reflect a successful state.\",\n      \"kind\": \"constraint\",\n      \"statement\": \"Optimistic UI updates are not allowed such that if a backend action fails, the frontend must not reflect a successful state.\",\n      \"context_reason\": null\n    }\n  ]\n}",
+      "type": "text"
+     }
+    ],
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "google_genai"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_read": 0
+     },
+     "input_tokens": 1011,
+     "output_tokens": 446,
+     "total_tokens": 1457
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "models/gemini-3.5-flash-lite",
+ "provider": "google"
+}

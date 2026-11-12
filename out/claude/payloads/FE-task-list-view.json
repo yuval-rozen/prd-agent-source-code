@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add task list view showing all task fields",
+  "body": "**Parent:** `US-create-and-view-tasks`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nShow all saved tasks from GET /tasks in a list with ID, Title, Description, Status, Priority, Creation Date and Due Date. Show an empty state when there are no tasks and an error message when loading fails.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] List shows all required fields for each task.\n- [ ] Empty state is shown when no tasks exist.\n- [ ] Error message is shown when the list fails to load.\n- [ ] List is refreshed after a successful create.\n\n## Requirements\n\n- `R-4bed9064` (functional) Users can view the task list.\n- `R-9675bb49` (data_model) Each task has a unique ID field.\n- `R-aaf23206` (data_model) Each task has a Title field.\n- `R-c9046f7a` (data_model) Each task has a Description field.\n- `R-576b7e59` (data_model) Each task has a Status field whose allowed values are Open, In Progress and Completed.\n- `R-9fb58566` (data_model) Each task has a Priority field whose allowed values are Low, Medium and High.\n- `R-1c2262bc` (data_model) Each task has a Creation Date field.\n- `R-71bdd372` (data_model) Each task has a Due Date field.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

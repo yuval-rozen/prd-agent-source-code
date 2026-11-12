@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add DELETE /tasks/{id} endpoint that removes a stored task",
+  "body": "**Parent:** `US-delete-task-with-confirmation`\n\n**Track:** backend · **Size:** S · touches DB\n## Description\n\nAdd a DELETE endpoint that takes a task ID, removes the stored task and returns a success response. Document the request and response shape.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] DELETE /tasks/{id} removes the stored task and returns a success response\n- [ ] Endpoint is documented with request and response examples\n- [ ] Endpoint is covered by unit tests for success\n\n## Requirements\n\n- `R-8523b9ec` (functional) Users can delete a task.\n- `R-244669c0` (backend) The backend exposes endpoints to create, read all, read by ID, update, delete, and change the status of a Todo.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

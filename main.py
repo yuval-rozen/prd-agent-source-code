@@ -1,6 +1,6 @@
 """CLI entry point (SPEC §13).
 
-Milestone 1: `run` executes S1 (load_prd) and prints a summary; later stages are added in milestone 2+.
+Milestone 2: `run` executes S1 -> S2 -> S4 -> S5 -> S8 -> S11 (no checks or gates yet).
 """
 
 from __future__ import annotations
@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import time
 from enum import IntEnum, StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -16,11 +17,12 @@ import typer
 from pydantic import ValidationError
 from rich.console import Console
 from rich.table import Table
-from rich.tree import Tree
 
+from agent import build_graph
 from config import ConfigError, load_settings
+from llm import LLM, BudgetExceeded, LLMError
 from schemas import TicketPlan
-from tools.file_reader import PRDReadError, iter_sections, load_prd
+from tools.file_reader import PRDReadError
 
 
 class ExitCode(IntEnum):
@@ -31,6 +33,7 @@ class ExitCode(IntEnum):
     LLM = 4
     GITHUB = 5
     ABORTED = 6
+    BUDGET = 7
 
 
 class PreviewFormat(StrEnum):
@@ -69,34 +72,66 @@ def run(
     force: Annotated[bool, typer.Option("--force", help="Allow publishing a NEEDS_REVIEW plan.")] = False,
 ) -> None:
     """Run the pipeline on a PRD. Without --publish it is a dry run that stops after the plan review."""
+    if repo and not publish:
+        _fail("--repo is only used together with --publish.", ExitCode.BAD_INPUT)
+    if not prd.is_file():
+        _fail(f"PRD file not found: {prd}", ExitCode.BAD_INPUT)
     try:
         settings = load_settings()
         if publish:
             settings.require_github(repo)
+        llm = LLM(settings, replay=replay)
     except ConfigError as exc:
         _fail(str(exc), ExitCode.CONFIG, exc)
-    if repo and not publish:
-        _fail("--repo is only used together with --publish.", ExitCode.BAD_INPUT)
 
-    console.rule("[bold]S1 load_prd")
+    timings: dict[str, float] = {}
+    graph = build_graph(llm, console=console, timings=timings)
+    initial = {"prd_path": str(prd), "out_dir": str(out), "publish": publish, "auto_yes": yes, "force": force}
+    started = time.monotonic()
+    outcome: dict = {"error": None, "exit_code": int(ExitCode.OK), "state": {}}
     try:
-        parsed = load_prd(prd)
+        outcome["state"] = graph.invoke(initial)
     except PRDReadError as exc:
+        outcome.update(error=str(exc), exit_code=int(ExitCode.BAD_INPUT))
         _fail(str(exc), ExitCode.BAD_INPUT, exc)
+    except BudgetExceeded as exc:
+        outcome.update(error=str(exc), exit_code=int(ExitCode.BUDGET))
+        _fail(str(exc), ExitCode.BUDGET, exc)
+    except LLMError as exc:
+        outcome.update(error=str(exc), exit_code=int(ExitCode.LLM))
+        _fail(str(exc), ExitCode.LLM, exc)
+    finally:
+        cache = llm.cache
+        if cache.hits or cache.misses:
+            console.print(f"[dim]LLM response cache: {cache.hits} hits, {cache.misses} misses · cost {llm.cost.summary()}[/]")
+        _write_run_stats(out, settings, llm, timings, time.monotonic() - started, outcome, replay)
 
-    tree = Tree(f"[bold]{prd.name}[/]  [dim]prd_hash={parsed.prd_hash[:12]}[/]")
-    nodes = {(): tree}
-    for section in iter_sections(parsed.root):
-        if not section.path:
-            continue
-        parent = nodes[tuple(section.path[:-1])]
-        nodes[tuple(section.path)] = parent.add(f"{section.title} [dim]({len(section.unit_ids)} units)[/]")
-    console.print(tree)
-    console.print(f"[green]Loaded[/] {len(parsed.units)} units in {sum(1 for _ in iter_sections(parsed.root)) - 1} sections.")
-    console.print(
-        "[yellow]Stages S2+ are not implemented yet (milestone 2). "
-        f"Options recorded: out={out}, replay={replay}, yes={yes}, publish={publish}, force={force}.[/]"
-    )
+
+def _write_run_stats(out: Path, settings, llm: LLM, timings: dict, total_s: float, outcome: dict, replay: bool) -> None:
+    """Machine-readable record of the run (no secrets), used to compare providers and models."""
+    state = outcome.get("state") or {}
+    stats = {
+        "provider": settings.llm_provider,
+        "models": {role: settings.model_for(role) for role in ("extract", "generation", "critic")},
+        "google_thinking_level": settings.google_thinking_level if settings.llm_provider == "google" else None,
+        "effort": {role: settings.effort_for(role) for role in ("extract", "generation", "critic")}
+        if settings.llm_provider == "anthropic" else None,
+        "replay": replay,
+        "max_run_cost_usd": settings.max_run_cost_usd,
+        "stage_seconds": timings,
+        "total_seconds": round(total_s, 1),
+        "cost_usd": round(llm.cost.spent_usd, 6),
+        "api_calls": llm.cost.live_calls,
+        "cache_hits": llm.cache.hits,
+        "tokens": llm.cost.tokens,
+        "rate_limit_waits": llm.cost.rate_limit_waits,
+        "server_retries": llm.cost.server_retries,
+        "reference_findings": len(state.get("reference_findings") or []),
+        "exit_code": outcome["exit_code"],
+        "error": outcome["error"],
+    }
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "run_stats.json").write_text(json.dumps(stats, indent=2) + "\n", encoding="utf-8")
 
 
 @app.command()

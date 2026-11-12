@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add confirmation prompt to the task delete action",
+  "body": "**Parent:** `US-delete-task-with-confirmation`\n\n**Track:** frontend · **Size:** S · consumes API\n## Description\n\nAdd a delete action on each task that opens a confirmation prompt. The delete request is sent only when the user confirms. Cancelling closes the prompt without any request.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Delete action opens a confirmation prompt\n- [ ] Confirm sends DELETE request to the backend\n- [ ] Cancel closes the prompt and sends no request\n- [ ] Prompt component is covered by tests\n\n## Requirements\n\n- `R-8523b9ec` (functional) Users can delete a task.\n- `R-8ef41ba1` (functional) Deleting a task requires the user to confirm the deletion through a prompt before it is applied.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

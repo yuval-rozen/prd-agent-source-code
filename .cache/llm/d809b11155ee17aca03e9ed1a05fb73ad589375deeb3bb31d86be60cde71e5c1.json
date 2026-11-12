@@ -1,0 +1,39 @@
+{
+ "llm_output": {},
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": [
+     {
+      "extras": {
+       "signature": "EmAKXgFpFH0TFbstnwehVC/bRbz/xcaHmycEK7WLe9hxGEqg0LDdmgCwwuZ/7IoRFSWt1PXRDE4vcDXtA9CiHVDB05jgGNHJwEt0N0vXCVWX5BFhDcbwnk89okbkAzkJb14="
+      },
+      "text": "{\n  \"requirements\": [\n    {\n      \"unit_ids\": [\"U-5c5015-22f28530\"],\n      \"source_quote\": \"Create a new task.\",\n      \"kind\": \"functional\",\n      \"statement\": \"The system must allow users to create a new task.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5c5015-4bed9064\"],\n      \"source_quote\": \"View the task list.\",\n      \"kind\": \"functional\",\n      \"statement\": \"The system must allow users to view the task list.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5c5015-bc3213df\"],\n      \"source_quote\": \"Update an existing task.\",\n      \"kind\": \"functional\",\n      \"statement\": \"The system must allow users to update an existing task.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5c5015-8523b9ec\"],\n      \"source_quote\": \"Delete a task.\",\n      \"kind\": \"functional\",\n      \"statement\": \"The system must allow users to delete a task.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5c5015-2304218f\"],\n      \"source_quote\": \"Mark a task as 'Completed'.\",\n      \"kind\": \"functional\",\n      \"statement\": \"The system must allow users to mark a task as 'Completed'.\",\n      \"context_reason\": null\n    },\n    {\n      \"unit_ids\": [\"U-5c5015-959e2960\"],\n      \"source_quote\": \"Revert a 'Completed' task back to 'Open'.\",\n      \"kind\": \"functional\",\n      \"statement\": \"The system must allow users to revert a 'Completed' task back to 'Open'.\",\n      \"context_reason\": null\n    }\n  ]\n}",
+      "type": "text"
+     }
+    ],
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_name": "gemini-3.5-flash-lite",
+     "model_provider": "google_genai"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_read": 0
+     },
+     "input_tokens": 1007,
+     "output_tokens": 494,
+     "total_tokens": 1501
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "gemini-3.5-flash-lite",
+ "provider": "google"
+}

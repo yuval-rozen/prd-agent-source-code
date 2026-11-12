@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add task report API with filter, search and sort parameters",
+  "body": "**Parent:** `US-filter-search-sort-task-report`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nExpose the API that returns tasks for the report, applying Status, Priority and Date Range filters, title search and sort by Creation Date, Due Date, Status or Priority. Metric aggregation is part of the same API requirement and is covered by its own story.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Endpoint accepts Status, Priority, Date Range, title search and sort parameters\n- [ ] Filters, search and sort are applied in the database query, not in the client\n- [ ] Invalid parameter values return a documented error response\n- [ ] Unit and integration tests cover each parameter and their combination\n- [ ] API contract is documented\n\n## Requirements\n\n- `R-5f4ef76c` (functional) The task report can be filtered by Status, Priority, and Date Range.\n- `R-48e39a9d` (functional) The task report can be searched by task title.\n- `R-f214002a` (functional) The task report can be sorted by Creation Date, Due Date, Status, or Priority.\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

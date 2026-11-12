@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Add end-to-end test suite for the delete task flow",
+  "body": "**Parent:** `US-delete-task-with-confirmation`\n\n**Track:** qa_general · **Size:** M\n## Description\n\nWrite the test suite covering confirm, cancel, success, not-found and internal error paths for deleting a task, including the rule that no success state is shown on backend failure.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Tests cover confirm, cancel, success, not-found and internal error paths\n- [ ] Tests verify the task remains in the list when the backend returns an error\n- [ ] Tests verify no success message is shown when the backend fails\n- [ ] Test suite runs in the CI pipeline\n\n## Requirements\n\n- `R-8523b9ec` (functional) Users can delete a task.\n- `R-8ef41ba1` (functional) Deleting a task requires the user to confirm the deletion through a prompt before it is applied.\n- `R-d57336f7` (frontend) A success or error message must be displayed after each create, update, or delete task action.\n- `R-244669c0` (backend) The backend exposes endpoints to create, read all, read by ID, update, delete, and change the status of a Todo.\n- `R-9dc414dc` (backend) The backend returns simple error responses for task not found, invalid input, missing mandatory fields, updating or deleting non-existent tasks, and internal server or database errors.\n- `R-ab9e9cb0` (constraint) The frontend must not show a successful state for a task change before the backend confirms it, and must not show success when a backend action fails.\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

@@ -340,3 +340,95 @@ class SyncAction(_Model):
     action: SyncActionType
     issue_number: int | None = None
     payload: dict | None = None
+
+
+# --------------------------------------------------------------------------- LLM-facing drafts
+# The LLM fills these via native structured output. Code then derives IDs, normalizes keys, assigns labels
+# and links parents, so the LLM never has to reproduce hashes or label vocabularies exactly.
+
+
+class RequirementDraft(_Model):
+    unit_ids: list[str] = Field(description="IDs of the PRD units this requirement comes from (from the input).")
+    source_quote: str = Field(description="Verbatim text copied from the PRD that states the requirement.")
+    kind: ReqKind
+    statement: str = Field(description="One-sentence, testable restatement. Add nothing the quote does not say.")
+    context_reason: str | None = Field(
+        default=None, description="Only for kind=context_only: why this unit is context, not a requirement."
+    )
+
+
+class RequirementDraftList(_Model):
+    requirements: list[RequirementDraft]
+
+
+class EpicDraft(_Model):
+    title: str
+    scope: str = Field(description="What the project covers, in 2-4 sentences, grounded in the PRD.")
+    business_goals: list[str] = Field(description="Business goals stated or directly implied by the PRD overview.")
+
+
+class StorySkeletonDraft(_Model):
+    key: str = Field(description="Stable key 'US-<kebab-case-slug>' naming the capability.")
+    title: str
+    requirement_ids: list[str] = Field(description="IDs of the requirements this story delivers.")
+
+
+class ConstraintScopeDraft(_Model):
+    constraint_id: str = Field(description="ID of a requirement of kind constraint.")
+    applies_to_requirement_ids: list[str] = Field(
+        description="Requirement IDs the constraint applies to; empty list means it applies globally."
+    )
+
+
+class StoryPlanDraft(_Model):
+    epic: EpicDraft
+    stories: list[StorySkeletonDraft]
+    constraint_scopes: list[ConstraintScopeDraft] = Field(default_factory=list)
+
+
+class TaskArea(StrEnum):
+    frontend = "frontend"
+    backend = "backend"
+    qa = "qa"
+    db = "db"
+    infra = "infra"
+
+
+class TaskDraft(_Model):
+    key_slug: str = Field(description="Short kebab-case slug naming the artifact, e.g. 'loans-table-migration'.")
+    title: str = Field(description="Starts with [FE], [BE] or [QA] matching the track; names the concrete artifact.")
+    track: Track
+    area: TaskArea = Field(description="frontend for FE, qa for QA; backend, db or infra for BE tasks.")
+    description: str
+    size: Size
+    consumes_api: bool = Field(description="True if the task calls an API provided by a backend task.")
+    touches_db: bool = Field(description="True if the task reads or writes the database schema or data.")
+    requirement_ids: list[str] = Field(description="Requirement IDs this task implements; may be empty if derived.")
+    derived_reason: DerivedReason | None = Field(
+        default=None, description="Required when requirement_ids is empty: why the task exists."
+    )
+    is_spike: bool = Field(description="True only for a task that resolves an open decision (decision_open).")
+    definition_of_done: list[str]
+
+
+class StoryContentDraft(_Model):
+    as_a: str
+    i_want: str
+    so_that: str
+    business_description: str
+    business_value: str
+    acceptance_criteria: list[AcceptanceCriterion]
+    edge_cases: list[str]
+    dependencies: list[str] = Field(description="Keys of other stories (from the given list) this story depends on.")
+    definition_of_done: list[str]
+
+
+class StoryDetailDraft(_Model):
+    story: StoryContentDraft
+    tasks: list[TaskDraft]
+
+
+class StorySkeleton(_Model):
+    key: StoryKey
+    title: Title
+    requirement_ids: list[ReqId] = Field(default_factory=list)
