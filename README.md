@@ -214,6 +214,15 @@ uv run main.py run "prd/PRD To-Do Management System (1).pdf" --publish --repo ow
 - Any GitHub error stops the run with a clear message (exit code 5); rate limits and 5xx are retried.
   Because publishing is idempotent, re-running resumes where it stopped.
 
+**Sample publish** (the PASS plan in [`out/m3/`](out/m3/), 2026-11-12): the issues are in the test
+repository [yuval-rozen/prd-agent-issues](https://github.com/yuval-rozen/prd-agent-issues/issues), with
+the epic at [#1](https://github.com/yuval-rozen/prd-agent-issues/issues/1).
+
+| Run | Diff found by S9 | Written | Time |
+|---|---|---|---|
+| First publish | create 49 | 49 issues created, 11 bodies relinked in pass 2, 9 labels created | 111 s in S10 |
+| Second run, same PRD | unchanged 49 | nothing (0 writes) | — |
+
 ## Design decisions & trade-offs
 
 - **No sampling parameters; repeatability comes from the LLM cache.** Current Claude models reject
