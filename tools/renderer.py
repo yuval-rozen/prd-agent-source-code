@@ -6,6 +6,7 @@ The LLM never writes final issue Markdown. Issue references render as `#N` once 
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections import Counter, defaultdict
@@ -48,8 +49,25 @@ def _tidy(text: str) -> str:
     return "\n".join(out) + "\n"
 
 
-def render_bodies(plan: TicketPlan, issue_numbers: dict[str, int] | None = None) -> dict[str, str]:
-    """Return {ticket key: Markdown body} for the epic, every story and every task."""
+def content_hash(plan: TicketPlan, key: str) -> str:
+    """Hash of a ticket's plan data (SPEC §10): title, content fields, labels, parent key, blocked_by keys, plus the
+    keys of its children (so a story's task checklist is refreshed when tasks change). It is computed from the
+    plan, never from the rendered body, so real issue numbers do not affect it."""
+    items = {i.key: i for i in [plan.project, *plan.stories, *plan.tasks]}
+    data = items[key].model_dump(mode="json")
+    if key in {s.key for s in plan.stories}:
+        data["_children"] = [t.key for t in plan.tasks if t.story_key == key]
+    canonical = json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
+def marker(key: str, digest: str) -> str:
+    return f"<!-- prd-agent:key={key};hash={digest} -->"
+
+
+def render_bodies(plan: TicketPlan, issue_numbers: dict[str, int] | None = None, with_marker: bool = True) -> dict[str, str]:
+    """Return {ticket key: Markdown body} for the epic, every story and every task. Each body ends with the
+    idempotency marker `<!-- prd-agent:key=<KEY>;hash=<content_hash> -->`."""
     ref = _ref_fn(issue_numbers)
     reqs = {r.id: r for r in plan.requirements}
     bodies = {
@@ -67,12 +85,15 @@ def render_bodies(plan: TicketPlan, issue_numbers: dict[str, int] | None = None)
         bodies[task.key] = _env.get_template("task.md.j2").render(
             task=task, requirements=[reqs[i] for i in task.requirement_ids if i in reqs], ref=ref
         )
-    return {key: _tidy(body) for key, body in bodies.items()}
+    out = {key: _tidy(body) for key, body in bodies.items()}
+    if with_marker:
+        out = {key: f"{body}\n{marker(key, content_hash(plan, key))}\n" for key, body in out.items()}
+    return out
 
 
-def build_payloads(plan: TicketPlan, issue_numbers: dict[str, int] | None = None) -> dict[str, dict]:
+def build_payloads(plan: TicketPlan, issue_numbers: dict[str, int] | None = None, with_marker: bool = True) -> dict[str, dict]:
     """Raw GitHub REST payloads (POST /repos/{owner}/{repo}/issues) keyed by ticket key."""
-    bodies = render_bodies(plan, issue_numbers)
+    bodies = render_bodies(plan, issue_numbers, with_marker)
     items = [plan.project, *plan.stories, *plan.tasks]
     return {
         item.key: {"title": item.title, "body": bodies[item.key], "labels": [str(lb) for lb in item.labels]}
@@ -101,7 +122,7 @@ def demote_headings(markdown: str, levels: int) -> str:
 def render_plan_md(plan: TicketPlan) -> str:
     """One document: # epic > ## story > ### story sections and ### task > #### task sections.
     Issue bodies keep their own ## sections; only plan.md shifts them under their ticket heading."""
-    payloads = build_payloads(plan)
+    payloads = build_payloads(plan, with_marker=False)  # the marker is for GitHub, not for reading
     parts = [f"# {plan.project.title}\n", f"`{plan.project.key}` · labels: {', '.join(payloads[plan.project.key]['labels'])}\n"]
     parts.append(payloads[plan.project.key]["body"])
     for story in plan.stories:

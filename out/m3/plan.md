@@ -112,6 +112,7 @@ Users can capture tasks with consistent data that later stories can list, edit, 
 **Parent:** `US-create-task`
 
 **Track:** backend · **Size:** S · touches DB
+
 #### Description
 
 Create the new tasks table in the existing persistence database with columns for ID (unique), Title, Description, Status (Open, In Progress, Completed), Priority (Low, Medium, High), Creation Date, Due Date, Last Updated Date and Completion Date (nullable).
@@ -146,6 +147,7 @@ Create the new tasks table in the existing persistence database with columns for
 **Parent:** `US-create-task`
 
 **Track:** backend · **Size:** M · touches DB
+
 #### Description
 
 Add POST /tasks. The backend sets the unique ID, Creation Date and Last Updated Date on create; the client does not supply them. The endpoint rejects an empty title and a Due Date earlier than the Creation Date, returns a clear error for each, and stores nothing on rejection. Completion Date is stored empty.
@@ -176,6 +178,7 @@ Add POST /tasks. The backend sets the unique ID, Creation Date and Last Updated 
 **Parent:** `US-create-task`
 
 **Track:** frontend · **Size:** M · consumes API
+
 #### Description
 
 Add the create mode of the task form with inputs for Title, Description, Priority and Due Date. The form does not collect Creation Date or Last Updated Date, because the backend sets them. The form calls POST /tasks and shows a success or error message only after the backend responds. It does not add the task to any list before the backend confirms the create.
@@ -204,6 +207,7 @@ Add the create mode of the task form with inputs for Title, Description, Priorit
 **Parent:** `US-create-task`
 
 **Track:** qa_general · **Size:** S · consumes API · touches DB
+
 #### Description
 
 Automated tests for task creation covering the POST /tasks endpoint, the stored database row and the creation form.
@@ -310,6 +314,7 @@ The user can see all their tasks and their state in one place, so they know what
 **Parent:** `US-view-task-list`
 
 **Track:** backend · **Size:** M · touches DB
+
 #### Description
 
 Implement the read-all and read-by-ID endpoints for the user's to-do items. Return only the requesting user's tasks. Return a task-not-found error for an unknown ID, and use the shared simple error response format for internal and database errors. Create and write endpoints belong to other stories.
@@ -338,6 +343,7 @@ Implement the read-all and read-by-ID endpoints for the user's to-do items. Retu
 **Parent:** `US-view-task-list`
 
 **Track:** frontend · **Size:** M · consumes API
+
 #### Description
 
 Build the task list component on the to-do management page. Each row shows the task's status indicator and priority indicator. The component renders distinct loading, empty and error states, and calls the read-all endpoint.
@@ -367,6 +373,7 @@ Build the task list component on the to-do management page. Each row shows the t
 **Parent:** `US-view-task-list`
 
 **Track:** frontend · **Size:** S · consumes API
+
 #### Description
 
 Make the task list reload from the backend after a create, update, delete or status change is confirmed by the backend. The list must not change before the backend confirms the action.
@@ -392,6 +399,7 @@ Make the task list reload from the backend after a create, update, delete or sta
 **Parent:** `US-view-task-list`
 
 **Track:** qa_general · **Size:** M · consumes API
+
 #### Description
 
 Write the end-to-end and integration tests for the task list story, covering the populated, loading, empty and error states, the status and priority indicators, the auto-refresh behaviour and the read endpoints.
@@ -490,6 +498,7 @@ Users can correct and maintain their tasks without deleting and recreating them,
 **Parent:** `US-update-task`
 
 **Track:** backend · **Size:** M · touches DB
+
 #### Description
 
 Implement the update operation of the task endpoints: accept changed fields for an existing task ID, validate that the title is not empty and that the Due Date is not earlier than the Creation Date, store the change, and return the updated task. Return Task Not Found for unknown IDs and the shared error responses for invalid input and internal or database errors. Only the update operation is built here; create, read, delete and status change belong to other stories.
@@ -522,6 +531,7 @@ Implement the update operation of the task endpoints: accept changed fields for 
 **Parent:** `US-update-task`
 
 **Track:** frontend · **Size:** M · consumes API
+
 #### Description
 
 Extend the existing task creation/editing form so that it opens for an existing task with its current values filled in. On submit, call the update endpoint. Do not show the task as updated until the backend returns success. Show a success or error message after the update action.
@@ -554,6 +564,7 @@ Extend the existing task creation/editing form so that it opens for an existing 
 **Parent:** `US-update-task`
 
 **Track:** qa_general · **Size:** S · consumes API
+
 #### Description
 
 Write the test suite for the edit story covering the update endpoint, the edit form and the messages after each update action, including the rule that no optimistic success state is shown.
@@ -657,6 +668,7 @@ Users can remove tasks they no longer need, and accidental deletions are reduced
 **Parent:** `US-delete-task`
 
 **Track:** backend · **Size:** S · touches DB
+
 #### Description
 
 Add the DELETE /tasks/{id} endpoint. It deletes the stored task with the given ID and returns success. It covers only the delete part of the shared task endpoints.
@@ -683,6 +695,7 @@ Add the DELETE /tasks/{id} endpoint. It deletes the stored task with the given I
 **Parent:** `US-delete-task`
 
 **Track:** backend · **Size:** S · touches DB
+
 #### Description
 
 Make DELETE /tasks/{id} return a task-not-found error for an unknown ID and an internal or database error when storage fails. Use the simple error handling approach from the PRD.
@@ -709,6 +722,7 @@ Make DELETE /tasks/{id} return a task-not-found error for an unknown ID and an i
 **Parent:** `US-delete-task`
 
 **Track:** frontend · **Size:** S · consumes API
+
 #### Description
 
 Add a delete action to each task in the list. Selecting it opens a confirmation prompt. Cancelling sends no request. Confirming sends the delete request for that task ID.
@@ -736,6 +750,7 @@ Add a delete action to each task in the list. Selecting it opens a confirmation 
 **Parent:** `US-delete-task`
 
 **Track:** frontend · **Size:** S · consumes API
+
 #### Description
 
 After the delete request completes, show a success message and remove the task only on backend success. On error, show an error message and keep the task visible. Do not remove the task before the backend responds.
@@ -764,6 +779,7 @@ After the delete request completes, show a success message and remove the task o
 **Parent:** `US-delete-task`
 
 **Track:** qa_general · **Size:** S
+
 #### Description
 
 Test suite for the delete story. It covers the confirm and cancel paths, success and error messages, the not-found response, and the server or database error response.
@@ -865,6 +881,7 @@ Users can see which work is finished and which is still open, and the stored sta
 **Parent:** `US-change-task-status`
 
 **Track:** backend · **Size:** S · touches DB
+
 #### Description
 
 Add an endpoint that sets the status of an existing task to Completed or Open. Set the Completion Date when the status becomes Completed. Store the change in the tasks table created by the create task story.
@@ -892,6 +909,7 @@ Add an endpoint that sets the status of an existing task to Completed or Open. S
 **Parent:** `US-change-task-status`
 
 **Track:** backend · **Size:** S
+
 #### Description
 
 Return a task not found error when the task ID does not exist and an invalid input error when the status is not Open or Completed. Use the simple error handling approach. Leave stored data unchanged on both errors.
@@ -918,6 +936,7 @@ Return a task not found error when the task ID does not exist and an invalid inp
 **Parent:** `US-change-task-status`
 
 **Track:** frontend · **Size:** M · consumes API
+
 #### Description
 
 Add a control on each task list row that marks the task Completed or reverts it to Open. Show the row at its previous status while the request is pending. Update the row only after the backend confirms success. On failure, keep the previous status and show an error message.
@@ -948,6 +967,7 @@ Add a control on each task list row that marks the task Completed or reverts it 
 **Parent:** `US-change-task-status`
 
 **Track:** qa_general · **Size:** M · consumes API
+
 #### Description
 
 Test the status change endpoint, its error responses, the Completion Date behaviour, and the toggle behaviour, including pending and failed states.
@@ -1042,6 +1062,7 @@ The user can see how much work is open and how much is completed without opening
 **Parent:** `US-view-task-report`
 
 **Track:** backend · **Size:** M · touches DB
+
 #### Description
 
 Add a GET report endpoint that returns all tasks of the current user with Title, Status, Priority and Due Date, plus the Total, Open and Completed counts computed from those tasks. Filtering, search and sorting are out of scope for this story.
@@ -1068,6 +1089,7 @@ Add a GET report endpoint that returns all tasks of the current user with Title,
 **Parent:** `US-view-task-report`
 
 **Track:** frontend · **Size:** M · consumes API
+
 #### Description
 
 Build the Task Reporting page that calls the report endpoint and shows every returned task as one row in a table with Title, Status, Priority and Due Date.
@@ -1095,6 +1117,7 @@ Build the Task Reporting page that calls the report endpoint and shows every ret
 **Parent:** `US-view-task-report`
 
 **Track:** frontend · **Size:** S · consumes API
+
 #### Description
 
 Show the Total Tasks, Open Tasks and Completed Tasks metrics on the Task Reporting page using the counts returned by the report endpoint.
@@ -1121,6 +1144,7 @@ Show the Total Tasks, Open Tasks and Completed Tasks metrics on the Task Reporti
 **Parent:** `US-view-task-report`
 
 **Track:** qa_general · **Size:** S
+
 #### Description
 
 Add the automated test suite for the Task Reporting page table and metrics, covering the report endpoint and page behaviour.
@@ -1214,6 +1238,7 @@ Users can narrow a long task list to the subset they need to review, without sca
 **Parent:** `US-filter-report-tasks`
 
 **Track:** backend · **Size:** M · touches DB
+
 #### Description
 
 Extend the task report GET endpoint so it accepts optional status, priority and date range query parameters and returns only matching tasks. Validate values against the allowed Status and Priority values and reject invalid input. Searching, sorting and metric aggregation are implemented in other stories and are not part of this task.
@@ -1241,6 +1266,7 @@ Extend the task report GET endpoint so it accepts optional status, priority and 
 **Parent:** `US-filter-report-tasks`
 
 **Track:** frontend · **Size:** M · consumes API
+
 #### Description
 
 Add Status and Priority selectors and a Date Range control to the task reporting page. Changing a filter calls the report endpoint with the filter values and renders the returned tasks in the report table. Show the loading and error states while the request runs.
@@ -1268,6 +1294,7 @@ Add Status and Priority selectors and a Date Range control to the task reporting
 **Parent:** `US-filter-report-tasks`
 
 **Track:** qa_general · **Size:** M · consumes API
+
 #### Description
 
 Write the automated tests for the report filters: API tests for each filter, combined filters, empty results and invalid values, and UI tests for the filter controls and the resulting table rows.
@@ -1356,6 +1383,7 @@ Users can locate a single task quickly in a larger report by matching its title,
 **Parent:** `US-search-report-tasks`
 
 **Track:** backend · **Size:** S · touches DB
+
 #### Description
 
 Extend the task report API so it accepts an optional title search value and filters the returned tasks by their Title field. Other report parameters (filtering, sorting, aggregation) belong to other stories and are not implemented here.
@@ -1384,6 +1412,7 @@ Extend the task report API so it accepts an optional title search value and filt
 **Parent:** `US-search-report-tasks`
 
 **Track:** frontend · **Size:** S · consumes API
+
 #### Description
 
 Add a search input labelled By Title to the Task Reporting page. The input sends the search text to the report API and displays the returned rows in the report table.
@@ -1412,6 +1441,7 @@ Add a search input labelled By Title to the Task Reporting page. The input sends
 **Parent:** `US-search-report-tasks`
 
 **Track:** qa_general · **Size:** S · consumes API
+
 #### Description
 
 Write the end-to-end and API tests that verify title search on the reporting page and in the report API.
@@ -1499,6 +1529,7 @@ Users can find the most urgent or oldest tasks quickly and review the report in 
 **Parent:** `US-sort-report-tasks`
 
 **Track:** backend · **Size:** M · touches DB
+
 #### Description
 
 Add a sort parameter to the report tasks endpoint that accepts creation_date, due_date, status or priority and returns matching tasks ordered by that field. Reject other values with an invalid input error.
@@ -1526,6 +1557,7 @@ Add a sort parameter to the report tasks endpoint that accepts creation_date, du
 **Parent:** `US-sort-report-tasks`
 
 **Track:** frontend · **Size:** M · consumes API
+
 #### Description
 
 Add a sort control to the Task Reporting page with the options Creation Date, Due Date, Status and Priority. Selecting an option calls the report API with the matching sort value and shows the selected option.
@@ -1553,6 +1585,7 @@ Add a sort control to the Task Reporting page with the options Creation Date, Du
 **Parent:** `US-sort-report-tasks`
 
 **Track:** qa_general · **Size:** S · consumes API
+
 #### Description
 
 Test suite covering the report sort control and the sort parameter of the report endpoint, including the invalid sort value case.
@@ -1655,6 +1688,7 @@ Users can share and analyse the exact task view they are working with, without r
 **Parent:** `US-export-report-excel`
 
 **Track:** backend · **Size:** S
+
 #### Description
 
 Resolve the open decision whether the Excel file is generated on the frontend or the backend. Document the choice, rationale and trade-offs. The implementation tasks of this story follow the outcome.
@@ -1681,6 +1715,7 @@ Resolve the open decision whether the Excel file is generated on the frontend or
 **Parent:** `US-export-report-excel`
 
 **Track:** backend · **Size:** M · touches DB
+
 #### Description
 
 Add an endpoint that returns the report tasks for the export using the same filter and sort parameters as the report API. The endpoint returns the rows and column values needed for the Excel file. Its exact role depends on the outcome of the generation location decision.
@@ -1712,6 +1747,7 @@ Add an endpoint that returns the report tasks for the export using the same filt
 **Parent:** `US-export-report-excel`
 
 **Track:** frontend · **Size:** S · consumes API
+
 #### Description
 
 Add an export control to the Task Reporting page. The control sends the currently applied filters and sort to the export endpoint, downloads the result and shows the no-data message when there is nothing to export.
@@ -1741,6 +1777,7 @@ Add an export control to the Task Reporting page. The control sends the currentl
 **Parent:** `US-export-report-excel`
 
 **Track:** frontend · **Size:** M · consumes API
+
 #### Description
 
 Build the Excel file from the export data with clear column headers, one consistent date format for all date cells, and a filename that includes the generation timestamp. Scope may change if the decision spike places file generation on the backend.
@@ -1769,6 +1806,7 @@ Build the Excel file from the export data with clear column headers, one consist
 **Parent:** `US-export-report-excel`
 
 **Track:** qa_general · **Size:** M · consumes API
+
 #### Description
 
 Test suite covering the export endpoint, the export control, the file content and the filename, as well as the no-data case and the filter and sort behaviour of the export.

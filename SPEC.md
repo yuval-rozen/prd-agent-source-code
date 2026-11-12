@@ -185,7 +185,9 @@ AgentState (agent.py): prd_path, units, requirements, requirement_diff, req_repo
 
 ## 10. GitHub idempotency & update flow
 - Every issue body ends with `<!-- prd-agent:key=<KEY>;hash=<content_hash> -->` and gets the label prd-agent. The key → issue mapping is read from GitHub. Issues without the marker are never touched.
-- content_hash is computed from the ticket's plan data (title, content fields, labels, parent key, blocked_by keys), NOT from the rendered body, so real issue numbers do not affect it.
+- content_hash is computed from the ticket's plan data (title, content fields, labels, parent key, blocked_by keys, and for a story the keys of its tasks, so its checklist is refreshed when tasks change), NOT from the rendered body, so real issue numbers do not affect it.
+- Listing: GET issues with state=all and label prd-agent, all pages (Link rel=next). Pull requests, issues without the marker, and a second issue repeating an already-seen key are reported and never touched. A managed issue that is closed but whose key is back in the plan is updated and reopened.
+- Writes are spaced at least 1 s apart (GitHub's secondary rate limits). Pass 2 patches only the bodies that change once the real issue numbers are known. Close = a comment, then state closed (state_reason not_planned).
 - Diff:
   - key missing → create.
   - hash differs → update.

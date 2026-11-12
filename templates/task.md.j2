@@ -1,6 +1,6 @@
 **Parent:** {{ ref(task.story_key) }}
 
-**Track:** {{ task.track.value }} · **Size:** {{ task.size.value }}{% if task.consumes_api %} · consumes API{% endif %}{% if task.touches_db %} · touches DB{% endif %}
+**Track:** {{ task.track.value }} · **Size:** {{ task.size.value }}{{ " · consumes API" if task.consumes_api else "" }}{{ " · touches DB" if task.touches_db else "" }}
 
 ## Description
 

@@ -8,7 +8,8 @@ ReviewFinding instead of doing it silently.
 
 S1 load_prd -> S2 extract_requirements -> S3 check_requirements <-> repair_requirements
 -> S4 plan_stories -> S5 detail_stories -> S6 map_dependencies -> S7 check_plan <-> repair_plan
--> S8 render_preview -> G1 approve_plan -> S11 summary.   (S9/S10/G2 publish arrive in milestone 4.)
+-> S8 render_preview -> G1 approve_plan -> [only with --publish] S9 sync_diff -> G2 confirm_diff -> S10 publish
+-> S11 summary.
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ from schemas import (
     StoryPlanDraft,
     StorySkeleton,
     SyncAction,
+    SyncActionType,
     TaskArea,
     TaskDraft,
     TechnicalTask,
@@ -59,6 +61,7 @@ from schemas import (
     slugify,
 )
 from tools import renderer, state_store, validators
+from tools.github_tool import publish, sync_diff
 from tools.file_reader import iter_sections, load_prd
 
 log = logging.getLogger("prd_agent.agent")
@@ -101,6 +104,8 @@ class AgentState(TypedDict, total=False):
     reports: list[ReviewReport]
     reference_findings: Findings
     sync_actions: list[SyncAction]
+    publish_decision: str | None
+    publish_result: dict | None
     publish: bool
     auto_yes: bool
     force: bool
@@ -766,8 +771,9 @@ def plan_status(state: AgentState) -> Status:
 
 def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer=None, timings: dict | None = None,
                 max_repair_rounds: int = DEFAULT_MAX_REPAIR_ROUNDS, grounding_threshold: float = 90.0,
-                duplicate_threshold: float = 90.0):
-    """Compile the graph. `timings` (if given) receives {stage name: seconds}, also when a stage fails."""
+                duplicate_threshold: float = 90.0, github=None):
+    """Compile the graph. `timings` (if given) receives {stage name: seconds}, also when a stage fails.
+    `github` is a tools.github_tool.GitHubTool, required only when the run publishes (S9 / G2 / S10)."""
     console = console or Console()
     timings = timings if timings is not None else {}
     cost = getattr(llm, "cost", None)
@@ -936,6 +942,7 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             return {"approval": "approve"}
         report = state.get("plan_report")
         answer = interrupt({
+            "gate": "G1",
             "status": status.value,
             "stories": len(state["plan"].stories),
             "tasks": len(state["plan"].tasks),
@@ -956,7 +963,66 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         return {"approval": "approve" if action == "approve" else "abort"}
 
     def route_approval(state: AgentState) -> str:
-        return "repair_plan" if state.get("approval") == "feedback" and state.get("feedback_findings") else "summary"
+        if state.get("approval") == "feedback" and state.get("feedback_findings"):
+            return "repair_plan"
+        if state.get("approval") == "approve" and state.get("publish"):
+            return "sync_diff"
+        return "summary"
+
+    # ---- S9 / G2 / S10
+    def n_sync_diff(state: AgentState) -> AgentState:
+        stage("S9 sync_diff")
+        if github is None:
+            raise RuntimeError("--publish needs a GitHub client")
+        listing = github.list_marked_issues()
+        actions = sync_diff(state["plan"], listing)
+        counts = {k.value: sum(a.action is k for a in actions) for k in SyncActionType}
+        console.print(f"{github.repo}: {len(listing.issues)} managed issue(s) found · "
+                      + " · ".join(f"{k} {v}" for k, v in counts.items()))
+        if listing.ignored_unmarked:
+            numbers = ", ".join(f"#{n}" for n in listing.ignored_unmarked)
+            console.print(f"[dim]{len(listing.ignored_unmarked)} issue(s) labelled prd-agent without a marker are "
+                          f"never touched: {numbers}[/]")
+        for key, number in listing.duplicate_keys:
+            console.print(f"[yellow]Issue #{number} repeats the key {key}; only the first issue is managed.[/]")
+        return {"sync_actions": actions}
+
+    def n_confirm_diff(state: AgentState) -> AgentState:
+        stage("G2 confirm_diff")
+        actions = state["sync_actions"]
+        if state["status"] is Status.NEEDS_REVIEW and not state.get("force"):
+            console.print("[red]Refusing to publish: status is NEEDS_REVIEW. Resolve the findings or pass --force.[/]")
+            return {"publish_decision": "refused"}
+        changes = [a for a in actions if a.action is not SyncActionType.unchanged]
+        if not changes:
+            console.print("Nothing to change on GitHub.")
+            return {"publish_decision": "confirm"}
+        if state.get("auto_yes"):
+            console.print("--yes: diff confirmed automatically.")
+            return {"publish_decision": "confirm"}
+        answer = interrupt({
+            "gate": "G2",
+            "repo": github.repo if github is not None else "",
+            "counts": {k.value: sum(a.action is k for a in actions) for k in SyncActionType},
+            "changes": [{"key": a.key, "action": a.action.value, "issue": a.issue_number,
+                         "title": (a.payload or {}).get("title")} for a in changes],
+        })
+        action = answer.get("action") if isinstance(answer, dict) else str(answer)
+        return {"publish_decision": "confirm" if action == "confirm" else "abort"}
+
+    def route_publish(state: AgentState) -> str:
+        changes = any(a.action is not SyncActionType.unchanged for a in state.get("sync_actions") or [])
+        return "publish" if state.get("publish_decision") == "confirm" and changes else "summary"
+
+    def n_publish(state: AgentState) -> AgentState:
+        stage("S10 publish")
+        result = publish(state["plan"], state["sync_actions"], github)
+        console.print(f"created {len(result.created)} · updated {len(result.updated)} · closed {len(result.closed)} · "
+                      f"unchanged {len(result.unchanged)} · relinked {len(result.relinked)} · "
+                      f"labels created {len(result.labels_created)}")
+        return {"publish_result": {"numbers": result.numbers, "created": result.created, "updated": result.updated,
+                                   "closed": result.closed, "unchanged": result.unchanged,
+                                   "relinked": result.relinked, "labels_created": result.labels_created}}
 
     def n_summary(state: AgentState) -> AgentState:
         stage("S11 summary")
@@ -983,6 +1049,20 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             console.print(f"[bold]Time:[/] {time.monotonic() - state['started_at']:.1f}s")
         if state.get("approval") == "abort":
             console.print("[red]Aborted at G1; nothing was published.[/]")
+        decision = state.get("publish_decision")
+        published = state.get("publish_result")
+        if state.get("publish") and published and github is not None:
+            epic = published["numbers"].get(plan.project.key)
+            link = f" · epic {github.issue_url(epic)}" if epic else ""
+            console.print(f"[bold]Published[/] to {github.repo}: created {len(published['created'])}, updated "
+                          f"{len(published['updated'])}, closed {len(published['closed'])}, unchanged "
+                          f"{len(published['unchanged'])}{link}")
+        elif state.get("publish") and decision == "refused":
+            console.print("[yellow]Nothing was published (refused at G2: status NEEDS_REVIEW).[/]")
+        elif state.get("publish") and decision == "abort":
+            console.print("[yellow]Nothing was published (aborted at G2).[/]")
+        elif state.get("publish") and decision == "confirm":
+            console.print("GitHub already matches the plan: 0 changes.")
         return {"status": status}
 
     graph = StateGraph(AgentState)
@@ -990,7 +1070,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         ("load_prd", n_load_prd), ("extract_requirements", n_extract), ("check_requirements", n_check_requirements),
         ("repair_requirements", n_repair_requirements), ("plan_stories", n_plan), ("detail_stories", n_detail),
         ("map_dependencies", n_map_dependencies), ("check_plan", n_check_plan), ("repair_plan", n_repair_plan),
-        ("render_preview", n_render), ("approve_plan", n_approve), ("summary", n_summary),
+        ("render_preview", n_render), ("approve_plan", n_approve), ("sync_diff", n_sync_diff),
+        ("confirm_diff", n_confirm_diff), ("publish", n_publish), ("summary", n_summary),
     ]
     for name, fn in nodes:
         graph.add_node(name, timed(name, fn))
@@ -1005,6 +1086,9 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
     graph.add_conditional_edges("check_plan", route_plan, ["repair_plan", "render_preview"])
     graph.add_edge("repair_plan", "check_plan")
     graph.add_edge("render_preview", "approve_plan")
-    graph.add_conditional_edges("approve_plan", route_approval, ["repair_plan", "summary"])
+    graph.add_conditional_edges("approve_plan", route_approval, ["repair_plan", "sync_diff", "summary"])
+    graph.add_edge("sync_diff", "confirm_diff")
+    graph.add_conditional_edges("confirm_diff", route_publish, ["publish", "summary"])
+    graph.add_edge("publish", "summary")
     graph.add_edge("summary", END)
     return graph.compile(checkpointer=checkpointer)

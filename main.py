@@ -27,6 +27,7 @@ from config import ConfigError, load_settings
 from llm import LLM, BudgetExceeded, LLMError
 from schemas import Status, TicketPlan
 from tools.file_reader import PRDReadError
+from tools.github_tool import GitHubError, GitHubTool
 
 
 class ExitCode(IntEnum):
@@ -80,10 +81,12 @@ def run(
         _fail("--repo is only used together with --publish.", ExitCode.BAD_INPUT)
     if not prd.is_file():
         _fail(f"PRD file not found: {prd}", ExitCode.BAD_INPUT)
+    github = None
     try:
         settings = load_settings()
         if publish:
-            settings.require_github(repo)
+            token, target_repo = settings.require_github(repo)
+            github = GitHubTool(token.get_secret_value(), target_repo, dry_run=False)
         llm = LLM(settings, replay=replay)
     except ConfigError as exc:
         _fail(str(exc), ExitCode.CONFIG, exc)
@@ -91,19 +94,22 @@ def run(
     timings: dict[str, float] = {}
     graph = build_graph(llm, console=console, timings=timings, checkpointer=MemorySaver(serde=_checkpoint_serde()),
                         max_repair_rounds=settings.max_repair_rounds, grounding_threshold=settings.grounding_threshold,
-                        duplicate_threshold=settings.duplicate_title_threshold)
+                        duplicate_threshold=settings.duplicate_title_threshold, github=github)
     config = {"configurable": {"thread_id": f"run-{uuid.uuid4().hex[:8]}"}, "recursion_limit": 100}
     initial = {"prd_path": str(prd), "out_dir": str(out), "publish": publish, "auto_yes": yes, "force": force}
     started = time.monotonic()
     outcome: dict = {"error": None, "exit_code": int(ExitCode.OK), "state": {}}
     try:
         result = graph.invoke(initial, config)
-        while result.get("__interrupt__"):  # G1 approve_plan
-            answer = _ask_approval(result["__interrupt__"][0].value)
+        while result.get("__interrupt__"):  # G1 approve_plan / G2 confirm_diff
+            payload = result["__interrupt__"][0].value
+            answer = _ask_publish(payload) if payload.get("gate") == "G2" else _ask_approval(payload)
             result = graph.invoke(Command(resume=answer), config)
         outcome["state"] = result
         if result.get("status") is Status.ABORTED:
             outcome.update(exit_code=int(ExitCode.ABORTED), error="aborted at G1")
+        elif publish and result.get("publish_decision") in ("refused", "abort"):
+            outcome.update(exit_code=int(ExitCode.ABORTED), error=f"publish {result['publish_decision']} at G2")
     except PRDReadError as exc:
         outcome.update(error=str(exc), exit_code=int(ExitCode.BAD_INPUT))
         _fail(str(exc), ExitCode.BAD_INPUT, exc)
@@ -113,6 +119,9 @@ def run(
     except LLMError as exc:
         outcome.update(error=str(exc), exit_code=int(ExitCode.LLM))
         _fail(str(exc), ExitCode.LLM, exc)
+    except GitHubError as exc:
+        outcome.update(error=str(exc), exit_code=int(ExitCode.GITHUB))
+        _fail(f"{exc} Publishing is idempotent: fix the cause and re-run to resume.", ExitCode.GITHUB, exc)
     finally:
         cache = llm.cache
         if cache.hits or cache.misses:
@@ -147,6 +156,22 @@ def _ask_approval(payload: dict) -> dict:
     return {"action": "approve" if choice.startswith("ap") else "abort"}
 
 
+def _ask_publish(payload: dict) -> dict:
+    """G2: show the create / update / close actions; answer confirm | abort. EOF (no terminal) = abort."""
+    console.rule("[bold]G2 confirm GitHub changes")
+    counts = payload["counts"]
+    console.print(f"{payload['repo']}: create {counts['create']} · update {counts['update']} · "
+                  f"close {counts['close']} · unchanged {counts['unchanged']}")
+    for c in payload["changes"]:
+        number = f"#{c['issue']}" if c.get("issue") else "new"
+        console.print(f"  {c['action']:<7} {number:<6} {c['key']}  {c.get('title') or ''}")
+    try:
+        choice = input("confirm / abort [abort]: ").strip().lower() or "abort"
+    except EOFError:
+        choice = "abort"
+    return {"action": "confirm" if choice.startswith("c") else "abort"}
+
+
 def _write_run_stats(out: Path, settings, llm: LLM, timings: dict, total_s: float, outcome: dict, replay: bool) -> None:
     """Machine-readable record of the run (no secrets), used to compare providers and models."""
     state = outcome.get("state") or {}
@@ -164,6 +189,10 @@ def _write_run_stats(out: Path, settings, llm: LLM, timings: dict, total_s: floa
         "cost_by_stage": {k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in llm.cost.by_stage.items()},
         "cost_by_role": {k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in llm.cost.by_role.items()},
         "status": state["status"].value if state.get("status") else None,
+        "publish": {"decision": state.get("publish_decision"),
+                    "counts": {k: len(v) for k, v in (state.get("publish_result") or {}).items() if isinstance(v, list)},
+                    "epic_issue": (state.get("publish_result") or {}).get("numbers", {}).get(
+                        state["plan"].project.key) if state.get("plan") else None} if state.get("publish") else None,
         "requirement_rounds": state.get("req_rounds"),
         "plan_repair_rounds": state.get("plan_rounds"),
         "blocking_history": {"check_requirements": state.get("req_blocking_history"),

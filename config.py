@@ -160,12 +160,24 @@ class Settings(BaseModel):
                 "GITHUB_TOKEN is not set. It is required only with --publish. "
                 "Use a fine-grained token limited to the test repo with Issues read/write."
             )
-        repo = repo_override or self.github_repo
+        repo = normalize_repo(repo_override or self.github_repo)
         if not repo:
             raise ConfigError("No GitHub repo given. Pass --repo owner/name or set GITHUB_REPO.")
         if repo.count("/") != 1 or not all(repo.split("/")):
             raise ConfigError(f"Invalid repo {repo!r}: expected the form owner/name.")
         return self.github_token, repo
+
+
+def normalize_repo(value: str | None) -> str | None:
+    """Accept owner/name or a GitHub URL (https://github.com/owner/name[.git], git@github.com:owner/name.git)."""
+    if not value:
+        return value
+    repo = value.strip()
+    for prefix in ("https://github.com/", "http://github.com/", "git@github.com:", "github.com/"):
+        if repo.lower().startswith(prefix):
+            repo = repo[len(prefix):]
+    repo = repo.rstrip("/")
+    return repo[:-4] if repo.endswith(".git") else repo
 
 
 def _env(name: str) -> str | None:

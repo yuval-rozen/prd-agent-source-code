@@ -137,3 +137,11 @@ def test_parallel_override(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "google")
     monkeypatch.setenv("MAX_PARALLEL_CALLS", "2")
     assert load_settings(env_file=None).parallel_calls == 2
+
+
+@pytest.mark.parametrize("value", ["owner/name", "https://github.com/owner/name.git", "https://github.com/owner/name/",
+                                   "git@github.com:owner/name.git"])
+def test_repo_url_is_normalized(monkeypatch, value):
+    monkeypatch.setenv("GITHUB_TOKEN", FAKE_KEY)
+    monkeypatch.setenv("GITHUB_REPO", value)
+    assert load_settings(env_file=None).require_github()[1] == "owner/name"

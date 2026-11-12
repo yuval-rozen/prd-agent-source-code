@@ -194,6 +194,26 @@ decision ($0.0389, 21 s), and the run ended **PASS**. Reviewer decisions are pas
 every later repair as authoritative context, and feedback starts a fresh repair cycle, so the loop can
 never restore an earlier round that lacks the decision.
 
+## Publishing to GitHub
+
+```bash
+uv run main.py run "prd/PRD To-Do Management System (1).pdf" --publish --repo owner/name
+```
+
+- Needs `GITHUB_TOKEN` (fine-grained, the test repository only, Issues: read and write, short expiry) and
+  the repository (`--repo` or `GITHUB_REPO`). Dry runs (no `--publish`) never need a token.
+- After G1, S9 reads the repository (read-only) and computes the diff; G2 shows every create / update /
+  close and asks for confirmation (`--yes` skips the question; a NEEDS_REVIEW plan is refused unless
+  `--force`). S10 then creates the epic, the stories and the tasks (blockers first), patches the bodies
+  with the real issue numbers ("Parent: #N", "Blocked by: #N", child checklists), and closes removed
+  tickets with a comment. Issues are never deleted.
+- Every managed issue carries the `prd-agent` label and ends with
+  `<!-- prd-agent:key=<KEY>;hash=<content_hash> -->`. The hash comes from the plan data, not from the
+  rendered body, so a second run with the same plan sends no writes at all. Issues without the marker are
+  never touched.
+- Any GitHub error stops the run with a clear message (exit code 5); rate limits and 5xx are retried.
+  Because publishing is idempotent, re-running resumes where it stopped.
+
 ## Design decisions & trade-offs
 
 - **No sampling parameters; repeatability comes from the LLM cache.** Current Claude models reject
