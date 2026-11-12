@@ -12,7 +12,7 @@ from schemas import Label, ReviewFinding, Severity, Size, Status, SyncActionType
 from tests.fake_github import REPO, FakeGitHub
 from tests.fake_llm import FakeLLM
 from tests.test_pipeline import GENERIC_PRD
-from tools.github_tool import GitHubError, parse_marker, publish, publish_order, sync_diff
+from tools.github_tool import GitHubError, parse_marker, publish, publish_order, read_sub_issues, sync_diff, tree_links
 from tools.renderer import build_payloads, content_hash
 
 
@@ -31,12 +31,22 @@ def plan(prd_file, tmp_path):
 
 def _sync(plan, gh):
     tool = gh.tool()
-    actions = sync_diff(plan, tool.list_marked_issues())
+    listing = tool.list_marked_issues()
+    actions = sync_diff(plan, listing, read_sub_issues(tool, plan, listing))
     return actions, tool
 
 
 def _counts(actions):
     return {k.value: sum(a.action is k for a in actions) for k in SyncActionType}
+
+
+def _by_key(actions):
+    """Issue-level actions by ticket key (sub-issue link actions are counted separately)."""
+    return {a.key: a.action for a in actions if a.action is not SyncActionType.link}
+
+
+def _n_links(plan):
+    return len(plan.stories) + len(plan.tasks)
 
 
 # --------------------------------------------------------------------------- renderer: marker and hash
@@ -89,7 +99,8 @@ def test_publish_order_is_epic_stories_then_blockers_first(plan):
 def test_first_publish_creates_everything_with_real_references(plan):
     gh = FakeGitHub()
     actions, tool = _sync(plan, gh)
-    assert _counts(actions) == {"create": 1 + len(plan.stories) + len(plan.tasks), "update": 0, "close": 0, "unchanged": 0}
+    assert _counts(actions) == {"create": 1 + len(plan.stories) + len(plan.tasks), "update": 0, "close": 0,
+                                "link": _n_links(plan), "unchanged": 0}
     result = publish(plan, actions, tool)
     assert {str(lb) for i in [plan.project, *plan.stories, *plan.tasks] for lb in i.labels} <= set(gh.labels)
     numbers = result.numbers
@@ -118,6 +129,7 @@ def test_second_run_changes_nothing(plan):
     writes_after_first = len(gh.writes())
     again, tool2 = _sync(plan, gh)
     assert _counts(again)["unchanged"] == len(again) and len(again) == 1 + len(plan.stories) + len(plan.tasks)
+    assert _counts(again)["link"] == 0
     publish(plan, again, tool2)
     assert len(gh.writes()) == writes_after_first  # no labels, issues or comments written
 
@@ -134,7 +146,7 @@ def test_modified_plan_creates_updates_and_closes(plan):
     tasks = [t.model_copy(update={"blocked_by": [b for b in t.blocked_by if b != removed.key]}) for t in tasks]
     v2 = plan.model_copy(update={"tasks": tasks})
     actions2, tool2 = _sync(v2, gh)
-    by_key = {a.key: a.action for a in actions2}
+    by_key = _by_key(actions2)
     assert by_key["QA-extra-suite"] is SyncActionType.create
     assert by_key[renamed.key] is SyncActionType.update
     assert by_key[removed.key] is SyncActionType.close
@@ -169,7 +181,7 @@ def test_closed_managed_issue_is_reopened_when_back_in_plan(plan):
     numbers = publish(plan, actions, tool).numbers
     gh.issues[numbers[plan.tasks[0].key]]["state"] = "closed"
     again, tool2 = _sync(plan, gh)
-    assert {a.key: a.action for a in again}[plan.tasks[0].key] is SyncActionType.update
+    assert _by_key(again)[plan.tasks[0].key] is SyncActionType.update
     publish(plan, again, tool2)
     assert gh.issues[numbers[plan.tasks[0].key]]["state"] == "open"
 
@@ -237,7 +249,8 @@ def test_graph_publish_with_g2_confirmation_then_zero_changes(prd_file, tmp_path
     assert first["__interrupt__"][0].value["gate"] == "G1"
     second = graph.invoke(Command(resume={"action": "approve"}), config)
     g2 = second["__interrupt__"][0].value
-    assert g2["gate"] == "G2" and g2["counts"]["create"] == len(g2["changes"]) > 0 and gh.writes() == []
+    assert g2["gate"] == "G2" and g2["counts"]["create"] + g2["counts"]["link"] == len(g2["changes"]) and gh.writes() == []
+    assert g2["counts"]["create"] > 0 and g2["counts"]["link"] > 0
     final = graph.invoke(Command(resume={"action": "confirm"}), config)
     assert len(final["publish_result"]["created"]) == g2["counts"]["create"]
     # Second run with --yes: G2 sees no changes and nothing is written.
@@ -275,3 +288,98 @@ def test_task_body_keeps_a_blank_line_before_each_heading(plan):
     for t in plan.tasks:
         body = build_payloads(plan)[t.key]["body"]
         assert not re.search(r"[^\n]\n## ", body), body[:200]
+
+
+# --------------------------------------------------------------------------- native sub-issue tree
+
+
+def _expected_tree(plan, numbers):
+    tree = {numbers[plan.project.key]: [numbers[s.key] for s in plan.stories]}
+    for s in plan.stories:
+        kids = [numbers[k] for p, k in tree_links(plan) if p == s.key]
+        if kids:
+            tree[numbers[s.key]] = kids
+    return tree
+
+
+def test_first_publish_builds_the_native_tree_with_issue_ids(plan):
+    gh = FakeGitHub()
+    actions, tool = _sync(plan, gh)
+    result = publish(plan, actions, tool)
+    assert gh.tree() == _expected_tree(plan, result.numbers)  # the fake rejects numbers: links used issue ids
+    assert len(result.linked) == _n_links(plan)
+    epic_body = gh.issues[result.numbers[plan.project.key]]["body"]
+    assert all(f"- [ ] #{result.numbers[s.key]}" in epic_body for s in plan.stories)  # checklist fallback kept
+
+
+def test_second_run_adds_no_links(plan):
+    gh = FakeGitHub()
+    actions, tool = _sync(plan, gh)
+    publish(plan, actions, tool)
+    writes = len(gh.writes())
+    again, tool2 = _sync(plan, gh)
+    assert _counts(again)["link"] == 0
+    publish(plan, again, tool2)
+    assert len(gh.writes()) == writes
+    assert not any("sub_issues" in p for m, p in gh.writes()[writes:])
+
+
+def test_already_published_issues_get_only_the_missing_links(plan):
+    """The upgrade path: issues published before sub-issue support, one link already made by hand."""
+    gh = FakeGitHub()
+    numbers = {}
+    for key in publish_order(plan):
+        payload = build_payloads(plan)[key]
+        numbers[key] = gh.add_issue(payload["title"], payload["body"], payload["labels"])
+    first_story = plan.stories[0].key
+    gh.link(numbers[plan.project.key], numbers[first_story])
+    actions, tool = _sync(plan, gh)
+    counts = _counts(actions)
+    assert counts["create"] == counts["update"] == counts["close"] == 0
+    assert counts["link"] == _n_links(plan) - 1  # the existing link is skipped
+    before = len(gh.writes())
+    publish(plan, actions, tool)
+    issue_writes = [p for m, p in gh.writes()[before:] if "sub_issues" not in p and "/labels" not in p]
+    assert issue_writes == []  # only links (and missing labels) were written
+    assert gh.tree() == _expected_tree(plan, numbers)
+    again, _ = _sync(plan, gh)
+    assert all(a.action is SyncActionType.unchanged for a in again)
+
+
+def test_task_moved_to_another_story_is_re_parented(plan):
+    gh = FakeGitHub()
+    actions, tool = _sync(plan, gh)
+    numbers = publish(plan, actions, tool).numbers
+    task = next(t for t in plan.tasks if t.story_key == plan.stories[0].key)
+    target = plan.stories[1].key
+    moved = plan.model_copy(update={"tasks": [t.model_copy(update={"story_key": target}) if t.key == task.key else t
+                                              for t in plan.tasks]})
+    actions2, tool2 = _sync(moved, gh)
+    links = [a for a in actions2 if a.action is SyncActionType.link]
+    assert [(a.key, a.payload["parent"]) for a in links] == [(task.key, target)]
+    publish(moved, actions2, tool2)
+    assert numbers[task.key] in gh.tree()[numbers[target]]
+    assert numbers[task.key] not in gh.tree().get(numbers[plan.stories[0].key], [])
+    third, _ = _sync(moved, gh)
+    assert _counts(third)["link"] == 0
+
+
+def test_sub_issues_added_by_a_human_are_kept(plan):
+    gh = FakeGitHub()
+    actions, tool = _sync(plan, gh)
+    numbers = publish(plan, actions, tool).numbers
+    note = gh.add_issue("Human follow-up", "not managed")
+    story = numbers[plan.stories[0].key]
+    gh.link(story, note)
+    again, tool2 = _sync(plan, gh)
+    assert _counts(again)["link"] == 0
+    publish(plan, again, tool2)
+    assert note in gh.tree()[story]
+
+
+def test_dry_run_adds_no_links(plan):
+    gh = FakeGitHub()
+    tool = gh.tool(dry_run=True)
+    listing = tool.list_marked_issues()
+    result = publish(plan, sync_diff(plan, listing, read_sub_issues(tool, plan, listing)), tool)
+    assert gh.writes() == [] and gh.tree() == {} and len(result.linked) == _n_links(plan)

@@ -17,6 +17,8 @@ class FakeGitHub:
         self.issues: dict[int, dict] = {}
         self.labels: dict[str, dict] = {}
         self.comments: list[tuple[int, str]] = []
+        self.parent_of: dict[int, int] = {}  # child issue id -> parent issue number (native sub-issues)
+        self.children: dict[int, list[int]] = {}  # parent issue number -> child issue ids, in link order
         self.requests: list[tuple[str, str]] = []
         self.failures: list[tuple[str, str, int, dict]] = []  # (method, path regex, status, headers), used once each
         self.page_size = page_size
@@ -26,12 +28,22 @@ class FakeGitHub:
     def add_issue(self, title: str, body: str = "", labels: list[str] = (), state: str = "open", pr: bool = False) -> int:
         number = self._next
         self._next += 1
-        issue = {"number": number, "title": title, "body": body, "state": state,
+        issue = {"id": 900000 + number, "number": number, "title": title, "body": body, "state": state,
                  "labels": [{"name": n} for n in labels], "html_url": f"https://github.com/{REPO}/issues/{number}"}
         if pr:
             issue["pull_request"] = {"url": "x"}
         self.issues[number] = issue
         return number
+
+    def link(self, parent_number: int, child_number: int) -> None:
+        child_id = self.issues[child_number]["id"]
+        self.parent_of[child_id] = parent_number
+        self.children.setdefault(parent_number, []).append(child_id)
+
+    def tree(self) -> dict[int, list[int]]:
+        """parent number -> child numbers, from the native sub-issue links."""
+        by_id = {i["id"]: n for n, i in self.issues.items()}
+        return {p: [by_id[c] for c in kids] for p, kids in self.children.items() if kids}
 
     def fail_once(self, method: str, path_regex: str, status: int, headers: dict | None = None) -> None:
         self.failures.append((method, path_regex, status, headers or {}))
@@ -71,6 +83,27 @@ class FakeGitHub:
                 self.labels.setdefault(name, {"name": name})
             number = self.add_issue(body["title"], body.get("body", ""), body.get("labels", []))
             return httpx.Response(201, json=self.issues[number])
+        sub = re.fullmatch(rf"{re.escape(base)}/issues/(\d+)/sub_issues", path)
+        if sub:
+            parent = int(sub.group(1))
+            if parent not in self.issues:
+                return httpx.Response(404, json={"message": "Not Found"})
+            if method == "GET":
+                kids = [i for i in self.issues.values() if i["id"] in self.children.get(parent, [])]
+                return self._page(kids, request.url.params)
+            child_id = body["sub_issue_id"]
+            if child_id not in {i["id"] for i in self.issues.values()}:
+                return httpx.Response(422, json={"message": "sub_issue_id is not a valid issue id"})
+            current = self.parent_of.get(child_id)
+            if current == parent:
+                return httpx.Response(422, json={"message": "Issue may not contain duplicate sub-issues"})
+            if current is not None and not body.get("replace_parent"):
+                return httpx.Response(422, json={"message": "Issue may not have more than one parent"})
+            if current is not None:
+                self.children[current].remove(child_id)
+            self.parent_of[child_id] = parent
+            self.children.setdefault(parent, []).append(child_id)
+            return httpx.Response(201, json=self.issues[parent])
         match = re.fullmatch(rf"{re.escape(base)}/issues/(\d+)(/comments)?", path)
         if match:
             number = int(match.group(1))

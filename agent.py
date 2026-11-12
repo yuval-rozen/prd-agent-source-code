@@ -61,7 +61,7 @@ from schemas import (
     slugify,
 )
 from tools import renderer, state_store, validators
-from tools.github_tool import publish, sync_diff
+from tools.github_tool import publish, read_sub_issues, sync_diff
 from tools.file_reader import iter_sections, load_prd
 
 log = logging.getLogger("prd_agent.agent")
@@ -975,7 +975,7 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         if github is None:
             raise RuntimeError("--publish needs a GitHub client")
         listing = github.list_marked_issues()
-        actions = sync_diff(state["plan"], listing)
+        actions = sync_diff(state["plan"], listing, read_sub_issues(github, state["plan"], listing))
         counts = {k.value: sum(a.action is k for a in actions) for k in SyncActionType}
         console.print(f"{github.repo}: {len(listing.issues)} managed issue(s) found · "
                       + " · ".join(f"{k} {v}" for k, v in counts.items()))
@@ -1005,7 +1005,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             "repo": github.repo if github is not None else "",
             "counts": {k.value: sum(a.action is k for a in actions) for k in SyncActionType},
             "changes": [{"key": a.key, "action": a.action.value, "issue": a.issue_number,
-                         "title": (a.payload or {}).get("title")} for a in changes],
+                         "title": (a.payload or {}).get("title"), "parent": (a.payload or {}).get("parent")}
+                        for a in changes],
         })
         action = answer.get("action") if isinstance(answer, dict) else str(answer)
         return {"publish_decision": "confirm" if action == "confirm" else "abort"}
@@ -1019,10 +1020,11 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         result = publish(state["plan"], state["sync_actions"], github)
         console.print(f"created {len(result.created)} · updated {len(result.updated)} · closed {len(result.closed)} · "
                       f"unchanged {len(result.unchanged)} · relinked {len(result.relinked)} · "
-                      f"labels created {len(result.labels_created)}")
+                      f"sub-issue links added {len(result.linked)} · labels created {len(result.labels_created)}")
         return {"publish_result": {"numbers": result.numbers, "created": result.created, "updated": result.updated,
                                    "closed": result.closed, "unchanged": result.unchanged,
-                                   "relinked": result.relinked, "labels_created": result.labels_created}}
+                                   "relinked": result.relinked, "linked": result.linked,
+                                   "labels_created": result.labels_created}}
 
     def n_summary(state: AgentState) -> AgentState:
         stage("S11 summary")
@@ -1055,8 +1057,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             epic = published["numbers"].get(plan.project.key)
             link = f" · epic {github.issue_url(epic)}" if epic else ""
             console.print(f"[bold]Published[/] to {github.repo}: created {len(published['created'])}, updated "
-                          f"{len(published['updated'])}, closed {len(published['closed'])}, unchanged "
-                          f"{len(published['unchanged'])}{link}")
+                          f"{len(published['updated'])}, closed {len(published['closed'])}, sub-issue links "
+                          f"{len(published['linked'])}, unchanged {len(published['unchanged'])}{link}")
         elif state.get("publish") and decision == "refused":
             console.print("[yellow]Nothing was published (refused at G2: status NEEDS_REVIEW).[/]")
         elif state.get("publish") and decision == "abort":

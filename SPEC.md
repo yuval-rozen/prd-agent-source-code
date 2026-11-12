@@ -119,14 +119,14 @@ G1 approve_plan (human, interrupt)
 - `--yes` auto-approves only when the status is PASS.
 
 S9 sync_diff (code: github_tool read-only)
-- Lists the existing issues that carry the prd-agent label and marker, and compares them with the plan → SyncActions (create / update / close / unchanged). See Section 10.
+- Lists the existing issues that carry the prd-agent label and marker, and compares them with the plan → SyncActions (create / update / close / unchanged). It also reads the current sub-issues of every managed parent (`GET .../issues/{n}/sub_issues`) and adds a `link` action for every story→epic or task→story link that is missing. See Section 10.
 
 G2 confirm_diff (human, interrupt)
 - Shows the counts and the list of create / update / close actions. `--yes` skips it. Refused when the status is NEEDS_REVIEW, unless `--force` is passed.
 
 S10 publish (code: github_tool write)
 - Pass 1: ensure labels, then create/update issues in topological order (Epic → stories → tasks, blockers first).
-- Pass 2: re-render the bodies with real issue numbers ("Parent: #N", "Blocked by: #N") and add child checklists ("- [ ] #N") to the Epic and the Stories.
+- Pass 2: re-render the bodies with real issue numbers ("Parent: #N", "Blocked by: #N") and add child checklists ("- [ ] #N") to the Epic and the Stories. Then build the native GitHub ticket tree with the REST sub-issues API: each story is a sub-issue of the epic and each task a sub-issue of its story (`POST /repos/{owner}/{repo}/issues/{parent_number}/sub_issues` with `sub_issue_id` = the child's issue **id**, not its number, and `replace_parent: true` so a task that moved to another story is re-parented). Required token permission: Issues: write (listing sub-issues needs Issues: read). The body checklists stay as a fallback for views that do not show sub-issues.
 - Close removed issues with a comment. Never delete issues.
 
 S11 summary (code)
@@ -193,7 +193,8 @@ AgentState (agent.py): prd_path, units, requirements, requirement_diff, req_repo
   - hash differs → update.
   - key not in the plan → close.
   - same → unchanged.
-- Running twice therefore produces 0 changes.
+- Sub-issue links: a link that already exists is skipped, so it is never posted twice; links to sub-issues a human added are never removed.
+- Running twice therefore produces 0 changes (no issue writes and no link writes).
 - RequirementDiff: a removed requirement and an added one whose normalized quotes fuzzy-match (≥ 85) are reported as "changed".
 - A PRD update is just another run:
   1. S1 loads the previous plan.

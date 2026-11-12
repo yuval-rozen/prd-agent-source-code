@@ -91,6 +91,7 @@ class SyncActionType(StrEnum):
     create = "create"
     update = "update"
     close = "close"
+    link = "link"  # add a native GitHub sub-issue link: payload {"parent": <parent key>}
     unchanged = "unchanged"
 
 
@@ -339,6 +340,7 @@ class SyncAction(_Model):
     key: NonEmpty
     action: SyncActionType
     issue_number: int | None = None
+    issue_id: int | None = None  # GitHub's issue id (not its number); needed for sub-issue links
     payload: dict | None = None
 
 

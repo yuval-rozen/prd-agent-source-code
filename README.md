@@ -207,6 +207,11 @@ uv run main.py run "prd/PRD To-Do Management System (1).pdf" --publish --repo ow
   `--force`). S10 then creates the epic, the stories and the tasks (blockers first), patches the bodies
   with the real issue numbers ("Parent: #N", "Blocked by: #N", child checklists), and closes removed
   tickets with a comment. Issues are never deleted.
+- **Native ticket tree:** S10 also links every story as a sub-issue of the epic and every task as a
+  sub-issue of its story (REST sub-issues API; the token's Issues: read and write permission covers it),
+  so GitHub shows the tree with progress on the epic and each story. Links that already exist are
+  skipped, so a second run still makes 0 changes; sub-issues added by hand are left alone. The checklists
+  in the bodies stay as a fallback.
 - Every managed issue carries the `prd-agent` label and ends with
   `<!-- prd-agent:key=<KEY>;hash=<content_hash> -->`. The hash comes from the plan data, not from the
   rendered body, so a second run with the same plan sends no writes at all. Issues without the marker are
@@ -222,6 +227,8 @@ the epic at [#1](https://github.com/yuval-rozen/prd-agent-issues/issues/1).
 |---|---|---|---|
 | First publish | create 49 | 49 issues created, 11 bodies relinked in pass 2, 9 labels created | 111 s in S10 |
 | Second run, same PRD | unchanged 49 | nothing (0 writes) | — |
+| Sub-issue upgrade, same 49 issues | unchanged 49, link 48 | 48 native sub-issue links (10 stories under the epic, 38 tasks under their stories); no issue writes | 99 s total |
+| Run after the upgrade | unchanged 49, link 0 | nothing (0 writes) | — |
 
 ## Design decisions & trade-offs
 

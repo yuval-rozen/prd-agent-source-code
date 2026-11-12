@@ -161,10 +161,11 @@ def _ask_publish(payload: dict) -> dict:
     console.rule("[bold]G2 confirm GitHub changes")
     counts = payload["counts"]
     console.print(f"{payload['repo']}: create {counts['create']} · update {counts['update']} · "
-                  f"close {counts['close']} · unchanged {counts['unchanged']}")
+                  f"close {counts['close']} · sub-issue links {counts.get('link', 0)} · unchanged {counts['unchanged']}")
     for c in payload["changes"]:
         number = f"#{c['issue']}" if c.get("issue") else "new"
-        console.print(f"  {c['action']:<7} {number:<6} {c['key']}  {c.get('title') or ''}")
+        detail = c.get("title") or (f"sub-issue of {c['parent']}" if c.get("parent") else "")
+        console.print(f"  {c['action']:<7} {number:<6} {c['key']}  {detail}")
     try:
         choice = input("confirm / abort [abort]: ").strip().lower() or "abort"
     except EOFError:
