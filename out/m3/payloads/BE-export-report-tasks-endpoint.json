@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add export endpoint returning filtered and sorted report tasks",
+  "body": "**Parent:** `US-export-report-excel`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nAdd an endpoint that returns the report tasks for the export using the same filter and sort parameters as the report API. The endpoint returns the rows and column values needed for the Excel file. Its exact role depends on the outcome of the generation location decision.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n- `BE-excel-generation-location-decision`\n- `BE-report-tasks-filter-api`\n- `BE-report-api-sort-parameter`\n\n## Definition of Done\n\n- [ ] Endpoint accepts the same filter and sort parameters as the report task API.\n- [ ] Response contains the same tasks, in the same order, as the report table for the same parameters.\n- [ ] Endpoint returns an empty result when no tasks match, without an error.\n- [ ] Endpoint returns a clear error response for invalid filter or sort parameters.\n- [ ] Unit and API tests cover filtering, sorting and the empty result.\n\n## Requirements\n\n- `R-52360b76` (functional) The reporting page lets the user download task data to an Excel file.\n- `R-09e9d163` (functional) The exported Excel file must reflect the filters and sorting currently applied to the task view.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

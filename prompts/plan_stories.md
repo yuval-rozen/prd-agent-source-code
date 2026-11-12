@@ -22,6 +22,12 @@ Story scoping:
   giant story. A capability usually combines its functional, frontend, backend, data and validation
   requirements.
 - Every requirement that is not `context_only` must be cited by at least one story.
+- A requirement that covers several capabilities (for example "endpoints for create, read, update and
+  delete", or "error handling for not found, invalid input and server errors") is cited by every story
+  that delivers part of it. Each of those stories implements only its own part.
+- The data-model requirements of one entity (its fields) are all cited by the first story that stores
+  that entity, so its table is created once and complete. Later stories that use those fields cite only
+  the requirements of their own behavior and depend on that story.
 - A story that is affected by a constraint also lists that constraint's ID in `requirement_ids`.
 - Each `decision_open` requirement belongs to the story whose work depends on the decision.
 - Cite only requirement IDs from the input. Do not add scope the requirements do not contain.

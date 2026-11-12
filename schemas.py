@@ -348,7 +348,7 @@ class SyncAction(_Model):
 
 
 class RequirementDraft(_Model):
-    unit_ids: list[str] = Field(description="IDs of the PRD units this requirement comes from (from the input).")
+    unit_ids: list[str] = Field(description="References of the PRD units this requirement comes from, e.g. ['u3'].")
     source_quote: str = Field(description="Verbatim text copied from the PRD that states the requirement.")
     kind: ReqKind
     statement: str = Field(description="One-sentence, testable restatement. Add nothing the quote does not say.")
@@ -432,3 +432,12 @@ class StorySkeleton(_Model):
     key: StoryKey
     title: Title
     requirement_ids: list[ReqId] = Field(default_factory=list)
+
+
+class DependencyEdgeDraft(_Model):
+    task_key: str = Field(description="Key of the task that is blocked.")
+    blocked_by: list[str] = Field(description="Keys of the tasks that must be finished first.")
+
+
+class DependencyPlanDraft(_Model):
+    edges: list[DependencyEdgeDraft]

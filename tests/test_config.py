@@ -10,8 +10,9 @@ def test_defaults_without_env():
     assert s.llm_provider == "anthropic"
     assert s.max_repair_rounds == 3
     assert s.anthropic_api_key is None
-    assert s.models() == ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-sonnet-5-5"]
-    assert s.max_run_cost_usd == 0.50
+    assert s.models() == ["claude-haiku-5-5", "claude-haiku-5-5", "claude-sonnet-5-5"]
+    assert s.max_run_cost_usd == 0.30
+
 
 
 def test_budget_and_models_from_env(monkeypatch):

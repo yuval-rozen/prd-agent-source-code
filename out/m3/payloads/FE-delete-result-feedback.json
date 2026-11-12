@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Show success or error after task deletion, with no optimistic removal",
+  "body": "**Parent:** `US-delete-task`\n\n**Track:** frontend · **Size:** S · consumes API\n## Description\n\nAfter the delete request completes, show a success message and remove the task only on backend success. On error, show an error message and keep the task visible. Do not remove the task before the backend responds.\n\n## Blocked by\n\n- `BE-delete-task-endpoint`\n- `BE-delete-task-error-handling`\n\n## Definition of Done\n\n- [ ] A success message is shown only after the backend confirms the deletion.\n- [ ] The task is removed from the list only after a success response.\n- [ ] An error response shows an error message and keeps the task visible.\n- [ ] No success state is shown when the backend returns an error.\n\n## Requirements\n\n- `R-d57336f7` (frontend) A success or error message is displayed after each create, update and delete task action.\n- `R-ab9e9cb0` (constraint) The frontend does not show a successful state for a task action unless the backend action has succeeded; optimistic UI updates are not allowed.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Add test suite for task creation across API, database and form",
+  "body": "**Parent:** `US-create-task`\n\n**Track:** qa_general · **Size:** S · consumes API · touches DB\n## Description\n\nTest task creation end to end: valid create, empty title, Due Date earlier than Creation Date, Due Date equal to Creation Date, database failure, and the pending state of the form.\n\n## Blocked by\n\n- `BE-create-task-endpoint`\n- `FE-create-task-form`\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] Tests cover every acceptance criterion of this story.\n- [ ] Tests check the stored fields and that rejected tasks are not stored.\n- [ ] Tests pass in the CI pipeline.\n\n## Requirements\n\n- `R-22f28530` (functional) The user can create a new task.\n- `R-03df7815` (validation_rule) The system rejects a task whose title is empty, so task titles are mandatory.\n- `R-efe1e5d4` (validation_rule) The system rejects a task whose Due Date is earlier than its Creation Date.\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

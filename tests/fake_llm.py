@@ -9,6 +9,12 @@ import re
 
 from schemas import (
     AcceptanceCriterion,
+    DependencyEdgeDraft,
+    DependencyPlanDraft,
+    ReviewFinding,
+    ReviewReport,
+    Severity,
+    Verdict,
     ConstraintScopeDraft,
     EpicDraft,
     ReqKind,
@@ -25,16 +31,32 @@ from schemas import (
     slugify,
 )
 
-_UNIT = re.compile(r"^\[(U-[0-9a-f-]+)\] (.+)$", re.MULTILINE)
+_UNIT = re.compile(r"^\[(u\d+)\] (.+)$", re.MULTILINE)
 _REQ = re.compile(r"^\[(R-[0-9a-f-]+)\] \((\w+)\) (.+?): ", re.MULTILINE)
 
 
 class FakeLLM:
-    def __init__(self):
+    """critic_findings: list of ReviewFinding lists, one per critic call (missing entries = no findings).
+    drop_units: unit references the first extraction of a section silently skips (to exercise S3 repair)."""
+
+    def __init__(self, critic_findings=None, drop_units=()):
         self.calls: list[tuple[str, str]] = []
+        self.roles: list[str] = []
+        self.critic_findings = list(critic_findings or [])
+        self.drop_units = set(drop_units)
+        self._critic_calls = 0
 
     def structured(self, schema, system, user, *, role="generation"):
+        if isinstance(user, list):  # content blocks (the critic marks a cache breakpoint)
+            user = "".join(block["text"] for block in user)
         self.calls.append((schema.__name__, user))
+        self.roles.append(role)
+        if schema is DependencyPlanDraft:
+            return self._dependencies(user)
+        if schema is ReviewReport:
+            findings = self.critic_findings[self._critic_calls] if self._critic_calls < len(self.critic_findings) else []
+            self._critic_calls += 1
+            return ReviewReport(stage="critic", round=0, verdict=Verdict.pass_, findings=findings)
         if schema is RequirementDraftList:
             return self._extract(user)
         if schema is StoryPlanDraft:
@@ -43,10 +65,12 @@ class FakeLLM:
             return self._detail(user)
         raise AssertionError(f"unexpected schema {schema}")
 
-    @staticmethod
-    def _extract(user: str) -> RequirementDraftList:
+    def _extract(self, user: str) -> RequirementDraftList:
         reqs = []
-        for uid, text in _UNIT.findall(user):
+        repairing = "had these problems" in user
+        for uid, text in _UNIT.findall(user.split("A previous extraction")[0]):
+            if uid in self.drop_units and not repairing:
+                continue
             if text.rstrip().endswith(":"):
                 kind, reason = ReqKind.context_only, "lead-in sentence"
             elif text.lower().startswith("all "):
@@ -75,6 +99,16 @@ class FakeLLM:
             stories=stories,
             constraint_scopes=[ConstraintScopeDraft(constraint_id=c, applies_to_requirement_ids=[]) for c in constraints],
         )
+
+    @staticmethod
+    def _dependencies(user: str) -> DependencyPlanDraft:
+        keys = re.findall(r"^(\S+) \[(\w+), .*\(story (\S+)\)$", user, re.MULTILINE)
+        edges = []
+        for key, track, story in keys:
+            if track != "backend":
+                blockers = [k for k, t, s in keys if s == story and t == "backend"]
+                edges.append(DependencyEdgeDraft(task_key=key, blocked_by=blockers + ["BE-unknown-task"]))
+        return DependencyPlanDraft(edges=edges)
 
     @staticmethod
     def _detail(user: str) -> StoryDetailDraft:

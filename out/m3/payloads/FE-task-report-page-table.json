@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Build Task Reporting page with a table of all tasks",
+  "body": "**Parent:** `US-view-task-report`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nBuild the Task Reporting page that calls the report endpoint and shows every returned task as one row in a table with Title, Status, Priority and Due Date.\n\n## Blocked by\n\n- `BE-report-endpoint-with-metrics`\n\n## Definition of Done\n\n- [ ] Page loads data from the report endpoint.\n- [ ] Table shows one row per task with Title, Status, Priority and Due Date from the response.\n- [ ] Table shows an empty state when the user has no tasks.\n- [ ] Page shows no values that were not returned by the endpoint.\n\n## Requirements\n\n- `R-d0e0fe7a` (frontend) The Task Reporting page presents an aggregated view of the user's tasks.\n- `R-a1b267a3` (frontend) The reporting page displays all tasks in a table.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

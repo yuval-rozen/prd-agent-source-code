@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add status, priority and date range filters to the report tasks endpoint",
+  "body": "**Parent:** `US-filter-report-tasks`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nExtend the task report GET endpoint so it accepts optional status, priority and date range query parameters and returns only matching tasks. Validate values against the allowed Status and Priority values and reject invalid input. Searching, sorting and metric aggregation are implemented in other stories and are not part of this task.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n- `BE-report-endpoint-with-metrics`\n\n## Definition of Done\n\n- [ ] Endpoint accepts status, priority and date range parameters, each optional.\n- [ ] Only tasks matching all supplied filter values are returned, following the combination rule documented in the open question.\n- [ ] Invalid status, priority or date values return the standard invalid input error.\n- [ ] Filter queries read the stored tasks table created by the create task story.\n\n## Requirements\n\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Build the Excel file with headers, date format and timestamped filename",
+  "body": "**Parent:** `US-export-report-excel`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nBuild the Excel file from the export data with clear column headers, one consistent date format for all date cells, and a filename that includes the generation timestamp. Scope may change if the decision spike places file generation on the backend.\n\n## Blocked by\n\n- `BE-export-report-tasks-endpoint`\n- `BE-excel-generation-location-decision`\n\n## Definition of Done\n\n- [ ] First row of the file contains clear column headers for every exported field.\n- [ ] All date cells use one date format, verified by tests.\n- [ ] Filename includes the generation timestamp in the format agreed in the story.\n- [ ] Each export produces a different filename when generated at different times.\n\n## Requirements\n\n- `R-fad183b1` (non_functional) The exported Excel file must have clear column headers and use one consistent date format throughout.\n- `R-d22b9b6a` (functional) The filename of the exported Excel file must include the timestamp of when the file was generated.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

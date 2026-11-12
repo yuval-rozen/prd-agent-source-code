@@ -39,9 +39,9 @@ A CLI agent that turns a PRD (PDF / DOCX / MD / TXT) into a validated GitHub iss
    | `GITHUB_TOKEN` | only with `--publish` | fine-grained, test repo only, Issues read/write, short expiry |
    | `GITHUB_REPO` | only with `--publish` | `owner/name`, or pass `--repo` |
    | `EXTRACT_MODEL` | no | S2 extraction; default `claude-haiku-5-5` / `gemini-3.5-flash-lite` |
-   | `GENERATION_MODEL` | no | S4 / S5 / S6 / repair; default `claude-sonnet-5-5` / `gemini-3.8-flash` |
+   | `GENERATION_MODEL` | no | S4 / S5 / S6 / repair; default `claude-haiku-5-5` / `gemini-3.8-flash` |
    | `CRITIC_MODEL` | no | S7 critic; default `claude-sonnet-5-5` / `gemini-3.8-flash` |
-   | `MAX_RUN_COST_USD` | no | hard cost cap per run, default `0.50` |
+   | `MAX_RUN_COST_USD` | no | hard cost cap per run, default `0.30` |
    | `EXTRACT_EFFORT`, `GENERATION_EFFORT`, `CRITIC_EFFORT` | no | reasoning effort, default `low` / `medium` / `medium` |
 
    During development all three models can be set to `claude-haiku-5-5`.
@@ -134,7 +134,62 @@ Only run 3 produced a plan. The indicators are computed from `out/claude/plan.js
 
 ### Decision and rationale
 
-<!-- To be filled in after reviewing the plans. -->
+**Decision:** Claude Haiku 5.5 (`claude-haiku-5-5`) for extraction and generation, Claude Sonnet 5.5
+(`claude-sonnet-5-5`) for the critic. These are the defaults in `config.py` and `.env.example`;
+`LLM_PROVIDER=google` stays available but is not used.
+
+**Rationale:**
+
+- **Gemini's free tier cannot carry the pipeline.** It failed twice, both times on server timeouts:
+  a 504 after one call hung for ~13 minutes (run 1), and three 503/504 errors in a row during extraction
+  (run 2). Its per-project limits (reported at about 5 requests/minute and 20/day for `gemini-3.8-flash`)
+  cannot support a full run with repair rounds, let alone a live demo.
+- **Haiku is fast and cheap enough to generate.** It finished M2 in about 1 minute for $0.02 (run 3),
+  with every actionable requirement cited.
+- **A cheap model generates, a stronger model reviews.** Haiku's M2 plan had problems that only show up
+  across stories (duplicate migrations and endpoints, a task duplicated in two stories, work assumed to
+  live in another story). A per-story generator cannot see them, so the critic must see the whole PRD and
+  the whole plan at once. That one call per round is where the stronger model pays for itself; it is
+  about three quarters of the run's cost (see the M3 runs below).
+
+### Milestone 3 runs (Haiku generation, Sonnet critic, $0.30 cap)
+
+Same PRD, `claude-haiku-5-5` for S2 / S4 / S5 / S6 / repairs and `claude-sonnet-5-5` for the critic.
+Runs 5 and 6 reuse cached responses for the stages whose prompts did not change. Each run stopped at G1
+(no terminal attached); outputs are written before the gate.
+
+| | Run 4 | Run 5 | Run 6 (committed: [`out/m3/`](out/m3/)) |
+|---|---|---|---|
+| Change before the run | first M3 run | overlap findings route to every named task's story; Given/When/Then dedup | S4/S5: shared requirements split per story, one complete table; critic caches only the PRD; keep the best round |
+| PRD units covered | 45 / 45 | 45 / 45 | 45 / 45 |
+| Blocking findings per S7 round | 8 → 5 → 4 → 3 | 8 → 4 → 1 → 5 | 6 → 1 → 2 (round 2 kept) |
+| Final status | NEEDS_REVIEW (3 blocking) | NEEDS_REVIEW (5 blocking) | NEEDS_REVIEW (1 blocking, explained) |
+| Stories / tasks | 8 / 40 | 8 / 38 | 10 / 38 |
+| Total time | 269.5 s | 126.3 s | 170.8 s |
+| Cost (critic share) | $0.2864 ($0.2185, 4 calls) | $0.1887 ($0.1651, 3 calls) | $0.1741 ($0.1268, 3 calls) |
+
+Run 6, time and cost per stage:
+
+| Stage | Time | Calls | Cost | Model |
+|---|---|---|---|---|
+| S1 load_prd | 2.4 s | 0 | $0.0000 | — |
+| S2 extract_requirements | 0.1 s | 0 (cached) | $0.0000 | `claude-haiku-5-5` |
+| S3 check_requirements | 0.0 s | 0 | $0.0000 | code |
+| S4 plan_stories | 18.2 s | 1 | $0.0026 | `claude-haiku-5-5` |
+| S5 detail_stories | 54.1 s | 10 | $0.0228 | `claude-haiku-5-5` |
+| S6 map_dependencies | 14.0 s | 1 | $0.0026 | `claude-haiku-5-5` |
+| S7 check_plan (validators + **critic**) | 13.7 s | 3 | **$0.1268** | `claude-sonnet-5-5` |
+| repair_plan (2 rounds) | 70.4 s | 8 | $0.0191 | `claude-haiku-5-5` |
+| S8 render_preview | 0.2 s | 0 | $0.0000 | code |
+| **Total** | **170.8 s** | **23** | **$0.1741** | |
+
+S2 was served from the cache in run 6. Its first live run (run 4) took 8.6 s and $0.0032 for 11 calls.
+
+The one remaining finding (CRIT-MISSING on `US-create-task`): the PRD lists Creation Date and Last
+Updated Date as task fields but does not say who sets them. The plan's ACs assume the form sends the
+Creation Date, and the critic proposes that the backend sets both on create. That is a product decision,
+so it is left to the reviewer at G1 (feedback such as "US-create-task: the backend sets Creation Date and
+Last Updated Date on create") instead of being guessed.
 
 ## Design decisions & trade-offs
 
@@ -146,21 +201,30 @@ Only run 3 produced a plan. The indicators are computed from `out/claude/plan.js
   deterministic.
 - **Native structured outputs, never forced tool calls.** Current models reject forced `tool_choice`.
   Every generation call uses `with_structured_output(Model, method="json_schema")`, which sends the
-  schema as `output_config.format`. The critic is `langchain.agents.create_agent` (the successor of
-  LangGraph's deprecated `create_react_agent`, whose `response_format` falls back to forced tool calls)
-  with `response_format=ProviderStrategy(ReviewReport)`, so its final report is also native structured
-  output while its PRD lookup tools stay ordinary, unforced tools.
+  schema as `output_config.format` (Gemini: `response_json_schema`).
+- **The critic is one structured call, not an agent.** It receives the full PRD and the full plan in a
+  compact form and returns a `ReviewReport`. A ReAct critic with PRD lookup tools would see the plan
+  piece by piece and pay for every tool round trip; the problems worth a strong model are the ones that
+  span stories (overlapping tasks, work assumed to be in another story), and those need the whole plan
+  in view. The `prd_search` helpers stay as code (R1 uses `verify_quote`). In repair rounds the critic
+  still gets the whole plan as context but reports only on the repaired items.
 - **Hard cost control.** Each live call is priced from its response `usage` (uncached input, cache
   reads, cache writes, output) with the price table in `config.py`. A configured model without a price is
   refused, because the cap could not be enforced for it. No call starts once the run has spent
   `MAX_RUN_COST_USD`, and the run aborts (exit code 7) as soon as a response pushes it over. Up to four
   calls run in parallel, so the overshoot is bounded by the calls already in flight. Responses are cached
   before the check, so re-running after an abort resumes without paying twice. S11 prints the total.
-- **Model and effort per stage.** Extraction is a narrow, per-section task, so it runs on Haiku at low
-  effort; planning, detailing and critique run on Sonnet at medium effort. Thinking tokens are billed as
-  output, so effort is the second cost lever after model choice.
+- **Model and effort per stage: a cheap model generates, a stronger model reviews.** Extraction (low
+  effort), planning, detailing, dependencies and repairs (medium) run on Haiku; the critic runs on Sonnet
+  (medium). Thinking tokens are billed as output, so effort is the second cost lever after model choice.
+- **The repair loop keeps the best round.** Regenerating a story can fix one finding and introduce
+  another. When the loop stops on a round that is worse than an earlier one, the earlier plan is kept and
+  the report says so.
 - **Prompt caching on every call.** A breakpoint on the system prompt (shared by all calls of a stage)
-  plus automatic top-level caching (the critic's growing tool loop, validation retries). Cache writes
+  plus automatic top-level caching (validation retries). The critic is the exception to the automatic
+  part: it marks the end of the PRD as its breakpoint and sends the plan, which changes every round, as
+  ordinary input. Writing ~18k plan tokens to the cache at 1.25× per round, never to be read back, was
+  the critic's largest avoidable cost. Cache writes
   cost 1.25× input, so a call with no reuse is slightly more expensive; prefixes below the model's
   minimum cacheable length are silently not cached. The S11 cost line reports cache reads and writes, so
   the effect is visible per run.

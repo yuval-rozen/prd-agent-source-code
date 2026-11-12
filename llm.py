@@ -98,6 +98,9 @@ class CostTracker:
         self.rate_limit_waits = 0
         self.server_retries = 0
         self.tokens = {"input": 0, "cache_read": 0, "cache_write": 0, "output": 0}
+        self.stage: str = "unknown"  # set by the graph before each stage runs (stages run one at a time)
+        self.by_stage: dict[str, dict] = {}
+        self.by_role: dict[str, dict] = {}
         self._lock = threading.Lock()
 
     def check_before_call(self) -> None:
@@ -107,11 +110,17 @@ class CostTracker:
             if self.limit_usd == 0 and self.spent_usd > 0:
                 raise BudgetExceeded(self._message())
 
-    def record(self, model: str, usage: dict) -> float:
+    def record(self, model: str, usage: dict, role: str | None = None) -> float:
         cost = usage_cost(model, usage)
         with self._lock:
             self.spent_usd += cost
             self.live_calls += 1
+            for bucket, name in ((self.by_stage, self.stage), (self.by_role, role or "unknown")):
+                entry = bucket.setdefault(name, {"cost_usd": 0.0, "calls": 0, "models": []})
+                entry["cost_usd"] += cost
+                entry["calls"] += 1
+                if model not in entry["models"]:
+                    entry["models"].append(model)
             self.tokens["input"] += usage.get("input_tokens") or 0
             self.tokens["cache_read"] += usage.get("cache_read_input_tokens") or 0
             self.tokens["cache_write"] += usage.get("cache_creation_input_tokens") or 0
@@ -213,10 +222,12 @@ class _CachingMixin:
 
     provider: Provider
 
-    def configure_cache(self, cache: ResponseCache, replay: bool, costs: CostTracker | None = None):
+    def configure_cache(self, cache: ResponseCache, replay: bool, costs: CostTracker | None = None,
+                        role: str | None = None):
         self._cache = cache
         self._replay = replay
         self._costs = costs
+        self._role = role
         return self
 
     # hooks -------------------------------------------------------------------
@@ -248,12 +259,20 @@ class _CachingMixin:
         result = self._live_generate(messages, stop, run_manager, **kwargs)
         self._cache.put(key, payload, result)  # cache first: a paid response is never lost
         if self._costs is not None:
-            cost = self._costs.record(self.model.removeprefix("models/"), self._normalized_usage(result))
+            cost = self._costs.record(self.model.removeprefix("models/"), self._normalized_usage(result), self._role)
             log.debug("call cost $%.5f (%s)", cost, self.model)
         return _with_stop_reason(result)
 
     async def _agenerate(self, *args: Any, **kwargs: Any) -> ChatResult:  # pragma: no cover - sync only
         raise NotImplementedError("The pipeline uses synchronous calls only (cached path).")
+
+
+def _has_block_breakpoint(messages: Any) -> bool:
+    for message in messages if isinstance(messages, list) else []:
+        content = getattr(message, "content", None)
+        if isinstance(content, list) and any(isinstance(b, dict) and "cache_control" in b for b in content):
+            return True
+    return False
 
 
 class CachedChatAnthropic(_CachingMixin, ChatAnthropic):
@@ -263,10 +282,14 @@ class CachedChatAnthropic(_CachingMixin, ChatAnthropic):
     _cache: ResponseCache = PrivateAttr()
     _replay: bool = PrivateAttr(default=False)
     _costs: CostTracker | None = PrivateAttr(default=None)
+    _role: str | None = PrivateAttr(default=None)
 
     def _get_request_payload(self, input_, *, stop=None, **kwargs: Any) -> dict:
-        """Add prompt-caching breakpoints to every request: system prompt + automatic top-level caching."""
-        kwargs.setdefault("cache_control", EPHEMERAL)
+        """Add prompt-caching breakpoints to every request: the system prompt, plus automatic top-level caching.
+        A request whose user content already carries its own breakpoint (the critic marks the end of the stable
+        PRD part) skips the automatic one, so the volatile tail (the plan) is not written to the cache."""
+        if not _has_block_breakpoint(input_):
+            kwargs.setdefault("cache_control", EPHEMERAL)
         payload = super()._get_request_payload(input_, stop=stop, **kwargs)
         system = payload.get("system")
         if isinstance(system, str) and system:
@@ -359,6 +382,7 @@ class CachedChatGoogle(_CachingMixin, ChatGoogleGenerativeAI):
     _cache: ResponseCache = PrivateAttr()
     _replay: bool = PrivateAttr(default=False)
     _costs: CostTracker | None = PrivateAttr(default=None)
+    _role: str | None = PrivateAttr(default=None)
 
     def _cache_payload(self, messages, stop, **kwargs: Any) -> dict:
         kwargs = {k: v for k, v in kwargs.items() if not k.startswith("ls_")}  # LangChain tracing metadata
@@ -454,10 +478,14 @@ class LLM:
                 max_retries=4,  # the Anthropic SDK retries 408/409/429/5xx (incl. 503/504) and timeouts itself
                 default_request_timeout=REQUEST_TIMEOUT_S,
             )
-        return chat.configure_cache(self.cache, self.replay, self.cost)
+        return chat.configure_cache(self.cache, self.replay, self.cost, role)
 
-    def structured(self, schema: type[T], system: str, user: str, *, role: Role = "generation") -> T:
-        """One structured call. Retries once with the validation error attached if the output is invalid."""
+    def structured(self, schema: type[T], system: str, user: str | list[dict], *, role: Role = "generation") -> T:
+        """One structured call. Retries once with the validation error attached if the output is invalid.
+        `user` may be a list of text blocks; a block with "cache_control" marks the end of a stable prefix
+        (Anthropic only; for Google the blocks are joined into plain text)."""
+        if isinstance(user, list) and self.provider != "anthropic":
+            user = "".join(block["text"] for block in user)
         runnable = self.chat_model(role).with_structured_output(schema, method="json_schema", include_raw=True)
         messages: list[BaseMessage] = [SystemMessage(content=system), HumanMessage(content=user)]
         out = _invoke(runnable, messages)

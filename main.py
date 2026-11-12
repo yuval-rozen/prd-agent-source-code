@@ -9,6 +9,7 @@ import json
 import logging
 import sys
 import time
+import uuid
 from enum import IntEnum, StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -19,9 +20,12 @@ from rich.console import Console
 from rich.table import Table
 
 from agent import build_graph
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from langgraph.types import Command
 from config import ConfigError, load_settings
 from llm import LLM, BudgetExceeded, LLMError
-from schemas import TicketPlan
+from schemas import Status, TicketPlan
 from tools.file_reader import PRDReadError
 
 
@@ -85,12 +89,21 @@ def run(
         _fail(str(exc), ExitCode.CONFIG, exc)
 
     timings: dict[str, float] = {}
-    graph = build_graph(llm, console=console, timings=timings)
+    graph = build_graph(llm, console=console, timings=timings, checkpointer=MemorySaver(serde=_checkpoint_serde()),
+                        max_repair_rounds=settings.max_repair_rounds, grounding_threshold=settings.grounding_threshold,
+                        duplicate_threshold=settings.duplicate_title_threshold)
+    config = {"configurable": {"thread_id": f"run-{uuid.uuid4().hex[:8]}"}, "recursion_limit": 100}
     initial = {"prd_path": str(prd), "out_dir": str(out), "publish": publish, "auto_yes": yes, "force": force}
     started = time.monotonic()
     outcome: dict = {"error": None, "exit_code": int(ExitCode.OK), "state": {}}
     try:
-        outcome["state"] = graph.invoke(initial)
+        result = graph.invoke(initial, config)
+        while result.get("__interrupt__"):  # G1 approve_plan
+            answer = _ask_approval(result["__interrupt__"][0].value)
+            result = graph.invoke(Command(resume=answer), config)
+        outcome["state"] = result
+        if result.get("status") is Status.ABORTED:
+            outcome.update(exit_code=int(ExitCode.ABORTED), error="aborted at G1")
     except PRDReadError as exc:
         outcome.update(error=str(exc), exit_code=int(ExitCode.BAD_INPUT))
         _fail(str(exc), ExitCode.BAD_INPUT, exc)
@@ -105,6 +118,33 @@ def run(
         if cache.hits or cache.misses:
             console.print(f"[dim]LLM response cache: {cache.hits} hits, {cache.misses} misses · cost {llm.cost.summary()}[/]")
         _write_run_stats(out, settings, llm, timings, time.monotonic() - started, outcome, replay)
+    if outcome["exit_code"] == int(ExitCode.ABORTED):
+        raise typer.Exit(int(ExitCode.ABORTED))
+
+
+def _checkpoint_serde() -> JsonPlusSerializer:
+    """Allow LangGraph's checkpointer to restore our own schema types (and nothing else) at the G1 gate."""
+    import schemas
+
+    names = [n for n, obj in vars(schemas).items() if isinstance(obj, type) and obj.__module__ == "schemas"]
+    return JsonPlusSerializer(allowed_msgpack_modules=[("schemas", n) for n in names])
+
+
+def _ask_approval(payload: dict) -> dict:
+    """G1: show status and blocking findings; answer approve | feedback | abort. EOF (no terminal) = abort."""
+    console.rule("[bold]G1 review")
+    console.print(f"Status: [bold]{payload['status']}[/] · {payload['stories']} stories · {payload['tasks']} tasks · "
+                  f"{len(payload['blocking'])} blocking, {payload['warnings']} warnings")
+    for f in payload["blocking"]:
+        console.print(f"  [red]{f['check_id']}[/] {f.get('item_key') or '-'}: {f['message']}")
+    console.print(f"Review {payload['out_dir']}/plan.md and validation_report.md.")
+    try:
+        choice = input("approve / feedback / abort [abort]: ").strip().lower() or "abort"
+        if choice.startswith("f"):
+            return {"action": "feedback", "text": input("Feedback (mention ticket keys to target them): ")}
+    except EOFError:
+        choice = "abort"
+    return {"action": "approve" if choice.startswith("ap") else "abort"}
 
 
 def _write_run_stats(out: Path, settings, llm: LLM, timings: dict, total_s: float, outcome: dict, replay: bool) -> None:
@@ -121,6 +161,13 @@ def _write_run_stats(out: Path, settings, llm: LLM, timings: dict, total_s: floa
         "stage_seconds": timings,
         "total_seconds": round(total_s, 1),
         "cost_usd": round(llm.cost.spent_usd, 6),
+        "cost_by_stage": {k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in llm.cost.by_stage.items()},
+        "cost_by_role": {k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in llm.cost.by_role.items()},
+        "status": state["status"].value if state.get("status") else None,
+        "requirement_rounds": state.get("req_rounds"),
+        "plan_repair_rounds": state.get("plan_rounds"),
+        "blocking_history": {"check_requirements": state.get("req_blocking_history"),
+                             "check_plan": state.get("plan_blocking_history")},
         "api_calls": llm.cost.live_calls,
         "cache_hits": llm.cache.hits,
         "tokens": llm.cost.tokens,

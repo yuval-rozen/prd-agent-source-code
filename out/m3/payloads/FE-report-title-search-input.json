@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add title search input to the task reporting page",
+  "body": "**Parent:** `US-search-report-tasks`\n\n**Track:** frontend · **Size:** S · consumes API\n## Description\n\nAdd a search input labelled By Title to the Task Reporting page. The input sends the search text to the report API and displays the returned rows in the report table.\n\n## Blocked by\n\n- `BE-report-title-search-api`\n- `FE-task-report-page-table`\n\n## Definition of Done\n\n- [ ] Search input labelled By Title is visible on the reporting page.\n- [ ] Submitting text calls the report API with the title search value.\n- [ ] Clearing the input shows all tasks again.\n- [ ] No-match state shows a message in the table area.\n- [ ] Component tests cover submit, clear and no-match.\n\n## Requirements\n\n- `R-48e39a9d` (functional) The reporting page lets the user search tasks by title.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

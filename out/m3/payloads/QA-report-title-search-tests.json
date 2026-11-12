@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Add test suite for report title search end to end",
+  "body": "**Parent:** `US-search-report-tasks`\n\n**Track:** qa_general · **Size:** S · consumes API\n## Description\n\nWrite the end-to-end and API tests that verify title search on the reporting page and in the report API.\n\n## Blocked by\n\n- `BE-report-title-search-api`\n- `FE-report-title-search-input`\n\n## Definition of Done\n\n- [ ] Tests cover a matching search, a non-matching search and a cleared search.\n- [ ] Tests run in the continuous integration pipeline and pass.\n- [ ] Test data is seeded and reset for each run.\n\n## Requirements\n\n- `R-48e39a9d` (functional) The reporting page lets the user search tasks by title.\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Return errors for status change on missing task and invalid status",
+  "body": "**Parent:** `US-change-task-status`\n\n**Track:** backend · **Size:** S\n## Description\n\nReturn a task not found error when the task ID does not exist and an invalid input error when the status is not Open or Completed. Use the simple error handling approach. Leave stored data unchanged on both errors.\n\n## Blocked by\n\n- `BE-status-change-endpoint`\n\n## Definition of Done\n\n- [ ] Unknown task ID returns a task not found error.\n- [ ] Status values other than Open or Completed return an invalid input error.\n- [ ] Stored status is unchanged after either error.\n- [ ] Internal and database errors return the standard error response.\n\n## Requirements\n\n- `R-9dc414dc` (backend) The backend must handle errors for task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

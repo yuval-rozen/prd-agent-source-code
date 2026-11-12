@@ -36,4 +36,16 @@ constraints that apply to it, and the keys and titles of the other stories. Retu
 - `key_slug`: short kebab-case slug naming the artifact.
 - Keep tasks appropriately sized: usually 3-8 tasks per story.
 
+Shared work across stories:
+
+- Each story builds the endpoints, UI and tests for its own capability. When a requirement is shared with
+  other stories (for example "endpoints for create, read, update and delete"), implement only the part
+  that belongs to this story's capability, and never assume another story builds this story's part.
+- The database table of an entity is shared: the story that cites the entity's data-model requirements
+  creates it once, with every one of those fields. Other stories never add those fields or the table
+  again; they add that story to `dependencies` instead.
+- Refer to work in another story only when that story's listed requirements clearly contain it.
+- If you receive review findings and the current version of this story, fix every finding, keep what is
+  correct, and do not repeat work that the listed tasks of other stories already do.
+
 {{ shared_rules }}

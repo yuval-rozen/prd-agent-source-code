@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add POST /tasks endpoint with title and Due Date validation",
+  "body": "**Parent:** `US-create-task`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nAdd the create operation of the tasks endpoint. Reject an empty title, reject a Due Date earlier than the Creation Date, store the task with a unique ID, and return clear errors for invalid input and database failures.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] POST /tasks stores one task with a unique ID when input is valid.\n- [ ] An empty title is rejected and no task is stored.\n- [ ] A Due Date earlier than the Creation Date is rejected and no task is stored.\n- [ ] A database failure returns an internal error response and no task is stored.\n- [ ] Error responses use one simple format.\n\n## Requirements\n\n- `R-22f28530` (functional) The user can create a new task.\n- `R-03df7815` (validation_rule) The system rejects a task whose title is empty, so task titles are mandatory.\n- `R-efe1e5d4` (validation_rule) The system rejects a task whose Due Date is earlier than its Creation Date.\n- `R-9dc414dc` (backend) The backend must handle errors for task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of to-do items.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

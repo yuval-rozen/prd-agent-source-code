@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Decide and document where the Excel file is generated",
+  "body": "**Parent:** `US-export-report-excel`\n\n**Track:** backend · **Size:** S\n## Description\n\nResolve the open decision whether the Excel file is generated on the frontend or the backend. Document the choice, rationale and trade-offs. The implementation tasks of this story follow the outcome.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Decision record states whether generation is on the frontend or the backend.\n- [ ] Decision record includes rationale and trade-offs for the chosen option.\n- [ ] Decision record lists the effects on the export endpoint, the file library and the test approach.\n- [ ] Decision record is linked from this story.\n\n## Requirements\n\n- `R-3a63e0ce` (decision_open) The development team decides whether the Excel file is generated on the frontend or the backend.\n",
+  "labels": [
+    "type:spike",
+    "area:backend",
+    "prd-agent"
+  ]
+}

@@ -7,6 +7,7 @@ The LLM never writes final issue Markdown. Issue references render as `#N` once 
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -92,16 +93,25 @@ def _md_cell(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", " ")
 
 
+def demote_headings(markdown: str, levels: int) -> str:
+    """Push every Markdown heading down by `levels` (## -> ### for 1), capped at ######."""
+    return re.sub(r"^(#{1,6}) ", lambda m: "#" * min(len(m.group(1)) + levels, 6) + " ", markdown, flags=re.MULTILINE)
+
+
 def render_plan_md(plan: TicketPlan) -> str:
+    """One document: # epic > ## story > ### story sections and ### task > #### task sections.
+    Issue bodies keep their own ## sections; only plan.md shifts them under their ticket heading."""
     payloads = build_payloads(plan)
     parts = [f"# {plan.project.title}\n", f"`{plan.project.key}` · labels: {', '.join(payloads[plan.project.key]['labels'])}\n"]
     parts.append(payloads[plan.project.key]["body"])
     for story in plan.stories:
         p = payloads[story.key]
-        parts.append(f"\n---\n\n## {story.title}\n\n`{story.key}` · labels: {', '.join(p['labels'])}\n\n{p['body']}")
+        parts.append(f"\n---\n\n## {story.title}\n\n`{story.key}` · labels: {', '.join(p['labels'])}\n\n"
+                     f"{demote_headings(p['body'], 1)}")
         for task in (t for t in plan.tasks if t.story_key == story.key):
             tp = payloads[task.key]
-            parts.append(f"\n### {task.title}\n\n`{task.key}` · labels: {', '.join(tp['labels'])}\n\n{tp['body']}")
+            parts.append(f"\n### Task: {task.title}\n\n`{task.key}` · labels: {', '.join(tp['labels'])}\n\n"
+                         f"{demote_headings(tp['body'], 2)}")
     return _tidy("\n".join(parts))
 
 
@@ -138,14 +148,56 @@ def render_requirements_md(plan: TicketPlan) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_validation_report(plan: TicketPlan, reports: list[ReviewReport] | None = None, status: str | None = None) -> str:
+_WARNING_NOTES = {
+    "P7": "Advisory dependency hint (SPEC §8 lists it as a warning); confirm the ordering at review.",
+    "P10": "Sizing advisory (SPEC §8 lists it as a warning); split the item if the team agrees.",
+}
+
+
+def _why_remaining(f, stop_reasons: dict[str, str | None], stage: str) -> str:
+    if f.check_id.startswith("REF-"):
+        return "Code already applied the stated correction; listed for traceability."
+    if f.severity.value == "blocking":
+        reason = stop_reasons.get(stage) or "the repair loop stopped"
+        return f"Not resolved: {reason}. Needs a human decision at G1 (approve, feedback or abort)."
+    if f.check_id.startswith("CRIT-"):
+        return "Non-blocking critic suggestion; it does not stop the pipeline."
+    return _WARNING_NOTES.get(f.check_id, "Warning only; it does not block the pipeline.")
+
+
+def render_remaining(reports: list[ReviewReport], stop_reasons: dict[str, str | None]) -> list[str]:
+    latest: dict[str, ReviewReport] = {}
+    for r in reports:
+        latest[r.stage] = r  # reports are in order; keep the final round of each stage
+    rows = [(stage, f) for stage, r in latest.items() for f in r.findings]
+    lines = ["## Remaining findings", ""]
+    if not rows:
+        return lines + ["None.", ""]
+    lines += ["Every finding still open in the final round of each stage, with the reason it remains.", "",
+              "| Stage | Check | Severity | Item | Finding | Why it remains |", "|---|---|---|---|---|---|"]
+    for stage, f in sorted(rows, key=lambda x: (x[1].severity.value != "blocking", x[0], x[1].check_id)):
+        detail = f.message + (f" Suggested fix: {f.suggested_fix}" if f.suggested_fix else "")
+        lines.append(f"| {stage} | {f.check_id} | {f.severity.value} | {f.item_key or '-'} | {_md_cell(detail)} "
+                     f"| {_md_cell(_why_remaining(f, stop_reasons, stage))} |")
+    return lines + [""]
+
+
+def render_validation_report(plan: TicketPlan, reports: list[ReviewReport] | None = None, status: str | None = None,
+                             stop_reasons: dict[str, str | None] | None = None) -> str:
     cited = citations(plan)
+    stop_reasons = stop_reasons or {}
     lines = ["# Validation report\n", f"**Final status:** {status or 'NOT CHECKED'}\n"]
+    lines += [f"- {stage}: {reason}" for stage, reason in stop_reasons.items() if reason]
+    if any(stop_reasons.values()):
+        lines.append("")
+    if reports:
+        lines += render_remaining(reports, stop_reasons)
+        lines += ["## Findings per round", ""]
     if not reports:
         lines.append("No checks have run on this plan yet.\n")
     for report in reports or []:
         lines += [
-            f"## {report.stage} — round {report.round}: {report.verdict.value} "
+            f"### {report.stage} — round {report.round}: {report.verdict.value} "
             f"({report.blocking_count} blocking, {report.warning_count} warnings)",
             "",
         ]
@@ -162,7 +214,8 @@ def render_validation_report(plan: TicketPlan, reports: list[ReviewReport] | Non
     return "\n".join(lines) + "\n"
 
 
-def write_outputs(plan: TicketPlan, out_dir: Path, reports: list[ReviewReport] | None = None, status: str | None = None) -> list[Path]:
+def write_outputs(plan: TicketPlan, out_dir: Path, reports: list[ReviewReport] | None = None, status: str | None = None,
+                  stop_reasons: dict[str, str | None] | None = None) -> list[Path]:
     out_dir = Path(out_dir)
     payload_dir = out_dir / "payloads"
     payload_dir.mkdir(parents=True, exist_ok=True)
@@ -172,7 +225,7 @@ def write_outputs(plan: TicketPlan, out_dir: Path, reports: list[ReviewReport] |
     files = {
         "plan.md": render_plan_md(plan),
         "requirements.md": render_requirements_md(plan),
-        "validation_report.md": render_validation_report(plan, reports, status),
+        "validation_report.md": render_validation_report(plan, reports, status, stop_reasons),
     }
     for name, text in files.items():
         path = out_dir / name

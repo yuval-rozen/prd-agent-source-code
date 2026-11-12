@@ -1,0 +1,72 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011CgyTGe7ApBv79xf2Tf7ba",
+  "model": "claude-haiku-5-5",
+  "model_name": "claude-haiku-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 4073
+   },
+   "cache_creation_input_tokens": 4073,
+   "cache_read_input_tokens": 3699,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 2639,
+   "output_tokens_details": {
+    "thinking_tokens": 902
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": [
+     {
+      "signature": "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",
+      "thinking": "",
+      "type": "thinking"
+     },
+     {
+      "text": "{\"story\":{\"as_a\":\"user viewing the task report\",\"i_want\":\"to sort the report tasks by Creation Date, Due Date, Status or Priority\",\"so_that\":\"I can review my tasks in the order I need\",\"business_description\":\"The Task Reporting page lets the user sort the task table by Creation Date, Due Date, Status or Priority. The report API accepts a sort field and returns tasks ordered by it.\",\"business_value\":\"Users can find the most urgent or oldest tasks quickly and review the report in a consistent order.\",\"acceptance_criteria\":[{\"given\":\"The Task Reporting page displays at least two tasks with different Creation Dates\",\"when\":\"The user selects the sort option Creation Date\",\"then\":\"The table rows are reordered so that the Creation Date values are in a single consistent order (ascending or descending, as defined by the sort control) and the sort option shown as selected is Creation Date\"},{\"given\":\"The Task Reporting page displays tasks with different Due Dates\",\"when\":\"The user selects the sort option Due Date\",\"then\":\"The table rows are reordered by the Due Date field and the sort option shown as selected is Due Date\"},{\"given\":\"The Task Reporting page displays tasks with different Status values\",\"when\":\"The user selects the sort option Status\",\"then\":\"The table rows are reordered by the Status field and the sort option shown as selected is Status\"},{\"given\":\"The Task Reporting page displays tasks with different Priority values\",\"when\":\"The user selects the sort option Priority\",\"then\":\"The table rows are reordered by the Priority field and the sort option shown as selected is Priority\"},{\"given\":\"The report API is called with a sort field of creation_date, due_date, status or priority\",\"when\":\"The request is processed by the backend\",\"then\":\"The response contains the matching tasks ordered by that field\"},{\"given\":\"The report API is called with a sort field that is not one of creation_date, due_date, status or priority\",\"when\":\"The request is processed by the backend\",\"then\":\"The backend returns an invalid input error and no task data is returned\"}],\"edge_cases\":[\"The PRD does not state the sort direction (ascending or descending) for each option or the default sort order; this is an open question for the sort control.\",\"The PRD does not define the order of Status values (Open, In Progress, Completed) or Priority values (Low, Medium, High) when sorting; this is an open question.\",\"The PRD does not define the order of tasks that share the same sort value; this is an open question.\",\"A sort field outside the four allowed values is rejected with an invalid input error.\"],\"dependencies\":[\"US-create-task\",\"US-view-task-report\"],\"definition_of_done\":[\"The report API accepts a sort parameter with the values creation_date, due_date, status and priority.\",\"The report API rejects any other sort value with an invalid input error and returns no task data.\",\"The report table offers exactly four sort options: Creation Date, Due Date, Status and Priority.\",\"The selected sort option is shown in the UI and matches the sort applied to the table.\",\"Sort direction and the order of Status and Priority values are documented or confirmed with the product owner.\"]},\"tasks\":[{\"key_slug\":\"report-api-sort-parameter\",\"title\":\"[BE] Add sort parameter to the task report endpoint\",\"track\":\"backend\",\"area\":\"backend\",\"description\":\"Add a sort parameter to the report tasks endpoint that accepts creation_date, due_date, status or priority and returns matching tasks ordered by that field. Reject other values with an invalid input error.\",\"size\":\"M\",\"consumes_api\":false,\"touches_db\":true,\"requirement_ids\":[\"R-8007d6b5\"],\"is_spike\":false,\"definition_of_done\":[\"Endpoint accepts sort values creation_date, due_date, status and priority.\",\"Response is ordered by the requested field.\",\"Any other sort value returns an invalid input error with no task data.\",\"Unit tests cover each valid value and an invalid value.\"]},{\"key_slug\":\"report-table-sort-control\",\"title\":\"[FE] Add sort control with four options to the report table\",\"track\":\"frontend\",\"area\":\"frontend\",\"description\":\"Add a sort control to the Task Reporting page with the options Creation Date, Due Date, Status and Priority. Selecting an option calls the report API with the matching sort value and shows the selected option.\",\"size\":\"M\",\"consumes_api\":true,\"touches_db\":false,\"requirement_ids\":[\"R-f214002a\"],\"is_spike\":false,\"definition_of_done\":[\"Sort control shows exactly four options: Creation Date, Due Date, Status, Priority.\",\"Selecting an option reorders the table rows using the API sort parameter.\",\"The selected option stays visible after the table reloads.\",\"Error state is shown if the sort request fails.\"]},{\"key_slug\":\"report-sort-test-suite\",\"title\":\"[QA] Test suite for report task sorting\",\"track\":\"qa_general\",\"area\":\"qa\",\"description\":\"Test suite covering the report sort control and the sort parameter of the report endpoint, including the invalid sort value case.\",\"size\":\"S\",\"consumes_api\":true,\"touches_db\":false,\"requirement_ids\":[\"R-f214002a\",\"R-8007d6b5\"],\"is_spike\":false,\"definition_of_done\":[\"Tests cover sorting by each of the four fields.\",\"Tests cover an invalid sort value and confirm the invalid input error.\",\"Tests confirm the selected sort option is shown in the UI.\",\"Test suite runs in the CI pipeline and passes.\"]}]}",
+      "type": "text"
+     }
+    ],
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 3699,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 4073
+     },
+     "input_tokens": 7776,
+     "output_token_details": {
+      "reasoning": 902
+     },
+     "output_tokens": 2639,
+     "total_tokens": 10415
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-haiku-5-5",
+ "provider": "anthropic"
+}

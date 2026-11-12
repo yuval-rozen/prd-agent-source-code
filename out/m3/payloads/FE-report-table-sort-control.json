@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add sort control with four options to the report table",
+  "body": "**Parent:** `US-sort-report-tasks`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nAdd a sort control to the Task Reporting page with the options Creation Date, Due Date, Status and Priority. Selecting an option calls the report API with the matching sort value and shows the selected option.\n\n## Blocked by\n\n- `BE-report-api-sort-parameter`\n- `FE-task-report-page-table`\n\n## Definition of Done\n\n- [ ] Sort control shows exactly four options: Creation Date, Due Date, Status, Priority.\n- [ ] Selecting an option reorders the table rows using the API sort parameter.\n- [ ] The selected option stays visible after the table reloads.\n- [ ] Error state is shown if the sort request fails.\n\n## Requirements\n\n- `R-f214002a` (functional) The reporting page lets the user sort tasks by Creation Date, Due Date, Status, or Priority.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

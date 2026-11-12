@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add update endpoint for a task by ID with validation and error responses",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nImplement the update operation of the task endpoints: accept changed fields for an existing task ID, validate that the title is not empty and that the Due Date is not earlier than the Creation Date, store the change, and return the updated task. Return Task Not Found for unknown IDs and the shared error responses for invalid input and internal or database errors. Only the update operation is built here; create, read, delete and status change belong to other stories.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] Endpoint updates an existing task and returns the updated task.\n- [ ] Empty title is rejected and nothing is stored.\n- [ ] Due Date earlier than Creation Date is rejected and nothing is stored.\n- [ ] Unknown task ID returns Task Not Found.\n- [ ] Invalid input and internal or database errors return the shared error format.\n- [ ] Unit tests cover each validation rule and error case.\n\n## Requirements\n\n- `R-bc3213df` (functional) The user can update an existing task.\n- `R-03df7815` (validation_rule) The system rejects a task whose title is empty, so task titles are mandatory.\n- `R-efe1e5d4` (validation_rule) The system rejects a task whose Due Date is earlier than its Creation Date.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of to-do items.\n- `R-9dc414dc` (backend) The backend must handle errors for task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

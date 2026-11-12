@@ -17,13 +17,14 @@ Provider = Literal["anthropic", "google"]
 Role = Literal["extract", "generation", "critic"]
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
 
-DEFAULT_MAX_RUN_COST_USD = 0.50
+DEFAULT_MAX_RUN_COST_USD = 0.30
 
 # Per-provider, per-stage default models. EXTRACT_MODEL / GENERATION_MODEL / CRITIC_MODEL override them.
 # Anthropic IDs verified against the Anthropic model table (2026-11-03). Google IDs verified against
 # Google's model list and pricing page (2026-11-12): all three defaults are on the Gemini free tier.
 DEFAULT_MODELS: dict[Provider, dict[Role, str]] = {
-    "anthropic": {"extract": "claude-haiku-5-5", "generation": "claude-sonnet-5-5", "critic": "claude-sonnet-5-5"},
+    # A cheap model generates, a stronger model reviews (README "Model selection").
+    "anthropic": {"extract": "claude-haiku-5-5", "generation": "claude-haiku-5-5", "critic": "claude-sonnet-5-5"},
     "google": {"extract": "gemini-3.5-flash-lite", "generation": "gemini-3.8-flash", "critic": "gemini-3.8-flash"},
 }
 MODEL_PREFIX: dict[Provider, str] = {"anthropic": "claude-", "google": "gemini-"}

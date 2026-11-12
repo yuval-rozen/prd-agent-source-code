@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add Export to Excel control to the report page",
+  "body": "**Parent:** `US-export-report-excel`\n\n**Track:** frontend · **Size:** S · consumes API\n## Description\n\nAdd an export control to the Task Reporting page. The control sends the currently applied filters and sort to the export endpoint, downloads the result and shows the no-data message when there is nothing to export.\n\n## Blocked by\n\n- `BE-export-report-tasks-endpoint`\n- `FE-task-report-page-table`\n\n## Definition of Done\n\n- [ ] Export control is shown on the Task Reporting page.\n- [ ] Clicking the control sends the current filter and sort values to the export endpoint.\n- [ ] When the result is empty, no file is downloaded and the no-data message is shown.\n- [ ] Export errors are shown to the user as an error message.\n\n## Requirements\n\n- `R-52360b76` (functional) The reporting page lets the user download task data to an Excel file.\n- `R-09e9d163` (functional) The exported Excel file must reflect the filters and sorting currently applied to the task view.\n- `R-437992f1` (frontend) When there is no data to export, the system must show a message to the user instead of producing an empty file. The exact wording of the message is not specified and is an open question.\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

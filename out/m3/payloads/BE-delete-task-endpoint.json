@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add DELETE /tasks/{id} endpoint that removes a task by ID",
+  "body": "**Parent:** `US-delete-task`\n\n**Track:** backend · **Size:** S · touches DB\n## Description\n\nAdd the DELETE /tasks/{id} endpoint. It deletes the stored task with the given ID and returns success. It covers only the delete part of the shared task endpoints.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] DELETE /tasks/{id} deletes the stored task and returns a success response.\n- [ ] The endpoint does not change any other task.\n- [ ] Unit or integration tests cover success for an existing ID.\n\n## Requirements\n\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of to-do items.\n- `R-8523b9ec` (functional) The user can delete a task.\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}
