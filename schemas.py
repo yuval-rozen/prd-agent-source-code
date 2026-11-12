@@ -1,7 +1,7 @@
 """Data contracts for the pipeline (SPEC §9).
 
 Pydantic validators enforce only *local* rules (key formats, non-empty Given/When/Then, unique labels,
-title length). Cross-item rules (coverage, AC counts, tracks, dependencies...) are validators.py checks
+non-empty titles). Title length is P11 only. Cross-item rules (coverage, AC counts, tracks, dependencies...) are validators.py checks
 that produce ReviewFindings, so the repair loop can fix them instead of failing on parse.
 """
 
@@ -162,7 +162,14 @@ EpicKey = Annotated[str, AfterValidator(_matches(EPIC_KEY_RE, "epic key"))]
 StoryKey = Annotated[str, AfterValidator(_matches(STORY_KEY_RE, "story key"))]
 TaskKey = Annotated[str, AfterValidator(_matches(TASK_KEY_RE, "task key"))]
 NonEmpty = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+# Title length (<= 80) is deliberately NOT enforced here: P11 reports it so the repair loop fixes the one
+# long title instead of the whole structured response failing to parse.
+TITLE_MAX_LEN = 80
+Title = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1),
+    Field(description=f"Imperative, specific, names the object, at most {TITLE_MAX_LEN} characters."),
+]
 Labels = Annotated[list[Label], AfterValidator(_unique_labels)]
 
 

@@ -25,11 +25,11 @@ Required ticket content:
 - Every stage that generates content is followed by a check stage. Nothing moves forward unchecked.
 - The LLM generates ticket content as structured data only. It has no GitHub tools; its only tools are the read-only PRD lookups used by the critic (Section 12). All GitHub API calls are made by deterministic code in the publish stage, after validation and human approval.
 - PRD-agnostic: nothing in the code, prompts, or validators is specific to the sample PRD, including the examples inside prompts.
-- Deterministic where possible: temperature 0, LLM response cache, Jinja rendering (the LLM never writes the final issue Markdown).
+- Deterministic where possible: no sampling parameters are sent (current models reject them); repeatability comes from the LLM response cache; Jinja rendering (the LLM never writes the final issue Markdown).
 - Secrets never appear in code, logs, outputs, or the repository.
 
 ## 4. Stack
-Python 3.11+, uv, LangGraph (StateGraph, conditional edges for the repair loops, interrupt() + MemorySaver for the human gates, a prebuilt ReAct agent for the critic), langchain-anthropic (`with_structured_output(PydanticModel)` for every LLM call), Pydantic v2, Typer + Rich, Jinja2, pymupdf4llm (PDF→Markdown), python-docx, rapidfuzz, httpx + tenacity, python-dotenv, pytest.
+Python 3.11+, uv, LangGraph (StateGraph, conditional edges for the repair loops, interrupt() + MemorySaver for the human gates, a prebuilt ReAct agent for the critic: `langchain.agents.create_agent` with `response_format=ProviderStrategy(ReviewReport)`, the successor of the deprecated `create_react_agent`), langchain-anthropic (`with_structured_output(PydanticModel, method="json_schema")` for every LLM call — native structured outputs, because current models reject forced `tool_choice`), Pydantic v2, Typer + Rich, Jinja2, pymupdf4llm (PDF→Markdown), python-docx, rapidfuzz, httpx + tenacity, python-dotenv, pytest.
 Model IDs come from config: GENERATION_MODEL and a stronger CRITIC_MODEL. Verify current model IDs and LangGraph/LangChain APIs in the official docs.
 
 ## 5. Pipeline overview
@@ -165,7 +165,7 @@ Models:
 - RequirementDiff{added, changed, removed}
 - SyncAction{key, action, issue_number, payload}
 
-Pydantic validators enforce the local rules: key formats, non-empty GWT, unique labels, title length.
+Pydantic validators enforce the local rules: key formats, non-empty GWT, unique labels, non-empty titles. Title length is checked by P11 only, so a long title is repaired instead of failing the whole response.
 AgentState (agent.py): prd_path, units, requirements, requirement_diff, req_report, previous_plan, plan, plan_report, rounds, blocking_history, sync_actions, publish, auto_yes, force, status.
 
 ## 10. GitHub idempotency & update flow

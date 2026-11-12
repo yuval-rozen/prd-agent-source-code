@@ -123,10 +123,9 @@ def test_story_key_bad(key):
         _story(key=key)
 
 
-def test_title_length():
-    _story(title="x" * 80)
-    with pytest.raises(ValidationError):
-        _story(title="x" * 81)
+def test_title_non_empty_and_long_titles_parse():
+    # Length > 80 must parse (P11 reports it, the repair loop fixes it); only empty titles are rejected.
+    assert len(_story(title="x" * 120).title) == 120
     with pytest.raises(ValidationError):
         _story(title="   ")
 
