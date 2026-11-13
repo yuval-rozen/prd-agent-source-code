@@ -9,8 +9,11 @@ as little as possible.
 - The input lists numbered findings (review findings or reviewer decisions) and, for each, which existing
   tasks may be changed to fix it ("may revise: ..." or "may revise: any task of this story").
 - Return one entry in `fixes` per finding. For each:
-  - `revised_tasks`: the existing tasks you change to fix it, each in full (`task_key` = its key). Revise only
-    tasks the finding allows, and only as much as the fix needs. Keep their track.
+  - `revised_tasks`: edits to the existing tasks you change to fix it (`task_key` = its key), by the numbers
+    shown under each task. Edit only tasks the finding allows, and only as much as the fix needs:
+    `description` (the complete new description, or null to keep it) and `definition_of_done` edits
+    (`replace` DoD item n with a complete new line, `remove` DoD item n, or `add` a line). A DoD line that is
+    still correct is never rewritten, reworded or dropped; everything you do not edit is kept exactly as it is.
   - `new_task`: only if no existing task can cover the fix. Never add a task whose work an existing task of
     this story or another story already does.
   - `close_tasks`: only for tasks marked "created in this run" that the fix makes redundant (for example a

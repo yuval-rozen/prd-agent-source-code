@@ -465,10 +465,20 @@ class StoryUpdateDraft(_Model):
     added_requirements: list[AddedPlacementDraft] = Field(description="Exactly one entry per ADDED requirement.")
 
 
+class TaskEditDraft(_Model):
+    """Edits to one existing task. Every field and DoD line not named here stays exactly as it is."""
+
+    task_key: str = Field(description="Key of an existing task the input allows for this finding.")
+    description: str | None = Field(default=None, description="The complete new description, only if the fix needs "
+                                                              "it; null keeps it.")
+    definition_of_done: list["LineEditDraft"] = Field(
+        default_factory=list, description="replace or remove DoD line n (as numbered in the input), or add a line.")
+
+
 class FindingFixDraft(_Model):
     finding: int = Field(description="Number of the finding (or reviewer decision) in the input that this fixes.")
-    revised_tasks: list[TaskRevisionDraft] = Field(
-        description="Existing tasks changed to fix it; only tasks the input allows for this finding.")
+    revised_tasks: list[TaskEditDraft] = Field(
+        description="Edits to existing tasks to fix it; only tasks the input allows for this finding.")
     new_task: TaskDraft | None = Field(default=None, description="Only if no existing task can cover the fix.")
     close_tasks: list[str] = Field(default_factory=list,
                                    description="Keys of tasks created in this run that the fix makes redundant.")
@@ -530,3 +540,4 @@ class DependencyPlanDraft(_Model):
 
 
 TicketPlan.model_rebuild()
+TaskEditDraft.model_rebuild()

@@ -34,6 +34,7 @@ from schemas import (
     PlainRewriteItemDraft,
     FindingFixDraft,
     TaskRevisionDraft,
+    TaskEditDraft,
     AddedPlacementDraft,
     TaskArea,
     TaskDraft,
@@ -216,6 +217,13 @@ _FINDING = re.compile(r"^FINDING (\d+) .*\| may revise: ([^\n]+)$", re.MULTILINE
 _STORY_TASK = re.compile(r"^((?:FE|BE|QA)-\S+) \[(\w+), .*\| requirements: ([^|\n]*)(\| created in this run)?", re.MULTILINE)
 
 
+def _task_edit(task_key: str, word: str) -> TaskEditDraft:
+    """Task-level edit: replace DoD item 1 and add one line; the description and other lines stay as they are."""
+    return TaskEditDraft(task_key=task_key, definition_of_done=[
+        LineEditDraft(op="replace", number=1, text=f"{_words(task_key)} {word}"),
+        LineEditDraft(op="add", text=f"{word} verified")])
+
+
 def _repair(self, user: str) -> StoryRepairDraft:
     key = re.search(r"^Story key: (\S+)", user, re.MULTILINE).group(1)
     section = user.split("Current tasks of this story:")[1].split("Findings to fix:")[0]
@@ -226,12 +234,12 @@ def _repair(self, user: str) -> StoryRepairDraft:
         allowed = [k for k, *_ in tasks] if "any task of this story" in scope else [x.strip() for x in scope.split(",")]
         target = next(t for t in tasks if t[0] == allowed[0])
         chosen = [t for t in tasks if t[0] in allowed] if self.repair_mode == "revise_all" else [target]
-        revised = [TaskRevisionDraft(task_key=t[0], task=_task_draft(t[0], t[1], t[2], "fixed")) for t in chosen]
+        revised = [_task_edit(t[0], "fixed") for t in chosen]
         new_task, close = None, []
         if self.repair_mode == "rogue":
             other = next((t for t in tasks if t[0] not in allowed), None)
             if other:
-                revised.append(TaskRevisionDraft(task_key=other[0], task=_task_draft(other[0], other[1], other[2], "rogue")))
+                revised.append(_task_edit(other[0], "rogue"))
         if self.repair_mode == "new_task":
             new_task = _task_draft("FE-fix-" + number, "frontend", target[2], "new")
         if self.repair_mode == "close_new":

@@ -50,6 +50,7 @@ from schemas import (
     StoryPlanDraft,
     PlainRewriteDraft,
     StoryEditsDraft,
+    TaskEditDraft,
     StoryRepairDraft,
     StoryUpdateDraft,
     StorySkeleton,
@@ -1326,7 +1327,7 @@ def repair_update_user_message(skeleton: StorySkeleton, story: UserStory, tasks:
     reqs = {r.id: r for r in requirements}
     own = [reqs[i] for i in skeleton.requirement_ids if i in reqs]
     task_lines = [f"{_task_line(t)} | requirements: {', '.join(t.requirement_ids) or '-'}"
-                  + (" | created in this run" if t.key in new_this_run else "") for t in tasks]
+                  + (" | created in this run" if t.key in new_this_run else "") + "\n" + _numbered_task(t) for t in tasks]
     finding_lines = []
     for i, (f, ok) in enumerate(zip(findings, allowed), 1):
         scope = "any task of this story" if ok is None else ", ".join(sorted(ok))
@@ -1432,6 +1433,23 @@ def apply_story_edits(story: UserStory, edits: StoryEditsDraft | None, findings:
     return story.model_copy(update=update)
 
 
+def apply_task_edits(task: TechnicalTask, edits: list[TaskEditDraft], findings: Findings) -> TechnicalTask:
+    """Code applies the model's edits to a task: a new description and numbered DoD edits. Title, size, flags,
+    labels, blockers and every DoD line no edit names stay byte-for-byte."""
+    description = next((e.description for e in reversed(edits) if e.description and e.description.strip()),
+                       task.description)
+    text = lambda e: e.text if e.text and e.text.strip() else None  # noqa: E731
+    dod = _edit_lines(task.definition_of_done, [x for e in edits for x in e.definition_of_done], text,
+                      "DoD item", task.key, findings)
+    return task.model_copy(update={"description": description, "definition_of_done": dod})
+
+
+def _numbered_task(t: TechnicalTask) -> str:
+    lines = [f"  Description: {t.description}"]
+    lines += [f"  DoD item {i}: {d}" for i, d in enumerate(t.definition_of_done, 1)]
+    return "\n".join(lines)
+
+
 def _plain_units(item) -> list[tuple[tuple, str]]:
     """The smallest texts of a story or task that contain an internal note (same rules as P12), with their path."""
     if isinstance(item, UserStory):
@@ -1515,6 +1533,8 @@ def apply_story_repair(skeleton: StorySkeleton, draft: StoryRepairDraft, story: 
     closed: set[str] = set()
     new_tasks: list[TechnicalTask] = []
     story_ids: list[str] = []
+    task_edits: dict[str, list[TaskEditDraft]] = {}  # all edits of a task refer to its input numbering
+    task_cites: dict[str, list[str]] = {}
     for fix in draft.fixes:
         if not 1 <= fix.finding <= len(findings):
             ref_findings.append(_finding("REF-RESTORE", f"Fix for unknown finding {fix.finding} ignored.", item_key=skeleton.key))
@@ -1527,8 +1547,8 @@ def apply_story_repair(skeleton: StorySkeleton, draft: StoryRepairDraft, story: 
                 ref_findings.append(_finding("REF-RESTORE", f"The model changed {rev.task_key!r}, which finding "
                                              f"{fix.finding} does not name; code kept it unchanged.", item_key=skeleton.key))
                 continue
-            result[rev.task_key] = _with_ids(
-                _revised_task(result[rev.task_key], rev.task, known, removed, changed, ref_findings), cites)
+            task_edits.setdefault(rev.task_key, []).append(rev)
+            task_cites.setdefault(rev.task_key, []).extend(cites)
         for key in fix.close_tasks:
             if key in by_key and key in new_this_run:
                 closed.add(key)
@@ -1537,6 +1557,9 @@ def apply_story_repair(skeleton: StorySkeleton, draft: StoryRepairDraft, story: 
                                              "can be removed by a repair.", item_key=skeleton.key))
         if fix.new_task is not None:
             new_tasks.append(_with_ids(_new_task(skeleton, fix.new_task, known, taken, ref_findings), cites))
+    for key, edits in task_edits.items():
+        result[key] = _with_ids(apply_task_edits(by_key[key], edits, ref_findings),
+                                list(dict.fromkeys(task_cites[key])))
     story_level = any(ok is None for ok in allowed)  # task-level findings only: the story text is kept as it is
     new_story = apply_story_edits(story, draft.story_edits, ref_findings) if story_level else story
     new_story = _with_ids(new_story, list(dict.fromkeys(story_ids)))  # code adds the citations, never the model

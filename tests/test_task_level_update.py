@@ -568,3 +568,37 @@ def test_p12_rewrite_names_the_notes_and_retries_once_when_a_note_is_left_in():
     users = [u for n, u in llm.calls if n == "PlainRewriteDraft"]
     assert len(users) == 2 and "remove: a ticket key" in users[0]
     assert check_p12_plain_language(fixed) == []
+
+
+from agent import apply_task_edits  # noqa: E402
+from schemas import TaskEditDraft  # noqa: E402
+
+
+def test_task_repair_edits_only_the_named_dod_lines_and_keeps_the_rest_byte_for_byte():
+    previous, plan, diff, skeletons = _changed_plan()
+    task = plan.tasks[2].model_copy(update={"definition_of_done": ["renew done", "Open or In Progress can renew",
+                                                                     "Errors are documented"]})
+    plan = plan.model_copy(update={"tasks": [*plan.tasks[:2], task, *plan.tasks[3:]]})
+    llm = FakeLLM()
+    repaired, _, touched, _ = repair_update(plan, skeletons, [_blocking(task.key)], llm, [], previous, diff)
+    after = next(t for t in repaired.tasks if t.key == task.key)
+    assert touched == [task.key]
+    assert after.definition_of_done == ["renew endpoint fixed", "Open or In Progress can renew",
+                                        "Errors are documented", "fixed verified"]  # line 1 replaced, one added
+    assert after.model_dump(exclude={"definition_of_done"}) == task.model_dump(exclude={"definition_of_done"})
+    user = next(u for n, u in llm.calls if n == "StoryRepairDraft")
+    assert "  DoD item 2: Open or In Progress can renew" in user and f"  Description: {task.description}" in user
+
+
+def test_task_edits_replace_the_description_remove_by_number_and_ignore_bad_numbers():
+    task = _four_task_story().tasks[0].model_copy(update={"definition_of_done": ["a", "b", "c"]})
+    found = []
+    edits = [TaskEditDraft(task_key=task.key, description="New description.",
+                           definition_of_done=[LineEditDraft(op="remove", number=2),
+                                               LineEditDraft(op="replace", number=7, text="x")]),
+             TaskEditDraft(task_key=task.key, definition_of_done=[LineEditDraft(op="replace", number=3, text="C")])]
+    after = apply_task_edits(task, edits, found)  # numbers of both edits refer to the input numbering
+    assert after.description == "New description." and after.definition_of_done == ["a", "C"]
+    assert after.title == task.title and after.size == task.size and after.labels == task.labels
+    assert [f.check_id for f in found] == ["REF-RESTORE"]
+    assert apply_task_edits(task, [TaskEditDraft(task_key=task.key)], []) == task
