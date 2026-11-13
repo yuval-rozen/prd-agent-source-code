@@ -1,9 +1,0 @@
-{
-  "title": "[FE] Render all tasks in a table on the reporting page",
-  "body": "**Parent:** `US-filter-search-sort-task-report`\n\n**Track:** frontend · **Size:** S · consumes API\n## Description\n\nDisplay the tasks returned by the task report API as a table on the reporting page, one row per task.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Reporting page shows every task returned by the API as one table row\n- [ ] Table columns include the fields needed for filtering, searching and sorting\n- [ ] Component test confirms row count matches the API response\n\n## Requirements\n\n- `R-a1b267a3` (frontend) The reporting page displays all tasks in a table.\n",
-  "labels": [
-    "type:task",
-    "area:frontend",
-    "prd-agent"
-  ]
-}

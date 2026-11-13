@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Add GET /tasks endpoint that returns all saved tasks",
-  "body": "**Parent:** `US-create-and-view-tasks`\n\n**Track:** backend · **Size:** S · touches DB\n## Description\n\nReturn all saved tasks with all required fields. Return an empty collection when no tasks exist. Return a simple error response on database failure.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Endpoint returns every saved task with ID, Title, Description, Status, Priority, Creation Date and Due Date.\n- [ ] Endpoint returns an empty collection when no tasks exist.\n- [ ] Database failure returns a simple internal error response.\n- [ ] API tests cover these cases.\n\n## Requirements\n\n- `R-4bed9064` (functional) Users can view the task list.\n- `R-244669c0` (backend) The backend exposes endpoints to create, read all, read by ID, update, delete, and change the status of a Todo.\n",
-  "labels": [
-    "type:task",
-    "area:backend",
-    "prd-agent"
-  ]
-}

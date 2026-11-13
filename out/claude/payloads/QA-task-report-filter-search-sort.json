@@ -1,9 +1,0 @@
-{
-  "title": "[QA] Add test suite for task report filtering, search and sorting",
-  "body": "**Parent:** `US-filter-search-sort-task-report`\n\n**Track:** qa_general · **Size:** M · consumes API\n## Description\n\nEnd-to-end and API tests covering filter, search, sort and table display on the task report, including combined parameters and empty results.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Tests cover each filter, title search and each sort field\n- [ ] Tests cover combined filters, search and sort\n- [ ] Tests cover the empty result case\n- [ ] Test suite runs in the continuous integration pipeline and passes\n\n## Requirements\n\n- `R-5f4ef76c` (functional) The task report can be filtered by Status, Priority, and Date Range.\n- `R-48e39a9d` (functional) The task report can be searched by task title.\n- `R-f214002a` (functional) The task report can be sorted by Creation Date, Due Date, Status, or Priority.\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n- `R-a1b267a3` (frontend) The reporting page displays all tasks in a table.\n",
-  "labels": [
-    "type:task",
-    "area:qa",
-    "prd-agent"
-  ]
-}

@@ -236,6 +236,7 @@ AgentState (agent.py): prd_path, units, requirements, requirement_diff, req_repo
 - The key of the selected provider (ANTHROPIC_API_KEY or GOOGLE_API_KEY) is required unless --replay is used. GITHUB_TOKEN is required only with --publish; dry runs work without it. If a required key is missing, fail with a clear message.
 - Recommended token: fine-grained, limited to the test repo, Issues read/write only, short expiry.
 - `--replay` runs the full pipeline from the LLM cache in .cache/llm/ (committed for the sample PRD and for v2), with no Anthropic key and no cost. The cache key is hash(provider, exact request) per LLM call (model, messages, schema, tools if any).
+- Gate answers: every run records its human gate answers in out/<dir>/gate_answers.json (the sha256 of the PRD file, the G1 answers in order: approve / feedback with its text / abort, and the G2 answers; no secrets). With --replay, the recorded G1 answers are offered (from OUT/gate_answers.json, or the file given with `--gate-answers`, only if it was recorded for the same PRD file): at the i-th G1 the CLI shows the i-th recorded answer; Enter accepts it, or the reviewer types approve / feedback / abort. EOF never accepts a recording (it aborts, as before). G2 is never answered from a recording: it stays a manual confirmation, or --yes.
 - Secrets are never printed, logged, written to out/, or included in error messages.
 - All GitHub REST calls go through github_tool, with retries (tenacity) and rate-limit handling. On a 4xx/5xx: a clear error and a stop, never a silent partial failure. Because publishing is idempotent, re-running after a failure resumes safely.
 
@@ -253,11 +254,11 @@ AgentState (agent.py): prd_path, units, requirements, requirement_diff, req_repo
 - examples/todo_prd_v2.<ext>
 - .cache/llm/ (committed for the sample run)
 - tests/
-- out/ (the sample run is committed)
+- out/sample-v1/ and out/sample-v2/ (the committed sample recordings: the v1 run and the v2 update run, each with gate_answers.json). out/sample-v1-old/ and out/sample-v2-old/ hold the earlier recordings only until the new ones are committed. Provider and model comparison runs are not kept as folders; their numbers are in the README model comparison.
 - README.md, .env.example, .gitignore, pyproject.toml
 
 ## 13. CLI
-- `main.py run <prd> [--out out/] [--replay] [--yes]` → stops after G1 (dry run).
+- `main.py run <prd> [--out out/] [--replay [--gate-answers FILE]] [--yes]` → stops after G1 (dry run).
 - `main.py run <prd> --publish --repo owner/name [--yes] [--force]`
 - `main.py preview [--format table|md|json]` → shows the saved plan.
 
@@ -288,7 +289,7 @@ Keep the context narrow in every call.
   - the v2 PRD → the expected create/update/close.
   - issues without the marker are never touched.
 - Incremental update: unchanged stories are carried over without calling the LLM, and their dependencies to removed keys are dropped.
-- One end-to-end run on the sample PRD from the LLM cache (the same mechanism as --replay).
+- One end-to-end run on the sample PRD from the LLM cache (the same mechanism as --replay), accepting the recorded G1 answers of out/sample-v1 with Enter; it must reproduce the committed plan.
 
 ## 16. README
 - Setup & run: required keys, token scope, .env setup, --replay.

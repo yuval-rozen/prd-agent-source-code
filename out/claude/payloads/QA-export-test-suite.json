@@ -1,9 +1,0 @@
-{
-  "title": "[QA] Add end-to-end test suite for task report Excel export",
-  "body": "**Parent:** `US-export-task-report-to-excel`\n\n**Track:** qa_general · **Size:** M\n## Description\n\nTest suite covering the export flow end to end: filters, sort, headers, date format, file name timestamp and empty-data message.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] End-to-end tests verify the exported rows match the applied filters and sort\n- [ ] End-to-end tests verify headers, date format and file name pattern\n- [ ] End-to-end tests verify the zero-row message and absence of a file\n- [ ] Test suite runs in the CI pipeline\n\n## Requirements\n\n- Derived task: testing.\n",
-  "labels": [
-    "type:task",
-    "area:qa",
-    "prd-agent"
-  ]
-}

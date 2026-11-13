@@ -1,9 +1,0 @@
-{
-  "title": "[FE] Render all tasks in a table on the reporting page",
-  "body": "**Parent:** `US-review-task-report`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nBuild the table on the reporting page that lists every task returned by the report API.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Every task returned by the API appears as one table row.\n- [ ] Empty state is shown when the API returns no tasks.\n- [ ] Component tests cover rendering with data and without data.\n\n## Requirements\n\n- `R-a1b267a3` (frontend) The reporting page displays all tasks in a table.\n",
-  "labels": [
-    "type:task",
-    "area:frontend",
-    "prd-agent"
-  ]
-}

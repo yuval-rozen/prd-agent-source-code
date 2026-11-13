@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Add task report API endpoint with Total, Open and Completed aggregation",
-  "body": "**Parent:** `US-review-task-report`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nAdd a read endpoint that returns all task rows and the Total, Open and Completed counts computed from stored task status. Filter, search and sort parameters are out of scope unless the filter story requires them.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Endpoint returns task rows and the three counts in one response.\n- [ ] Counts are computed from stored status values.\n- [ ] Endpoint returns zero counts when no tasks exist.\n- [ ] Unit and integration tests cover the aggregation.\n\n## Requirements\n\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n- `R-4ffbfafa` (functional) The task report shows the counts of Total Tasks, Open Tasks, and Completed Tasks.\n",
-  "labels": [
-    "type:task",
-    "area:backend",
-    "prd-agent"
-  ]
-}

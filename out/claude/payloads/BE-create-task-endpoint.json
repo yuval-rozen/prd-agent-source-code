@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Add POST /tasks endpoint with title and due date validation",
-  "body": "**Parent:** `US-create-and-view-tasks`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nAccept a new task, validate that the title is non-empty and that Due Date is not earlier than Creation Date, persist the task and return it. Return simple error responses for invalid input, missing mandatory fields and database errors.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Endpoint saves a valid task and returns the ID and Creation Date.\n- [ ] Empty title is rejected and nothing is saved.\n- [ ] Due Date earlier than Creation Date is rejected and nothing is saved.\n- [ ] Invalid input, missing mandatory fields and database errors return simple error responses.\n- [ ] Unit and API tests cover each rule.\n\n## Requirements\n\n- `R-22f28530` (functional) Users can create a new task.\n- `R-03df7815` (validation_rule) A task must not be saved unless its title is non-empty.\n- `R-efe1e5d4` (validation_rule) A task's Due Date must not be earlier than its Creation Date.\n- `R-9dc414dc` (backend) The backend returns simple error responses for task not found, invalid input, missing mandatory fields, updating or deleting non-existent tasks, and internal server or database errors.\n",
-  "labels": [
-    "type:task",
-    "area:backend",
-    "prd-agent"
-  ]
-}

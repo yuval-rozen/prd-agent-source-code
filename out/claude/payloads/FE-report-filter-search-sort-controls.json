@@ -1,9 +1,0 @@
-{
-  "title": "[FE] Add filter, search and sort controls to the task report",
-  "body": "**Parent:** `US-filter-search-sort-task-report`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nAdd Status, Priority and Date Range filter controls, a title search box and sort controls to the reporting page. Controls call the task report API and update the table.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Status, Priority and Date Range filters are visible and change the table results\n- [ ] Title search updates the table results\n- [ ] Sort by Creation Date, Due Date, Status and Priority is available and changes row order\n- [ ] Controls show the currently applied filter, search and sort state\n- [ ] Component tests cover control behaviour\n\n## Requirements\n\n- `R-5f4ef76c` (functional) The task report can be filtered by Status, Priority, and Date Range.\n- `R-48e39a9d` (functional) The task report can be searched by task title.\n- `R-f214002a` (functional) The task report can be sorted by Creation Date, Due Date, Status, or Priority.\n",
-  "labels": [
-    "type:task",
-    "area:frontend",
-    "prd-agent"
-  ]
-}

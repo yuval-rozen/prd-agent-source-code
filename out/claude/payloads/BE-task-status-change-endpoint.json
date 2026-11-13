@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Add PATCH /tasks/{id}/status endpoint to set Completed or Open",
-  "body": "**Parent:** `US-complete-and-reopen-task`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nAdd an endpoint that changes the Status of a task to Completed or Open. Completing sets Completion Date to the current time. Every change sets Last Updated Date. Return simple error responses for Task Not Found, invalid input and internal or database errors.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Endpoint sets Status to Completed and sets Completion Date\n- [ ] Endpoint sets Status to Open for a Completed task\n- [ ] Unknown task ID returns Task Not Found\n- [ ] Invalid status value returns an invalid input error\n- [ ] Database failure returns an internal error response\n- [ ] Last Updated Date is set on every successful change\n\n## Requirements\n\n- `R-244669c0` (backend) The backend exposes endpoints to create, read all, read by ID, update, delete, and change the status of a Todo.\n- `R-2304218f` (functional) Users can mark a task as 'Completed'.\n- `R-959e2960` (functional) Users can revert a 'Completed' task back to 'Open'.\n- `R-9dc414dc` (backend) The backend returns simple error responses for task not found, invalid input, missing mandatory fields, updating or deleting non-existent tasks, and internal server or database errors.\n",
-  "labels": [
-    "type:task",
-    "area:backend",
-    "prd-agent"
-  ]
-}

@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Add Status, Completion Date and Last Updated Date columns to tasks table",
-  "body": "**Parent:** `US-complete-and-reopen-task`\n\n**Track:** backend · **Size:** S · touches DB\n## Description\n\nAdd a Status column restricted to Open, In Progress and Completed, a nullable Completion Date column and a Last Updated Date column to the tasks table. Existing tasks get Status Open and no Completion Date.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Migration adds the three columns and runs forward and backward without data loss\n- [ ] Status column rejects values other than Open, In Progress and Completed\n- [ ] Existing tasks have Status Open after the migration\n- [ ] Migration is reviewed and merged\n\n## Requirements\n\n- `R-576b7e59` (data_model) Each task has a Status field whose allowed values are Open, In Progress and Completed.\n- `R-34e41747` (data_model) Each task has a Completion Date field, populated when the task is completed.\n- `R-31569dba` (data_model) Each task has a Last Updated Date field.\n",
-  "labels": [
-    "type:task",
-    "area:db",
-    "prd-agent"
-  ]
-}

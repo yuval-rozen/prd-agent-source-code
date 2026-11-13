@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Decide where the Excel file is generated, frontend or backend",
-  "body": "**Parent:** `US-export-task-report-to-excel`\n\n**Track:** backend · **Size:** S\n## Description\n\nDecision spike. Compare generating the Excel file in the frontend and in the backend. Consider file size, library support, testability, and dependency on the data query. Record the chosen option.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Decision document records the chosen option and its rationale\n- [ ] Trade-offs of frontend and backend generation are documented\n- [ ] Open implementation questions from the story are listed with owners\n\n## Requirements\n\n- `R-3a63e0ce` (decision_open) The development team decides whether the Excel file is generated on the frontend or the backend.\n",
-  "labels": [
-    "type:spike",
-    "area:backend",
-    "prd-agent"
-  ]
-}

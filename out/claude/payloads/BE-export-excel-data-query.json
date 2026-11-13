@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Add export data query that applies current filters and sort",
-  "body": "**Parent:** `US-export-task-report-to-excel`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nProvide the server-side data source for the export that applies the same filters, search and sort as the task report view. Returns the rows and columns needed for the Excel file.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Export data source returns only rows matching the applied filters\n- [ ] Rows are returned in the applied sort order\n- [ ] Returns an empty result when no rows match\n- [ ] Unit tests cover filter, search and sort combinations\n\n## Requirements\n\n- `R-09e9d163` (functional) The exported Excel file must contain only the rows matching the currently applied filters, in the currently applied sort order.\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n",
-  "labels": [
-    "type:task",
-    "area:backend",
-    "prd-agent"
-  ]
-}

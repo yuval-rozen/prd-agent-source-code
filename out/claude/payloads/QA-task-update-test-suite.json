@@ -1,9 +1,0 @@
-{
-  "title": "[QA] Test suite for updating task details",
-  "body": "**Parent:** `US-update-task-details`\n\n**Track:** qa_general · **Size:** M · consumes API\n## Description\n\nAutomated tests covering the update endpoint, validation rules, Last Updated Date behaviour, and frontend messages.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Tests cover valid update, empty title, Due Date before Creation Date, and not-found cases\n- [ ] Tests verify Last Updated Date changes on successful update\n- [ ] Tests verify no success message is shown on backend failure\n\n## Requirements\n\n- Derived task: testing.\n",
-  "labels": [
-    "type:task",
-    "area:qa",
-    "prd-agent"
-  ]
-}

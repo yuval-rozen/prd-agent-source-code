@@ -1,9 +1,0 @@
-{
-  "title": "[FE] Add Export to Excel action and no-data message to task report",
-  "body": "**Parent:** `US-export-task-report-to-excel`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nAdd an Export to Excel action to the task report view. Trigger the download with the current filters and sort. When the result is empty, show a message and do not start a download.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Export action is visible on the task report view\n- [ ] Download starts with the current filters and sort applied\n- [ ] Zero-row state shows a message and no download starts\n- [ ] Component tests cover the download and empty-data states\n\n## Requirements\n\n- `R-52360b76` (functional) The user can download task report data as an Excel file.\n- `R-437992f1` (frontend) When there is no data to export, the system must show a message to the user instead of producing an export file; the message text is not specified in the PRD.\n",
-  "labels": [
-    "type:task",
-    "area:frontend",
-    "prd-agent"
-  ]
-}

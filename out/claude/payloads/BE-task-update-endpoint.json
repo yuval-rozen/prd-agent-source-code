@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Add PUT /tasks/{id} endpoint to update task details",
-  "body": "**Parent:** `US-update-task-details`\n\n**Track:** backend · **Size:** M · touches DB\n## Description\n\nAdd an endpoint that updates an existing task by ID. Validate that the title is non-empty and that Due Date is not earlier than Creation Date. Set Last Updated Date on each successful update. Return a simple not-found error for unknown IDs and simple errors for invalid input.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Endpoint accepts updated task fields and returns the updated task on success\n- [ ] Empty or missing title returns a simple validation error and stores nothing\n- [ ] Due Date earlier than Creation Date returns a simple validation error and stores nothing\n- [ ] Unknown task ID returns a simple not-found error\n- [ ] Last Updated Date is set on each successful update\n- [ ] Internal or database errors return a simple error response\n\n## Requirements\n\n- `R-bc3213df` (functional) Users can update an existing task.\n- `R-03df7815` (validation_rule) A task must not be saved unless its title is non-empty.\n- `R-efe1e5d4` (validation_rule) A task's Due Date must not be earlier than its Creation Date.\n- `R-244669c0` (backend) The backend exposes endpoints to create, read all, read by ID, update, delete, and change the status of a Todo.\n- `R-9dc414dc` (backend) The backend returns simple error responses for task not found, invalid input, missing mandatory fields, updating or deleting non-existent tasks, and internal server or database errors.\n",
-  "labels": [
-    "type:task",
-    "area:backend",
-    "prd-agent"
-  ]
-}

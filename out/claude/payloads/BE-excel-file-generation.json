@@ -1,9 +1,0 @@
-{
-  "title": "[BE] Generate Excel file with headers, date format and timestamped name",
-  "body": "**Parent:** `US-export-task-report-to-excel`\n\n**Track:** backend · **Size:** M\n## Description\n\nBuild the .xlsx file from the export data. Use clear column headers, one consistent date format for all date columns, and a file name that includes the generation timestamp. If the generation side is decided as frontend, this task supplies the shared column and format definitions instead.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Generated file is a valid .xlsx file\n- [ ] Header row uses clear column labels\n- [ ] All date columns use one documented date format\n- [ ] File name includes the generation timestamp\n- [ ] Generation is covered by automated tests\n\n## Requirements\n\n- `R-52360b76` (functional) The user can download task report data as an Excel file.\n- `R-fad183b1` (non_functional) The exported Excel file must have clear column headers and use one consistent date format across all date columns.\n- `R-d22b9b6a` (functional) The exported Excel file name must include the timestamp of when the file was generated.\n",
-  "labels": [
-    "type:task",
-    "area:backend",
-    "prd-agent"
-  ]
-}

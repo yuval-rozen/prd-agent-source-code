@@ -1,9 +1,0 @@
-{
-  "title": "[FE] Add Complete and Revert controls with success and error messages",
-  "body": "**Parent:** `US-complete-and-reopen-task`\n\n**Track:** frontend · **Size:** M · consumes API\n## Description\n\nAdd a control on each task to mark it Completed, and a control on each Completed task to revert it to Open. Show the status only after the backend confirms the change. Show a success or error message after each action.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Complete control is shown on Open tasks and Revert control on Completed tasks\n- [ ] Displayed status changes only after a successful backend response\n- [ ] Success message is shown after a successful change\n- [ ] Error message is shown and status is unchanged after a failed change\n\n## Requirements\n\n- `R-2304218f` (functional) Users can mark a task as 'Completed'.\n- `R-959e2960` (functional) Users can revert a 'Completed' task back to 'Open'.\n- `R-d57336f7` (frontend) A success or error message must be displayed after each create, update, or delete task action.\n- `R-ab9e9cb0` (constraint) The frontend must not show a successful state for a task change before the backend confirms it, and must not show success when a backend action fails.\n",
-  "labels": [
-    "type:task",
-    "area:frontend",
-    "prd-agent"
-  ]
-}

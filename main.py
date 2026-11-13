@@ -5,6 +5,7 @@ Milestone 2: `run` executes S1 -> S2 -> S4 -> S5 -> S8 -> S11 (no checks or gate
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import sys
@@ -75,6 +76,8 @@ def run(
     publish: Annotated[bool, typer.Option("--publish", help="Sync the plan to GitHub after approval.")] = False,
     repo: Annotated[str | None, typer.Option("--repo", help="Target repo owner/name (with --publish).")] = None,
     force: Annotated[bool, typer.Option("--force", help="Allow publishing a NEEDS_REVIEW plan.")] = False,
+    gate_answers: Annotated[Path | None, typer.Option(
+        "--gate-answers", help="With --replay: the recorded G1 answers to offer (default: OUT/gate_answers.json).")] = None,
 ) -> None:
     """Run the pipeline on a PRD. Without --publish it is a dry run that stops after the plan review."""
     if repo and not publish:
@@ -91,6 +94,12 @@ def run(
     except ConfigError as exc:
         _fail(str(exc), ExitCode.CONFIG, exc)
 
+    prd_sha = hashlib.sha256(prd.read_bytes()).hexdigest()
+    recorded = load_gate_answers(gate_answers or out / GATE_ANSWERS_FILE, prd_sha) if replay else None
+    if replay and recorded:
+        console.print(f"[dim]Recorded G1 answers found: {len(recorded['g1'])} (offered at each G1; G2 is never "
+                      "answered from the recording).[/]")
+    given: dict[str, list[dict]] = {"g1": [], "g2": []}
     timings: dict[str, float] = {}
     graph = build_graph(llm, console=console, timings=timings, checkpointer=MemorySaver(serde=_checkpoint_serde()),
                         max_repair_rounds=settings.max_repair_rounds, grounding_threshold=settings.grounding_threshold,
@@ -103,7 +112,13 @@ def run(
         result = graph.invoke(initial, config)
         while result.get("__interrupt__"):  # G1 approve_plan / G2 confirm_diff
             payload = result["__interrupt__"][0].value
-            answer = _ask_publish(payload) if payload.get("gate") == "G2" else _ask_approval(payload)
+            if payload.get("gate") == "G2":  # always a manual confirmation (or --yes), never from a recording
+                answer = _ask_publish(payload)
+                given["g2"].append(answer)
+            else:
+                offered = recorded["g1"][len(given["g1"])] if recorded and len(given["g1"]) < len(recorded["g1"]) else None
+                answer = _ask_approval(payload, offered)
+                given["g1"].append(answer)
             result = graph.invoke(Command(resume=answer), config)
         outcome["state"] = result
         if result.get("status") is Status.ABORTED:
@@ -127,6 +142,8 @@ def run(
         if cache.hits or cache.misses:
             console.print(f"[dim]LLM response cache: {cache.hits} hits, {cache.misses} misses · cost {llm.cost.summary()}[/]")
         _write_run_stats(out, settings, llm, timings, time.monotonic() - started, outcome, replay)
+        if given["g1"] or given["g2"]:
+            save_gate_answers(out / GATE_ANSWERS_FILE, prd_sha, given)
     if outcome["exit_code"] == int(ExitCode.ABORTED):
         raise typer.Exit(int(ExitCode.ABORTED))
 
@@ -139,8 +156,35 @@ def _checkpoint_serde() -> JsonPlusSerializer:
     return JsonPlusSerializer(allowed_msgpack_modules=[("schemas", n) for n in names])
 
 
-def _ask_approval(payload: dict) -> dict:
-    """G1: show status and blocking findings; answer approve | feedback | abort. EOF (no terminal) = abort."""
+GATE_ANSWERS_FILE = "gate_answers.json"
+
+
+def save_gate_answers(path: Path, prd_sha: str, given: dict[str, list[dict]]) -> None:
+    """Every run records the human gate answers next to its outputs (no secrets: only approve / feedback text /
+    abort / confirm), so a --replay of the recording can offer the same G1 answers."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = {"prd_sha256": prd_sha, "g1": given["g1"], "g2": given["g2"]}
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def load_gate_answers(path: Path, prd_sha: str) -> dict | None:
+    """The recorded answers, only if they were recorded for this exact PRD file."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if data.get("prd_sha256") != prd_sha or not isinstance(data.get("g1"), list):
+        return None
+    return data
+
+
+def _describe(answer: dict) -> str:
+    return f"feedback: {answer.get('text', '')!r}" if answer.get("action") == "feedback" else answer.get("action", "?")
+
+
+def _ask_approval(payload: dict, offered: dict | None = None) -> dict:
+    """G1: show status and blocking findings; answer approve | feedback | abort. EOF (no terminal) = abort.
+    In --replay, `offered` is the answer the recorded run gave at this G1: Enter accepts it, or type another."""
     console.rule("[bold]G1 review")
     console.print(f"Status: [bold]{payload['status']}[/] · {payload['stories']} stories · {payload['tasks']} tasks · "
                   f"{len(payload['blocking'])} blocking, {payload['warnings']} warnings")
@@ -152,7 +196,13 @@ def _ask_approval(payload: dict) -> dict:
                       f"{len(diff['removed'])} removed (see requirements.md)")
     console.print(f"Review {payload['out_dir']}/plan.md and validation_report.md.")
     try:
-        choice = input("approve / feedback / abort [abort]: ").strip().lower() or "abort"
+        if offered:
+            console.print(f"Recorded answer: [bold]{_describe(offered)}[/]")
+            choice = input("Enter = use the recorded answer, or type approve / feedback / abort: ").strip().lower()
+            if not choice:
+                return dict(offered)
+        else:
+            choice = input("approve / feedback / abort [abort]: ").strip().lower() or "abort"
         if choice.startswith("f"):
             return {"action": "feedback", "text": input("Feedback (mention ticket keys to target them): ")}
     except EOFError:

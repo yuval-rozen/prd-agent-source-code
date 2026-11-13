@@ -1,9 +1,0 @@
-{
-  "title": "[QA] Test suite for the task report table and counts",
-  "body": "**Parent:** `US-review-task-report`\n\n**Track:** qa_general · **Size:** M · consumes API\n## Description\n\nEnd-to-end and integration test suite covering the task report table, the three counts and the empty state.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Tests cover a populated report with known counts.\n- [ ] Tests cover the empty report with all counts at 0.\n- [ ] Tests run in the CI pipeline and pass.\n\n## Requirements\n\n- `R-a1b267a3` (frontend) The reporting page displays all tasks in a table.\n- `R-4ffbfafa` (functional) The task report shows the counts of Total Tasks, Open Tasks, and Completed Tasks.\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n",
-  "labels": [
-    "type:task",
-    "area:qa",
-    "prd-agent"
-  ]
-}
