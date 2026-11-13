@@ -81,10 +81,12 @@ DEFAULT_PARALLEL_CALLS = 4
 DEFAULT_MAX_REPAIR_ROUNDS = 3
 CRITIC_CHECKS = {"CRIT-MISSING", "CRIT-MISREPRESENTED", "CRIT-UNREQUESTED", "CRIT-UNTESTABLE-AC", "CRIT-CONSTRAINT",
                  "CRIT-OVERLAP", "CRIT-PRD-GAP"}
-# A critic finding is blocking only when the plan leaves a PRD requirement uncovered (MISSING, CONSTRAINT not
-# reflected), contradicts the PRD (MISREPRESENTED), or states something the PRD does not say (UNREQUESTED).
-# Everything else, a detail the PRD is silent on (PRD-GAP) in particular, is a warning; code enforces it.
-CRITIC_BLOCKING_CHECKS = {"CRIT-MISSING", "CRIT-MISREPRESENTED", "CRIT-UNREQUESTED", "CRIT-CONSTRAINT"}
+# A critic finding can be blocking only when the plan leaves a PRD requirement uncovered (MISSING, CONSTRAINT not
+# reflected), contradicts the PRD (MISREPRESENTED), states something the PRD does not say (UNREQUESTED), does the
+# same work twice (OVERLAP), or has an acceptance criterion that cannot be verified (UNTESTABLE-AC). A detail the
+# PRD is silent on (PRD-GAP) and anything else (OTHER) is a warning; code enforces it.
+CRITIC_BLOCKING_CHECKS = {"CRIT-MISSING", "CRIT-MISREPRESENTED", "CRIT-UNREQUESTED", "CRIT-CONSTRAINT",
+                          "CRIT-OVERLAP", "CRIT-UNTESTABLE-AC"}
 
 T = TypeVar("T", bound=BaseModel)
 Findings = list[ReviewFinding]

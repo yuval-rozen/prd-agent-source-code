@@ -31,10 +31,11 @@ For each finding:
 
 - `item_key`: the key of the story or task to fix (exactly as in the plan). For `CRIT-MISSING`, use the
   story that should deliver the requirement, and put the requirement ID in `requirement_ids`.
-- `severity`: `blocking` only when the plan states something the PRD does not say (`CRIT-UNREQUESTED`),
-  contradicts the PRD (`CRIT-MISREPRESENTED`), or leaves a PRD requirement uncovered (`CRIT-MISSING`, or
-  `CRIT-CONSTRAINT`). Everything else is a `warning`: a PRD gap, an overlap, an untestable AC, an
-  improvement. Code enforces this. Do not report style preferences.
+- `severity`: `blocking` when the plan states something the PRD does not say (`CRIT-UNREQUESTED`),
+  contradicts the PRD (`CRIT-MISREPRESENTED`), leaves a PRD requirement uncovered (`CRIT-MISSING`,
+  `CRIT-CONSTRAINT`), does the same work twice (`CRIT-OVERLAP`), or has an acceptance criterion that
+  cannot be verified (`CRIT-UNTESTABLE-AC`), and the defect is real. A PRD gap (`CRIT-PRD-GAP`) and any
+  other improvement is a `warning`; code enforces this. Do not report style preferences.
 - `message`: what is wrong, citing the PRD text. `suggested_fix`: the concrete change.
 - Report each problem once. If there are no problems, return an empty `findings` list.
 - `stage`, `round`, `verdict` and the counts are filled in by code; set them to anything valid.

@@ -109,12 +109,12 @@ def test_critic_runs_once_on_whole_plan_when_clean(prd_file, tmp_path):
     assert state["status"] is Status.PASS and state["plan_rounds"] == 0
 
 
-def test_critic_blocking_finding_triggers_repair_of_that_story_only(prd_file, tmp_path):
+def test_critic_overlap_triggers_repair_of_that_story_only(prd_file, tmp_path):
     first = FakeLLM()
     _, _, clean = _run_to_gate(prd_file, tmp_path / "clean", first)
     target = clean["plan"].tasks[-1]  # a task of the last story
     other_story = clean["plan"].stories[0].key
-    overlap = _blocking("CRIT-UNREQUESTED", target.key, "Adds an export format the PRD does not ask for.")
+    overlap = _blocking("CRIT-OVERLAP", target.key, "Duplicates the migration of another story.")
     noise = ReviewFinding(check_id="crit-overlap", severity=Severity.warning, item_key=other_story, message="x")
     llm = FakeLLM(critic_findings=[[overlap], [noise]])  # round 2 reports on a non-repaired item -> filtered out
     _, _, state = _run_to_gate(prd_file, tmp_path / "out", llm)
@@ -243,7 +243,7 @@ def test_loop_keeps_best_round_when_it_regresses(prd_file, tmp_path):
     s1, s2 = clean["plan"].stories[0].key, clean["plan"].stories[1].key
     rounds = [[_blocking("CRIT-UNREQUESTED", s1), _blocking("CRIT-UNREQUESTED", s2)],  # round 1: 2 blocking
               [_blocking("CRIT-MISSING", s1)],                                         # round 2: 1 blocking (best)
-              [_blocking("CRIT-MISSING", s1), _blocking("CRIT-MISREPRESENTED", s1)]]   # round 3: 2 -> not improving
+              [_blocking("CRIT-MISSING", s1), _blocking("CRIT-UNTESTABLE-AC", s1)]]    # round 3: 2 -> not improving
     out = tmp_path / "out"
     state = _run_to_gate(prd_file, out, FakeLLM(critic_findings=rounds))[2]
     assert state["plan_blocking_history"] == [2, 1, 2]
@@ -251,7 +251,7 @@ def test_loop_keeps_best_round_when_it_regresses(prd_file, tmp_path):
     # is verified later instead of being lost; round 2's own open finding was re-raised in round 3 (same ID).
     assert state["plan_report"].round == 2
     assert {f.check_id for f in state["plan_report"].findings if f.severity.value == "blocking"} == {
-        "CRIT-MISSING", "CRIT-MISREPRESENTED"}
+        "CRIT-MISSING", "CRIT-UNTESTABLE-AC"}
     assert "kept the plan of round 2" in state["plan_stop_reason"]
     assert "kept the plan of round 2" in (out / "validation_report.md").read_text(encoding="utf-8")
 
@@ -332,7 +332,7 @@ def test_critic_sees_every_field_and_each_requirement_text_once(prd_file, tmp_pa
         assert view.index(r.statement) > view.index("REQUIREMENTS")
 
 
-def test_critic_blocking_only_for_unrequested_contradiction_or_uncovered(prd_file, tmp_path):
+def test_critic_blocking_except_for_prd_gaps_and_other(prd_file, tmp_path):
     clean = _run_to_gate(prd_file, tmp_path / "clean", FakeLLM())[2]
     key = clean["plan"].stories[0].key
     raised = [_blocking(c, key, f"{c} problem") for c in (
@@ -344,7 +344,7 @@ def test_critic_blocking_only_for_unrequested_contradiction_or_uncovered(prd_fil
     severity = {f.check_id: f.severity.value for f in found}
     assert severity == {"CRIT-MISSING": "blocking", "CRIT-MISREPRESENTED": "blocking",
                         "CRIT-UNREQUESTED": "blocking", "CRIT-CONSTRAINT": "blocking",
-                        "CRIT-OVERLAP": "warning", "CRIT-UNTESTABLE-AC": "warning", "CRIT-PRD-GAP": "warning",
+                        "CRIT-OVERLAP": "blocking", "CRIT-UNTESTABLE-AC": "blocking", "CRIT-PRD-GAP": "warning",
                         "CRIT-OTHER": "warning"}
 
 
