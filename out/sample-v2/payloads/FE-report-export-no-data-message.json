@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Show a no-data message instead of producing an empty Excel file",
+  "body": "**Parent:** `US-export-report-excel`\n\n**Track:** frontend · **Size:** S\n\n## Description\n\nAdd the no-data check to the export action. When the currently loaded filtered report has no rows, show a message to the user and do not request or download a file. This is the only place where the no-data case is handled. The wording of the message is not specified in the PRD; this is an open question to confirm with the product owner.\n\n## Blocked by\n\n- `FE-report-excel-download-action`\n\n## Definition of Done\n\n- [ ] Exporting a report with zero rows after filters are applied shows a message and requests no file\n- [ ] The message wording is confirmed with the product owner before release\n- [ ] Exporting a report with at least one row does not show the no-data message\n\n## Requirements\n\n- `R-437992f1` (frontend) When there is no data to export, the system must show a message to the user instead of producing an empty file. The PRD does not define the message wording or whether a file is still produced; this is an open question.\n\n<!-- prd-agent:key=FE-report-export-no-data-message;hash=192eb471198d5af7 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

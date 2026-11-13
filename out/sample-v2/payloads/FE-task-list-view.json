@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Build the task list view on the to-do management page",
+  "body": "**Parent:** `US-view-task-list`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nBuild the task list view on the to-do management page. Show one row per task from GET /tasks, with a status indicator and a priority indicator in each row.\n\n## Blocked by\n\n- `BE-tasks-list-endpoint`\n\n## Definition of Done\n\n- [ ] The to-do management page shows the task list with one row per task.\n- [ ] Each row shows a status indicator and a priority indicator with the stored values.\n- [ ] The list shows all stored tasks.\n\n## Requirements\n\n- `R-eed06908` (functional) The to-do management page lets the user manage their personal task list.\n- `R-60e02b8e` (frontend) The system provides a task list view that displays the user's tasks.\n- `R-48c89e9e` (frontend) The system shows a status indicator and a priority indicator for each task.\n\n<!-- prd-agent:key=FE-task-list-view;hash=6e9906f519f407e7 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

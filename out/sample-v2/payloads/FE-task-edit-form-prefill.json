@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Pre-fill the shared task form with stored values when editing a task",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nLoad the stored values of a task by ID and fill the shared task form with them when the user opens a task for editing. If the load fails, show an error message and do not open the edit form.\n\n## Blocked by\n\n- `BE-task-by-id-endpoint`\n- `FE-task-creation-form`\n\n## Definition of Done\n\n- [ ] The edit form shows the stored values of the selected task\n- [ ] A failed load shows an error message and the edit form does not open\n- [ ] No success message is shown when the load fails\n- [ ] Automated tests cover a successful load and a failed load\n\n## Requirements\n\n- `R-9b30a145` (frontend) The system provides a form to create a new task and to edit an existing task.\n- `R-bc3213df` (functional) The system lets a user update an existing task.\n\n<!-- prd-agent:key=FE-task-edit-form-prefill;hash=46d0a119f47f7fae -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

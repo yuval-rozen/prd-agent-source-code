@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add filter, title search and sort parameters to the report query",
+  "body": "**Parent:** `US-filter-search-sort-report`\n\n**Track:** backend · **Size:** M · touches DB\n\n## Description\n\nExtend the report query so it accepts Status, Priority and Date Range filters, a title search, and a sort field. The sort field may be Creation Date, Due Date, Status, Priority or Title. Results match all applied filters and the search, in the requested order. Sort direction is not specified in the requirements.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] Query filters by Status, Priority and Date Range\n- [ ] Query searches tasks by title\n- [ ] Query sorts by Creation Date, Due Date, Status, Priority and Title\n- [ ] Combined filters, search and sort return only matching tasks in the requested order\n\n## Requirements\n\n- `R-5f4ef76c` (functional) The report lets the user filter tasks by Status, Priority and Date Range.\n- `R-48e39a9d` (functional) The report lets the user search tasks by title.\n- `R-d482bfea` (functional) The report lets the user sort tasks by Creation Date, Due Date, Status, Priority or Title.\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n\n<!-- prd-agent:key=BE-report-query-filter-search-sort;hash=18bd446511b7045f -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

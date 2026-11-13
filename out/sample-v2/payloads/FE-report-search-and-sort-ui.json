@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add title search box and sortable column headers to the task report table",
+  "body": "**Parent:** `US-filter-search-sort-report`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nAdd a title search box and make the report table sortable by Creation Date, Due Date, Status, Priority and Title. Selecting a sort field requests the report data in that order.\n\n## Blocked by\n\n- `BE-report-query-filter-search-sort`\n\n## Definition of Done\n\n- [ ] Title search box narrows the listed tasks\n- [ ] Creation Date, Due Date, Status, Priority and Title can each be selected as the sort field\n- [ ] Table shows tasks in the order of the selected field\n\n## Requirements\n\n- `R-48e39a9d` (functional) The report lets the user search tasks by title.\n- `R-d482bfea` (functional) The report lets the user sort tasks by Creation Date, Due Date, Status, Priority or Title.\n\n<!-- prd-agent:key=FE-report-search-and-sort-ui;hash=f17714348424796c -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

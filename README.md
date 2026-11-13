@@ -229,20 +229,17 @@ uv run main.py run "prd/PRD To-Do Management System (1).pdf" --publish --repo ow
 - Any GitHub error stops the run with a clear message (exit code 5); rate limits and 5xx are retried.
   Because publishing is idempotent, re-running resumes where it stopped.
 
-**Sample publish** (the PASS plan in [`out/m3/`](out/m3/), 2026-11-12): the issues are in the test
-repository [yuval-rozen/prd-agent-issues](https://github.com/yuval-rozen/prd-agent-issues/issues), with
-the epic at [#1](https://github.com/yuval-rozen/prd-agent-issues/issues/1).
+**Sample publish** (the PASS plan in [`out/sample-v1/`](out/sample-v1/), re-recorded from scratch on
+2026-11-13 with a fresh LLM cache): the issues are in the test repository
+[yuval-rozen/prd-agent-demo](https://github.com/yuval-rozen/prd-agent-demo/issues), with the epic at
+[#1](https://github.com/yuval-rozen/prd-agent-demo/issues/1).
 
-| Run | Diff found by S9 | Written | Time |
+| Run | Diff found by S9 | Written | Time, cost |
 |---|---|---|---|
-| First publish | create 49 | 49 issues created, 11 bodies relinked in pass 2, 9 labels created | 111 s in S10 |
-| Second run, same PRD | unchanged 49 | nothing (0 writes) | — |
-| Sub-issue upgrade, same 49 issues | unchanged 49, link 48 | 48 native sub-issue links (10 stories under the epic, 38 tasks under their stories); no issue writes | 99 s total |
-| Run after the upgrade | unchanged 49, link 0 | nothing (0 writes) | — |
-| v2 PRD update ([`out/v2/`](out/v2/), PASS after 4 G1 decisions) | update 15, unchanged 34, churn 0 | 15 issues updated (each with a requirement change or G1 decision as its cause); nothing created, closed or relinked | 43 s (replayed from the cache, $0) |
-| Second v2 run | unchanged 49, churn 0 | nothing (0 writes); all 10 stories carried over, critic skipped | 28 s, $0.0027 |
-| v2 plain-language follow-up (field-level repairs + 1 G1 decision) | update 4, unchanged 45, churn 0 | #4, #6, #18, #42: only the flagged edge cases and the lines the decision needed changed; every other line byte-for-byte | replayed from the cache, $0 |
-| Second run after it | unchanged 49, churn 0 | nothing (0 writes) | $0.0021 |
+| v1 first publish (PASS after 3 G1 decisions) | create 45, link 44 | 45 issues created (1 epic, 8 stories, 36 tasks) and 44 native sub-issue links | 176 s (replayed from the cache, $0); recording up to G1 $0.31, G1 decisions $0.29 |
+| Second v1 run, same PRD | unchanged 45, churn 0 | nothing (0 writes) | 19 s, $0.0027 |
+| v2 PRD update ([`out/sample-v2/`](out/sample-v2/), PASS after 1 G1 decision) | update 15, unchanged 30, churn 0 | 15 issues updated (each with a requirement change, critic finding or G1 decision as its cause); nothing created, closed or relinked | 34 s (replayed from the cache, $0); recording up to G1 $0.33, G1 decision $0.12 |
+| Second v2 run | unchanged 45, churn 0 | nothing (0 writes) | 17 s, $0.0022 |
 
 ## Design decisions & trade-offs
 
@@ -288,6 +285,11 @@ the epic at [#1](https://github.com/yuval-rozen/prd-agent-issues/issues/1).
 
 ## Known gaps
 
+- **Update runs regenerate an affected story as a whole.** In an update run, a story touched by a
+  requirement change is regenerated in full (its tasks too), so lines that no requirement change touched
+  can be reworded or dropped. Repairs and G1 decisions are field- and line-level, but this first
+  regeneration is not. In the v2 sample run it dropped "Last Updated Date is set on each successful save"
+  and several open questions; a G1 decision restored the Last Updated Date rule.
 - **v2 update reached PASS only after reviewer decisions (resolved).** On `examples/todo_prd_v2.md` the update run ends NEEDS_REVIEW, so G2
   refuses to publish (no `--force` was used). The last retry (Sonnet revisions, $0.50 cap) stopped at
   the cap with 2 blocking findings, both in `US-change-task-status`: the reviewer decision "the status

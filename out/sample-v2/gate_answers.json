@@ -1,0 +1,17 @@
+{
+  "prd_sha256": "457ac04dc7462aad74505f489e07ac25e39f41a30796e8f9c627d22e819c55a6",
+  "g1": [
+    {
+      "action": "feedback",
+      "text": "US-update-task and US-create-task: The backend sets Last Updated Date on every successful save, and sets Creation Date and Last Updated Date when a task is created."
+    },
+    {
+      "action": "approve"
+    }
+  ],
+  "g2": [
+    {
+      "action": "confirm"
+    }
+  ]
+}

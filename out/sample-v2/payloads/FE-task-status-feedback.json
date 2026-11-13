@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Show success or error message after a task status change",
+  "body": "**Parent:** `US-change-task-status`\n\n**Track:** frontend · **Size:** S · consumes API\n\n## Description\n\nAfter each status change, show a success message when the backend confirms the change and an error message when the backend call fails.\n\n## Blocked by\n\n- `BE-task-status-endpoint`\n\n## Definition of Done\n\n- [ ] A success message is shown after a confirmed status change.\n- [ ] An error message is shown after a failed status change.\n- [ ] The wording of the messages is confirmed with the product owner, because it is not specified.\n\n## Requirements\n\n- `R-d57336f7` (frontend) After each create, update or delete action, the UI must display a success or error message reflecting the outcome.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action before the Backend confirms it, and must not show success when the Backend action fails.\n\n<!-- prd-agent:key=FE-task-status-feedback;hash=fb08ac095d20e3f0 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

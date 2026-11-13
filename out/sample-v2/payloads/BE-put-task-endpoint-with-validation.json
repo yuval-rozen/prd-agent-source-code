@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add PUT /tasks/{id} endpoint that saves edited task fields with validation",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** backend · **Size:** M · touches DB\n\n## Description\n\nAdd a PUT /tasks/{id} endpoint that saves edited task fields. It sets the Last Updated Date to the time of the save on every successful save and does not change the Creation Date. It rejects an empty title, a due date earlier than the creation date, and a title longer than 100 characters, and stores no changes when it rejects a request.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] PUT /tasks/{id} stores valid edits\n- [ ] An empty title is rejected\n- [ ] A due date earlier than the creation date is rejected\n- [ ] A title of 101 characters is rejected with an invalid input error and nothing is stored\n- [ ] A title of exactly 100 characters is accepted\n- [ ] Every successful save sets Last Updated Date to the time of the save and leaves Creation Date unchanged\n- [ ] A rejected save leaves Last Updated Date unchanged\n\n## Requirements\n\n- `R-bc3213df` (functional) The system lets a user update an existing task.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of todo items.\n- `R-03df7815` (validation_rule) A task title is required and an empty title must be rejected on task creation or update.\n- `R-efe1e5d4` (validation_rule) A task's Due Date must not be earlier than its Creation Date.\n- `R-0b1853d6` (validation_rule) A task title must not exceed 100 characters.\n\n<!-- prd-agent:key=BE-put-task-endpoint-with-validation;hash=ce4ab7c05c9ef701 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

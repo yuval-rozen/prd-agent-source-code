@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch1XskMuqxbco5P51HJdN",
+  "model": "claude-haiku-5-5",
+  "model_name": "claude-haiku-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 2356
+   },
+   "cache_creation_input_tokens": 2356,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 507,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"requirements\":[{\"unit_ids\":[\"u1\"],\"source_quote\":\"Task titles are mandatory; cannot be empty.\",\"kind\":\"validation_rule\",\"statement\":\"A task title is required and an empty title must be rejected on task creation or update.\"},{\"unit_ids\":[\"u2\"],\"source_quote\":\"Due Date cannot be earlier than the Creation Date.\",\"kind\":\"validation_rule\",\"statement\":\"A task's Due Date must not be earlier than its Creation Date.\"},{\"unit_ids\":[\"u3\"],\"source_quote\":\"Task titles cannot be longer than 100 characters.\",\"kind\":\"validation_rule\",\"statement\":\"A task title must not exceed 100 characters.\"},{\"unit_ids\":[\"u4\"],\"source_quote\":\"Deleting a task requires a prompt confirmation.\",\"kind\":\"frontend\",\"statement\":\"Deleting a task must first show a confirmation prompt that the user must accept before the task is deleted.\"},{\"unit_ids\":[\"u5\"],\"source_quote\":\"Success or error messages must be displayed after create/update/delete actions.\",\"kind\":\"frontend\",\"statement\":\"After each create, update or delete action, the UI must display a success or error message reflecting the outcome.\"},{\"unit_ids\":[\"u6\"],\"source_quote\":\"Optimistic UI updates are not allowed: if a Backend action fails, the Frontend must not reflect a successful state.\",\"kind\":\"constraint\",\"statement\":\"The Frontend must not show a successful state for an action before the Backend confirms it, and must not show success when the Backend action fails.\"}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 2356
+     },
+     "input_tokens": 2360,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 507,
+     "total_tokens": 2867
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-haiku-5-5",
+ "provider": "anthropic"
+}

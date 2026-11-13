@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch1XudwWVP2Xt8aUQhe73",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 3147
+   },
+   "cache_creation_input_tokens": 3147,
+   "cache_read_input_tokens": 4059,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 1860,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"report viewer\",\"i_want\":\"to filter, search and sort the tasks in the report\",\"so_that\":\"I can find the tasks I care about and review them in a useful order\",\"business_description\":\"The task report lets the user narrow the listed tasks by Status, Priority and Date Range, search them by title, and sort them by Creation Date, Due Date, Status, Priority or Title. The backend supports filtering, searching and sorting for the report.\",\"business_value\":\"Users find relevant tasks in the report faster without scanning the full list.\",\"acceptance_criteria\":[{\"given\":\"The report contains tasks with Status Open and tasks with Status Completed\",\"when\":\"The user selects Status Open in the Status filter\",\"then\":\"Only tasks with Status Open are listed in the report table\"},{\"given\":\"The report contains tasks with Priority Low, Medium and High\",\"when\":\"The user selects Priority High in the Priority filter\",\"then\":\"Only tasks with Priority High are listed in the report table\"},{\"given\":\"The report contains tasks with different dates\",\"when\":\"The user sets a Date Range in the Date Range filter\",\"then\":\"Only tasks whose date falls inside the selected range are listed in the report table\"},{\"given\":\"The report contains tasks with titles 'Pay invoice' and 'Write report'\",\"when\":\"The user types 'invoice' in the title search\",\"then\":\"Only the task titled 'Pay invoice' is listed in the report table\"},{\"given\":\"The report table lists several tasks with different Due Dates\",\"when\":\"The user selects the Due Date column to sort the table\",\"then\":\"The tasks are listed in Due Date order\"},{\"given\":\"The report table lists several tasks with different Creation Dates, Statuses and Priorities\",\"when\":\"The user selects Creation Date, Status or Priority as the sort field\",\"then\":\"The tasks are listed in the order of the selected field\"},{\"given\":\"The report table lists several tasks with different titles\",\"when\":\"The user selects Title as the sort field\",\"then\":\"The tasks are listed in order of their titles\"},{\"given\":\"A status filter, a priority filter, a date range, a title search and a sort field are applied on the report page\",\"when\":\"The report data is requested from the backend\",\"then\":\"The backend returns only the tasks matching all applied filters and the search, in the requested sort order\"}],\"edge_cases\":[\"The Date Range filter does not state which task date it applies to; this is not specified.\",\"The sort direction (ascending or descending) is not specified.\",\"Whether the title search is case-sensitive or matches partial words is not specified beyond the 'invoice' example.\"],\"dependencies\":[],\"definition_of_done\":[\"Status, Priority and Date Range filters and the title search narrow the report table\",\"The report can be sorted by Creation Date, Due Date, Status, Priority and Title\",\"Backend returns filtered, searched and sorted results\",\"Test suite covers filters, search and all five sort fields\"]},\"revised_tasks\":[{\"task_key\":\"BE-report-query-filter-search-sort\",\"task\":{\"key_slug\":\"report-query-filter-search-sort\",\"title\":\"[BE] Add filter, title search and sort parameters to the report query\",\"track\":\"backend\",\"area\":\"backend\",\"description\":\"Extend the report query so it accepts Status, Priority and Date Range filters, a title search, and a sort field. The sort field may be Creation Date, Due Date, Status, Priority or Title. Results match all applied filters and the search, in the requested order. Sort direction is not specified in the requirements.\",\"size\":\"M\",\"consumes_api\":false,\"touches_db\":true,\"requirement_ids\":[\"R-5f4ef76c\",\"R-48e39a9d\",\"R-d482bfea\",\"R-8007d6b5\"],\"is_spike\":false,\"definition_of_done\":[\"Query filters by Status, Priority and Date Range\",\"Query searches tasks by title\",\"Query sorts by Creation Date, Due Date, Status, Priority and Title\",\"Combined filters, search and sort return only matching tasks in the requested order\"]}},{\"task_key\":\"FE-report-search-and-sort-ui\",\"task\":{\"key_slug\":\"report-search-and-sort-ui\",\"title\":\"[FE] Add title search box and sortable column headers to the task report table\",\"track\":\"frontend\",\"area\":\"frontend\",\"description\":\"Add a title search box and make the report table sortable by Creation Date, Due Date, Status, Priority and Title. Selecting a sort field requests the report data in that order.\",\"size\":\"M\",\"consumes_api\":true,\"touches_db\":false,\"requirement_ids\":[\"R-48e39a9d\",\"R-d482bfea\"],\"is_spike\":false,\"definition_of_done\":[\"Title search box narrows the listed tasks\",\"Creation Date, Due Date, Status, Priority and Title can each be selected as the sort field\",\"Table shows tasks in the order of the selected field\"]}},{\"task_key\":\"QA-report-filter-search-sort-tests\",\"task\":{\"key_slug\":\"report-filter-search-sort-tests\",\"title\":\"[QA] Add test suite for report filtering, title search and sorting\",\"track\":\"qa_general\",\"area\":\"qa\",\"description\":\"Test the report filters, title search and sorting. Sorting tests cover Creation Date, Due Date, Status, Priority and Title, plus combined filters, search and sort through the backend.\",\"size\":\"M\",\"consumes_api\":true,\"touches_db\":false,\"requirement_ids\":[\"R-5f4ef76c\",\"R-48e39a9d\",\"R-d482bfea\",\"R-8007d6b5\"],\"is_spike\":false,\"definition_of_done\":[\"Tests cover Status, Priority and Date Range filters\",\"Tests cover title search\",\"Tests cover sorting by each of the five fields, including Title\",\"Tests cover combined filters, search and sort\"]}}],\"added_requirements\":[]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 4059,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 3147
+     },
+     "input_tokens": 7210,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 1860,
+     "total_tokens": 9070
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

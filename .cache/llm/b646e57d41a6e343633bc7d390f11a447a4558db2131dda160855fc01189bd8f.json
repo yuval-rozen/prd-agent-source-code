@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch1XuFMDVH29WoSzxrdFV",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 7265
+   },
+   "cache_creation_input_tokens": 7265,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 795,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"user managing my to-do list\",\"i_want\":\"to delete a task only after I confirm the deletion\",\"so_that\":\"I do not remove a task by accident and I see whether the deletion succeeded\",\"business_description\":\"Users can delete a task from the task list. A confirmation prompt must be accepted before the deletion is sent, and the interface shows a success or error message based on the backend result. The task list changes only after the backend confirms the deletion.\",\"business_value\":\"Prevents accidental data loss and keeps the displayed list consistent with the stored data.\",\"acceptance_criteria\":[{\"given\":\"A task is shown in the task list\",\"when\":\"The user chooses the delete action for that task\",\"then\":\"A confirmation prompt is shown, the task is still shown in the list, and no delete request has been sent\"},{\"given\":\"The confirmation prompt is shown for a task\",\"when\":\"The user cancels the prompt\",\"then\":\"No delete request is sent and the task remains unchanged in the list\"},{\"given\":\"The confirmation prompt is shown for an existing task\",\"when\":\"The user confirms the deletion and the backend returns a success response\",\"then\":\"The task is removed from the list and a success message is displayed\"},{\"given\":\"The user has confirmed the deletion and the delete request is still in progress\",\"when\":\"The user views the task list\",\"then\":\"The task still appears in the list because the frontend does not remove it before the backend confirms the deletion\"},{\"given\":\"The user has confirmed the deletion of a task\",\"when\":\"The backend returns an error response\",\"then\":\"The task remains in the list and an error message is displayed instead of a success message\"},{\"given\":\"A delete request is sent for a task ID that does not exist in the database\",\"when\":\"The backend processes the request\",\"then\":\"The backend returns a task not found error and no task data is changed\"},{\"given\":\"A delete request fails because of an internal server or database error\",\"when\":\"The backend processes the request\",\"then\":\"The backend returns an error response and the stored task is not removed\"}],\"edge_cases\":[\"The wording of the confirmation prompt and of the success and error messages is not specified.\",\"The task is deleted by another session before the user confirms; the backend returns a not found error and the interface shows an error message.\"],\"dependencies\":[],\"definition_of_done\":[\"All acceptance criteria are demonstrated in a test run\",\"Deletion happens only after the user accepts the confirmation prompt\",\"The task list never shows a successful deletion before the backend confirms it\"]},\"revised_tasks\":[],\"added_requirements\":[]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 7265
+     },
+     "input_tokens": 7269,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 795,
+     "total_tokens": 8064
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

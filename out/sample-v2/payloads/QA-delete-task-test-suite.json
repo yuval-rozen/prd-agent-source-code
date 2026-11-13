@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Test suite for task deletion, confirmation and error handling",
+  "body": "**Parent:** `US-delete-task`\n\n**Track:** qa_general · **Size:** M · consumes API · touches DB\n\n## Description\n\nAutomated tests for the delete flow: the confirmation prompt, cancel, successful delete, not-found and server error responses, and the messages shown to the user.\n\n## Blocked by\n\n- `BE-delete-task-endpoint`\n- `FE-delete-confirmation-prompt`\n\n## Definition of Done\n\n- [ ] Tests cover the confirmation prompt and the cancel path\n- [ ] Tests cover a successful delete and the success message\n- [ ] Tests cover a not-found response and confirm that no data changes\n- [ ] Tests cover a server or database error and confirm that the task is kept\n- [ ] Tests confirm that the task is not removed from the list before a success response\n\n## Requirements\n\n- `R-8523b9ec` (functional) The system lets a user delete a task.\n- `R-8ef41ba1` (frontend) Deleting a task must first show a confirmation prompt that the user must accept before the task is deleted.\n- `R-d57336f7` (frontend) After each create, update or delete action, the UI must display a success or error message reflecting the outcome.\n- `R-9dc414dc` (backend) The backend must handle task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action before the Backend confirms it, and must not show success when the Backend action fails.\n\n<!-- prd-agent:key=QA-delete-task-test-suite;hash=aca560fcbc61f51b -->\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch1XuFBHwkyqqdzbajZtj",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 8081
+   },
+   "cache_creation_input_tokens": 8081,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 1610,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"user managing my to-do list\",\"i_want\":\"to update the details of an existing task\",\"so_that\":\"the task reflects current information\",\"business_description\":\"A user opens an existing task in the shared task form, changes its details and saves. The backend validates the change, and the user sees the outcome as a success or error message.\",\"business_value\":\"Users can keep their tasks accurate without deleting and recreating them.\",\"acceptance_criteria\":[{\"given\":\"An existing task is open in the edit form\",\"when\":\"The user changes the title to a non-empty value of 100 characters or fewer and clicks save\",\"then\":\"The backend stores the new title, the saved title is shown in the task list, and a success message is displayed\"},{\"given\":\"An existing task is open in the edit form\",\"when\":\"The user clears the title field and clicks save\",\"then\":\"The task is not saved, the form shows a message that the title is required, and the stored title is unchanged\"},{\"given\":\"An existing task is open in the edit form\",\"when\":\"The user enters a title of 101 characters and clicks save\",\"then\":\"The task is not saved, the form shows a message that the title cannot be longer than 100 characters, and the stored title is unchanged\"},{\"given\":\"An update request with a title of 101 characters\",\"when\":\"The backend receives the request\",\"then\":\"The backend rejects the request with an invalid input error and stores no changes\"},{\"given\":\"An existing task with a creation date of 1 March\",\"when\":\"The user sets the due date to 28 February and clicks save\",\"then\":\"The task is not saved, the form shows a message that the due date cannot be earlier than the creation date, and the stored due date is unchanged\"},{\"given\":\"An existing task is open in the edit form and the backend returns an error for the save request\",\"when\":\"The user clicks save\",\"then\":\"The stored task keeps its previous values, an error message is displayed, and no success message is displayed\"},{\"given\":\"A task that no longer exists is open in the edit form\",\"when\":\"The user saves changes to it\",\"then\":\"The backend responds with a task not found error, the form shows an error message, and no success message is displayed\"},{\"given\":\"A save request that sends a field value the backend does not accept\",\"when\":\"The backend receives the request\",\"then\":\"The backend rejects the request with an invalid input error, stores no changes, and returns the error to the frontend\"},{\"given\":\"An update request that omits the title\",\"when\":\"The backend receives the request\",\"then\":\"The backend rejects the request with a missing mandatory field error and stores no changes\"},{\"given\":\"A save request that fails because of an internal server or database error\",\"when\":\"The backend returns the error\",\"then\":\"The backend stores no partial changes and the frontend shows an error message\"},{\"given\":\"A task with stored values exists\",\"when\":\"The user opens it for editing\",\"then\":\"The edit form shows the stored values of that task\"},{\"given\":\"The request to load a task by ID fails, for example because the task does not exist or the server returns an error\",\"when\":\"The user opens the task for editing\",\"then\":\"An error message is shown, the edit form does not open, and no success message is displayed\"},{\"given\":\"A task list row for an existing task and a save of that task has failed\",\"when\":\"The task list is shown after the failed save\",\"then\":\"The task list shows the previous values of the task, not the values the user tried to save\"},{\"given\":\"A task list row for an existing task\",\"when\":\"The user selects the edit action on that row\",\"then\":\"The edit form opens with the stored values of that task\"}],\"edge_cases\":[\"A title of exactly 100 characters is accepted; a title of 101 characters is rejected.\",\"The PRD does not specify whether spaces count toward the 100-character limit.\",\"The wording of the success and error messages is not specified.\"],\"dependencies\":[],\"definition_of_done\":[\"All acceptance criteria pass in the test suite\",\"Update failures leave stored values unchanged\",\"No success message appears before the backend confirms the save\"]},\"revised_tasks\":[],\"added_requirements\":[{\"requirement_id\":\"R-0b1853d6\",\"mode\":\"revise_existing\",\"task_key\":\"BE-put-task-endpoint-with-validation\",\"task\":{\"key_slug\":\"put-task-endpoint-with-validation\",\"title\":\"[BE] Add PUT /tasks/{id} endpoint that saves edited task fields with validation\",\"track\":\"backend\",\"area\":\"backend\",\"description\":\"Add a PUT /tasks/{id} endpoint that saves edited task fields. It rejects an empty title, a due date earlier than the creation date, and a title longer than 100 characters, and stores no changes when it rejects a request.\",\"size\":\"M\",\"consumes_api\":false,\"touches_db\":true,\"requirement_ids\":[\"R-bc3213df\",\"R-244669c0\",\"R-03df7815\",\"R-efe1e5d4\",\"R-0b1853d6\"],\"is_spike\":false,\"definition_of_done\":[\"PUT /tasks/{id} stores valid edits\",\"An empty title is rejected\",\"A due date earlier than the creation date is rejected\",\"A title of 101 characters is rejected with an invalid input error and nothing is stored\",\"A title of exactly 100 characters is accepted\"]}}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 8081
+     },
+     "input_tokens": 8085,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 1610,
+     "total_tokens": 9695
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

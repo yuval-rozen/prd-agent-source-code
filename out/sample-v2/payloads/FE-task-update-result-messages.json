@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Show update result messages and keep shown values until save succeeds",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** frontend · **Size:** S · consumes API\n\n## Description\n\nAfter a save, show a success message only when the backend confirms the save and an error message when it fails. Show the title-required and due-date messages in the form for the rejected cases. When a save fails, the task list keeps showing the previous values.\n\n## Blocked by\n\n- `BE-put-task-endpoint-with-validation`\n- `FE-task-edit-form-prefill`\n\n## Definition of Done\n\n- [ ] A success message appears only after the backend confirms the save\n- [ ] An error message appears when the backend returns an error and no success message is shown\n- [ ] The title-required and due-date messages appear in the form for the rejected cases\n- [ ] After a failed save the task list shows the previous values\n- [ ] Automated tests cover success, backend error and each validation message\n\n## Requirements\n\n- `R-d57336f7` (frontend) After each create, update or delete action, the UI must display a success or error message reflecting the outcome.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action before the Backend confirms it, and must not show success when the Backend action fails.\n- `R-03df7815` (validation_rule) A task title is required and an empty title must be rejected on task creation or update.\n- `R-efe1e5d4` (validation_rule) A task's Due Date must not be earlier than its Creation Date.\n\n<!-- prd-agent:key=FE-task-update-result-messages;hash=b3cdc27e50905e51 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

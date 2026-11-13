@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add Mark as Completed action to each task",
+  "body": "**Parent:** `US-change-task-status`\n\n**Track:** frontend · **Size:** S · consumes API\n\n## Description\n\nAdd an action to each task that marks it as Completed by calling the status change endpoint. The task shows Completed only after the backend confirms the change. If the backend action fails, the task keeps its previous status on screen.\n\n## Blocked by\n\n- `BE-task-status-endpoint`\n- `FE-task-list-view`\n\n## Definition of Done\n\n- [ ] Action marks the task as Completed through the backend\n- [ ] Completed status is shown only after backend confirmation\n- [ ] Failed backend action leaves the previous status on screen\n\n## Requirements\n\n- `R-2304218f` (functional) The system lets a user mark a task as 'Completed'.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action before the Backend confirms it, and must not show success when the Backend action fails.\n\n<!-- prd-agent:key=FE-task-status-toggle;hash=67551709ebc91f33 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

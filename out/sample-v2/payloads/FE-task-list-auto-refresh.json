@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Refresh the task list automatically after task changes",
+  "body": "**Parent:** `US-view-task-list`\n\n**Track:** frontend · **Size:** S · consumes API\n\n## Description\n\nRefresh the task list from the backend after a task is created, updated, deleted or has its status changed, so the change is visible without a page reload.\n\n## Blocked by\n\n- `BE-tasks-list-endpoint`\n- `FE-task-list-view`\n\n## Definition of Done\n\n- [ ] The list refreshes after a task is created, updated, deleted or has its status changed.\n- [ ] The change is visible without a manual page reload.\n- [ ] The list shows only data returned by the backend.\n\n## Requirements\n\n- `R-6a73fa71` (frontend) The task list refreshes automatically when a task is changed.\n\n<!-- prd-agent:key=FE-task-list-auto-refresh;hash=670e9e65c11328e1 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}
