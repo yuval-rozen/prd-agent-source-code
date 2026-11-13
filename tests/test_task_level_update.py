@@ -224,3 +224,99 @@ def test_g2_shows_causes_and_zero_churn_for_a_prd_update(tmp_path):
     again = build_graph(FakeLLM(), console=Console(quiet=True), github=gh.tool()).invoke(
         {"prd_path": str(prd), "out_dir": str(out), "publish": True, "auto_yes": True})
     assert all(a.action is SyncActionType.unchanged for a in again["sync_actions"])
+
+
+# --------------------------------------------------------------------------- repairs and G1 feedback in update runs
+
+from agent import repair_update  # noqa: E402
+from schemas import ReviewFinding, Severity  # noqa: E402
+
+
+def _changed_plan():
+    previous = _four_task_story()
+    new_reqs = [_req(TEXTS[0]), _req(TEXTS[1]), _req(CHANGED), _req(TEXTS[3])]
+    plan, diff, _ = _update(previous, new_reqs, FakeLLM())
+    skeletons = [StorySkeleton(key=s.key, title=s.title, requirement_ids=s.requirement_ids) for s in plan.stories]
+    return previous, plan, diff, skeletons
+
+
+def _blocking(item, message="problem", check="CRIT-MISSING"):
+    return ReviewFinding(check_id=check, severity=Severity.blocking, item_key=item, message=message)
+
+
+def test_repair_revises_only_the_named_task(tmp_path):
+    previous, plan, diff, skeletons = _changed_plan()
+    llm = FakeLLM()
+    repaired, _, touched, _ = repair_update(plan, skeletons, [_blocking("BE-renew-endpoint")], llm, [], previous, diff)
+    before = {t.key: t for t in plan.tasks}
+    after = {t.key: t for t in repaired.tasks}
+    assert set(after) == set(before) and touched == ["BE-renew-endpoint"]
+    for key in before:
+        if key != "BE-renew-endpoint":
+            assert after[key].model_dump_json() == before[key].model_dump_json()
+    assert repaired.stories == plan.stories  # a task-level finding does not touch the story text
+    assert not [n for n, _ in llm.calls if n == "StoryDetailDraft"]
+    user = next(u for n, u in llm.calls if n == "StoryRepairDraft")
+    assert "may revise: BE-renew-endpoint" in user
+
+
+def test_repair_cannot_change_a_task_the_finding_does_not_name():
+    previous, plan, diff, skeletons = _changed_plan()
+    found = []
+    repaired, _, touched, _ = repair_update(plan, skeletons, [_blocking("BE-renew-endpoint")], FakeLLM(repair_mode="rogue"),
+                                            found, previous, diff)
+    assert touched == ["BE-renew-endpoint"]
+    assert any(f.check_id == "REF-RESTORE" and "does not name" in f.message for f in found)
+
+
+def test_story_level_decision_lets_the_model_pick_the_minimal_set():
+    previous, plan, diff, skeletons = _changed_plan()
+    decision = _blocking("US-loans", "US-loans: renewals are limited to two.", check="G1-FEEDBACK")
+    llm = FakeLLM()
+    repaired, _, touched, _ = repair_update(plan, skeletons, [decision], llm, [], previous, diff)
+    assert "may revise: any task of this story" in next(u for n, u in llm.calls if n == "StoryRepairDraft")
+    assert set(touched) == {"US-loans", plan.tasks[0].key}  # the story text and the one task the model chose
+    for t in repaired.tasks[1:]:
+        assert t in plan.tasks
+
+
+def test_new_task_only_when_returned_and_never_closing_published_tasks():
+    previous, plan, diff, skeletons = _changed_plan()
+    added, _, _, _ = repair_update(plan, skeletons, [_blocking("US-loans")], FakeLLM(repair_mode="new_task"), [], previous, diff)
+    new = [t for t in added.tasks if t.key not in {x.key for x in plan.tasks}]
+    assert len(new) == 1 and new[0].key.startswith("FE-")
+    found = []
+    closed, _, _, _ = repair_update(added, skeletons, [_blocking(new[0].key)], FakeLLM(repair_mode="close_new"), found,
+                                    previous, diff)
+    assert new[0].key not in {t.key for t in closed.tasks}  # created in this run -> may be removed
+    assert {t.key for t in plan.tasks} <= {t.key for t in closed.tasks}  # published tasks are never closed here
+
+
+def test_g1_feedback_in_an_update_run_uses_the_task_level_path(tmp_path):
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.types import Command
+    from rich.console import Console
+
+    from tests.test_pipeline import GENERIC_PRD
+
+    prd = tmp_path / "prd.md"
+    out = tmp_path / "out"
+    prd.write_text(GENERIC_PRD, encoding="utf-8")
+    build_graph(FakeLLM(), console=Console(quiet=True)).invoke({"prd_path": str(prd), "out_dir": str(out), "auto_yes": True})
+    v1 = TicketPlan.model_validate_json((out / "plan.json").read_text(encoding="utf-8"))
+    prd.write_text(GENERIC_PRD.replace("- Cancel a reservation.", "- Cancel an open reservation."), encoding="utf-8")
+    llm = FakeLLM()
+    graph = build_graph(llm, console=Console(quiet=True), checkpointer=MemorySaver())
+    config = {"configurable": {"thread_id": "fb"}}
+    first = graph.invoke({"prd_path": str(prd), "out_dir": str(out)}, config)
+    story = next(s.key for s in first["plan"].stories if s.key not in first["carried"])
+    before = {t.key: t for t in first["plan"].tasks}
+    graph.invoke(Command(resume={"action": "feedback", "text": f"{story}: holds expire after 3 days."}), config)
+    final = graph.invoke(Command(resume={"action": "approve"}), config)
+    assert not [n for n, _ in llm.calls if n == "StoryDetailDraft"]  # never a full regeneration in an update run
+    assert [n for n, _ in llm.calls].count("StoryRepairDraft") == 1
+    after = {t.key: t for t in final["plan"].tasks}
+    changed = [k for k in after if before.get(k) != after[k]]
+    assert len(changed) == 1  # one task revised for the decision; every other task byte-for-byte
+    assert all(after[k] == v1_t for k, v1_t in {t.key: t for t in v1.tasks}.items()
+               if k in after and next(t for t in v1.tasks if t.key == k).story_key != story)

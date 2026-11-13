@@ -47,6 +47,7 @@ from schemas import (
     Status,
     StoryDetailDraft,
     StoryPlanDraft,
+    StoryRepairDraft,
     StoryUpdateDraft,
     StorySkeleton,
     SyncAction,
@@ -1272,6 +1273,134 @@ def changed_keys(plan: TicketPlan, previous: TicketPlan) -> list[str]:
     return [i.key for i in [*plan.stories, *plan.tasks] if old.get(i.key) != i]
 
 
+
+_TASK_KEY_IN_TEXT = re.compile(r"\b(?:FE|BE|QA)-[a-z0-9]+(?:-[a-z0-9]+)*\b")
+
+
+def allowed_tasks_for(finding: ReviewFinding, story_task_keys: set[str]) -> set[str] | None:
+    """The tasks a finding (or reviewer decision) names; None = it names none, so it is about the story itself and
+    any task of the story may be revised for it (the model picks the minimal set)."""
+    named = {finding.item_key} if finding.item_key in story_task_keys else set()
+    named |= {k for k in _TASK_KEY_IN_TEXT.findall(f"{finding.message} {finding.suggested_fix or ''}")
+              if k in story_task_keys}
+    return named or None
+
+
+def repair_update_user_message(skeleton: StorySkeleton, story: UserStory, tasks: list[TechnicalTask],
+                               findings: Findings, allowed: list[set[str] | None], new_this_run: set[str],
+                               requirements: list[Requirement], other_tasks: list[TechnicalTask],
+                               decisions: list[str] | None) -> str:
+    reqs = {r.id: r for r in requirements}
+    own = [reqs[i] for i in skeleton.requirement_ids if i in reqs]
+    acs = "\n".join(f"  AC: Given {a.given}; When {a.when}; Then {a.then}" for a in story.acceptance_criteria)
+    task_lines = [f"{_task_line(t)} | requirements: {', '.join(t.requirement_ids) or '-'}"
+                  + (" | created in this run" if t.key in new_this_run else "") for t in tasks]
+    finding_lines = []
+    for i, (f, ok) in enumerate(zip(findings, allowed), 1):
+        scope = "any task of this story" if ok is None else ", ".join(sorted(ok))
+        fix = f" Suggested fix: {f.suggested_fix}" if f.suggested_fix else ""
+        finding_lines.append(f"FINDING {i} [{f.check_id}] ({f.item_key or skeleton.key}) {f.message}{fix} | may revise: {scope}")
+    msg = (f"Story key: {skeleton.key}\nStory title: {skeleton.title}\n\n"
+           f"Requirements of this story:\n{_prd_block(chr(10).join(_req_line(r) for r in own))}\n\n"
+           f"Current story:\n{story.title}\n{acs}\n\n"
+           "Current tasks of this story:\n" + "\n".join(task_lines) + "\n\n"
+           "Findings to fix:\n" + "\n".join(finding_lines))
+    if other_tasks:
+        msg += "\n\nTasks that other stories already contain (do not repeat their work):\n" + "\n".join(
+            _task_line(t) for t in other_tasks)
+    if decisions:
+        msg += "\n\n" + _decisions_block(decisions)
+    return msg
+
+
+def apply_story_repair(skeleton: StorySkeleton, draft: StoryRepairDraft, story: UserStory, tasks: list[TechnicalTask],
+                       findings: Findings, allowed: list[set[str] | None], new_this_run: set[str], known: set[str],
+                       story_keys: set[str], taken: set[str], diff: RequirementDiff | None,
+                       ref_findings: Findings) -> tuple[UserStory, list[TechnicalTask]]:
+    """Code enforces the scope: only allowed tasks are revised, every other task stays byte-for-byte, only tasks
+    created in this run can be closed, and the story text changes only for a finding about the story itself."""
+    _, _, _, removed = _delta(diff)
+    changed = dict(diff.changed) if diff else {}
+    by_key = {t.key: t for t in tasks}
+    result = dict(by_key)
+    closed: set[str] = set()
+    new_tasks: list[TechnicalTask] = []
+    for fix in draft.fixes:
+        if not 1 <= fix.finding <= len(findings):
+            ref_findings.append(_finding("REF-RESTORE", f"Fix for unknown finding {fix.finding} ignored.", item_key=skeleton.key))
+            continue
+        ok = allowed[fix.finding - 1]
+        for rev in fix.revised_tasks:
+            if rev.task_key not in by_key or (ok is not None and rev.task_key not in ok):
+                ref_findings.append(_finding("REF-RESTORE", f"The model changed {rev.task_key!r}, which finding "
+                                             f"{fix.finding} does not name; code kept it unchanged.", item_key=skeleton.key))
+                continue
+            result[rev.task_key] = _revised_task(result[rev.task_key], rev.task, known, removed, changed, ref_findings)
+        for key in fix.close_tasks:
+            if key in by_key and key in new_this_run:
+                closed.add(key)
+            else:
+                ref_findings.append(_finding("REF-RESTORE", f"Close of {key!r} ignored: only tasks created in this run "
+                                             "can be removed by a repair.", item_key=skeleton.key))
+        if fix.new_task is not None:
+            new_tasks.append(_new_task(skeleton, fix.new_task, known, taken, ref_findings))
+    story_level = any(ok is None for ok in allowed)
+    new_story = _story_from_content(skeleton, draft.story, story_keys, ref_findings) if story_level else story
+    if not story_level and draft.story is not None:
+        pass  # task-level findings only: the story text is kept as it is
+    kept = [result[t.key] for t in tasks if t.key not in closed]
+    return new_story, kept + new_tasks
+
+
+def repair_update(plan: TicketPlan, skeletons: list[StorySkeleton], findings: Findings, llm: StructuredLLM,
+                  ref_findings: Findings, previous: TicketPlan, diff: RequirementDiff | None,
+                  decisions: Findings | None = None) -> tuple[TicketPlan, list[StorySkeleton], list[str], Findings]:
+    """Update runs: repairs and G1 feedback go through the task-level path instead of regenerating stories."""
+    targets, skeletons, unroutable = resolve_repair_targets(findings, plan, skeletons)
+    if not targets:
+        return plan, skeletons, [], unroutable
+    sk_by_key = {sk.key: sk for sk in skeletons}
+    story_by_key = {st.key: st for st in plan.stories}
+    order = [st.key for st in plan.stories if st.key in targets]
+    previous_keys = {t.key for t in previous.tasks}
+    new_this_run = {t.key for t in plan.tasks if t.key not in previous_keys}
+    system = system_prompt("repair_update_story")
+    scopes: dict[str, list[set[str] | None]] = {}
+    for key in order:
+        story_task_keys = {t.key for t in plan.tasks if t.story_key == key}
+        scopes[key] = [allowed_tasks_for(f, story_task_keys) for f in targets[key]]
+
+    def call(key: str) -> StoryRepairDraft:
+        tasks = [t for t in plan.tasks if t.story_key == key]
+        others = [t for t in plan.tasks if t.story_key != key]
+        mine = decisions_for(decisions or [], {key, *(t.key for t in tasks)})
+        user = repair_update_user_message(sk_by_key[key], story_by_key[key], tasks, targets[key], scopes[key],
+                                          new_this_run, plan.requirements, others, mine or None)
+        return llm.structured(StoryRepairDraft, system, user)
+
+    drafts = _parallel(call, order, _workers(llm))
+    known = {r.id for r in plan.requirements}
+    story_keys = {st.key for st in plan.stories}
+    taken = {t.key for t in plan.tasks} | previous_keys
+    new_story, new_tasks = {}, {}
+    for key, draft in zip(order, drafts):
+        tasks = [t for t in plan.tasks if t.story_key == key]
+        new_story[key], new_tasks[key] = apply_story_repair(
+            sk_by_key[key], draft, story_by_key[key], tasks, targets[key], scopes[key], new_this_run, known,
+            story_keys, taken, diff, ref_findings)
+    stories = [new_story.get(st.key, st) for st in plan.stories]
+    tasks: list[TechnicalTask] = []
+    for st in plan.stories:
+        tasks += new_tasks[st.key] if st.key in new_tasks else [t for t in plan.tasks if t.story_key == st.key]
+    repaired = TicketPlan.model_validate(plan.model_copy(update={"stories": stories, "tasks": tasks}).model_dump())
+    added = {t.key for t in repaired.tasks if t.key not in {x.key for x in plan.tasks}}
+    if added:
+        repaired = map_dependencies(repaired, llm, ref_findings, editable=added, allow_incoming=False)
+    before = {i.key: i for i in [*plan.stories, *plan.tasks]}
+    touched = [i.key for i in [*repaired.stories, *repaired.tasks] if before.get(i.key) != i]
+    return TicketPlan.model_validate(repaired.model_dump()), skeletons, touched, unroutable
+
+
 # --------------------------------------------------------------------------- G1
 
 
@@ -1465,10 +1594,13 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             # plan is still the context), and nothing at all when nothing changed.
             focus = changed_keys(plan, state["previous_plan"])  # only what differs from the approved plan
             skip_critic = not focus
+        elif round_no > 1 and state.get("previous_plan") is not None and not state.get("repaired_keys"):
+            focus, skip_critic = [], True  # the repair changed nothing: nothing new to review; earlier findings stay
         update_round = round_no == 1 and state.get("previous_plan") is not None
         critic = [] if skip_critic else run_critic(plan, state["parsed"], llm, round_no, focus,
                                                    decisions_for(state.get("reviewer_decisions") or []), update_round)
-        if focus and state.get("plan_report") is not None:  # carry earlier critic findings on untouched items
+        if (focus or (skip_critic and round_no > 1)) and state.get("plan_report") is not None:
+            # carry earlier critic findings on untouched items
             keys = {plan.project.key, *(s.key for s in plan.stories), *(t.key for t in plan.tasks)}
             carried = [f for f in state["plan_report"].findings
                        if f.check_id.startswith("CRIT-") and f.item_key not in set(focus) and f.item_key in keys]
@@ -1514,16 +1646,25 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         found: Findings = []
         findings = list(state["plan_report"].findings) + list(state.get("feedback_findings") or [])
         previous = state.get("previous_plan")
-        plan, skeletons, repaired, unroutable = repair_plan(state["plan"], state["skeletons"], findings, llm, found,
-                                                            state.get("reviewer_decisions") or [], previous is not None)
-        if previous is not None:  # update run: a repair may not cause churn either
+        if previous is not None:  # update run: task-level repair (revise only what is named; keep the rest)
+            plan, skeletons, repaired, unroutable = repair_update(
+                state["plan"], state["skeletons"], findings, llm, found, previous, state.get("requirement_diff"),
+                state.get("reviewer_decisions") or [])
+        else:
+            plan, skeletons, repaired, unroutable = repair_plan(state["plan"], state["skeletons"], findings, llm, found,
+                                                                state.get("reviewer_decisions") or [])
+        if previous is not None:  # ... and a repair may not cause churn either
             plan = match_old_keys(plan, previous, state.get("requirement_diff"), found)
             fb = feedback_story_keys(state.get("run_feedback") or [], plan)
             plan = TicketPlan.model_validate(churn_guard(plan, previous, state.get("requirement_diff"), fb, found).model_dump())
             repaired = [k for k in repaired if k in changed_keys(plan, previous)]
-        console.print(f"regenerated {sum(k.startswith('US-') for k in repaired)} story(ies): "
-                      f"{', '.join(k for k in repaired if k.startswith('US-')) or 'none'}"
-                      + (f" · {len(unroutable)} finding(s) not tied to a story" if unroutable else ""))
+        if previous is not None:
+            console.print(f"repaired (task level): {', '.join(repaired) or 'nothing changed'}"
+                          + (f" · {len(unroutable)} finding(s) not tied to a story" if unroutable else ""))
+        else:
+            console.print(f"regenerated {sum(k.startswith('US-') for k in repaired)} story(ies): "
+                          f"{', '.join(k for k in repaired if k.startswith('US-')) or 'none'}"
+                          + (f" · {len(unroutable)} finding(s) not tied to a story" if unroutable else ""))
         return {"plan": plan, "skeletons": skeletons, "repaired_keys": repaired, "plan_rounds": state["plan_rounds"] + 1,
                 "reference_findings": refs(state, found)}
 

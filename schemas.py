@@ -460,6 +460,22 @@ class StoryUpdateDraft(_Model):
     added_requirements: list[AddedPlacementDraft] = Field(description="Exactly one entry per ADDED requirement.")
 
 
+class FindingFixDraft(_Model):
+    finding: int = Field(description="Number of the finding (or reviewer decision) in the input that this fixes.")
+    revised_tasks: list[TaskRevisionDraft] = Field(
+        description="Existing tasks changed to fix it; only tasks the input allows for this finding.")
+    new_task: TaskDraft | None = Field(default=None, description="Only if no existing task can cover the fix.")
+    close_tasks: list[str] = Field(default_factory=list,
+                                   description="Keys of tasks created in this run that the fix makes redundant.")
+
+
+class StoryRepairDraft(_Model):
+    """Update run, repair or G1 feedback on one story: change only what the findings need."""
+
+    story: StoryContentDraft
+    fixes: list[FindingFixDraft] = Field(description="One entry per finding in the input.")
+
+
 class DependencyEdgeDraft(_Model):
     task_key: str = Field(description="Key of the task that is blocked.")
     blocked_by: list[str] = Field(description="Keys of the tasks that must be finished first.")

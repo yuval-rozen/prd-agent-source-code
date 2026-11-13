@@ -26,6 +26,8 @@ from schemas import (
     StoryPlanDraft,
     StorySkeletonDraft,
     StoryUpdateDraft,
+    StoryRepairDraft,
+    FindingFixDraft,
     TaskRevisionDraft,
     AddedPlacementDraft,
     TaskArea,
@@ -42,11 +44,14 @@ class FakeLLM:
     """critic_findings: list of ReviewFinding lists, one per critic call (missing entries = no findings).
     drop_units: unit references the first extraction of a section silently skips (to exercise S3 repair)."""
 
-    def __init__(self, critic_findings=None, drop_units=(), place_added_in=None, rogue_revise=False):
+    def __init__(self, critic_findings=None, drop_units=(), place_added_in=None, rogue_revise=False,
+                 repair_mode="revise_allowed"):
         """place_added_in: put an ADDED requirement into this existing task (revise_existing) instead of a new task.
         rogue_revise: also return a "revision" of every KEEP task (code must ignore it)."""
         self.place_added_in = place_added_in
         self.rogue_revise = rogue_revise
+        # repair_mode for StoryRepairDraft: revise_allowed | rogue (also edits a task it may not) | new_task | close_new
+        self.repair_mode = repair_mode
         self.calls: list[tuple[str, str]] = []
         self.roles: list[str] = []
         self.critic_findings = list(critic_findings or [])
@@ -72,6 +77,8 @@ class FakeLLM:
             return self._detail(user)
         if schema is StoryUpdateDraft:
             return self._update(user)
+        if schema is StoryRepairDraft:
+            return self._repair(user)
         raise AssertionError(f"unexpected schema {schema}")
 
     def _extract(self, user: str) -> RequirementDraftList:
@@ -183,3 +190,38 @@ def _update(self, user: str) -> StoryUpdateDraft:
 
 
 FakeLLM._update = _update
+
+
+_FINDING = re.compile(r"^FINDING (\d+) .*\| may revise: ([^\n]+)$", re.MULTILINE)
+_STORY_TASK = re.compile(r"^((?:FE|BE|QA)-\S+) \[(\w+), .*\| requirements: ([^|\n]*)(\| created in this run)?", re.MULTILINE)
+
+
+def _repair(self, user: str) -> StoryRepairDraft:
+    key = re.search(r"^Story key: (\S+)", user, re.MULTILINE).group(1)
+    section = user.split("Current tasks of this story:")[1].split("Findings to fix:")[0]
+    tasks = [(k, tr, [r.strip() for r in reqs.split(",") if r.strip().startswith("R-")], bool(new))
+             for k, tr, reqs, new in _STORY_TASK.findall(section)]
+    fixes = []
+    for number, scope in _FINDING.findall(user):
+        allowed = [k for k, *_ in tasks] if scope.startswith("any task") else [x.strip() for x in scope.split(",")]
+        target = next(t for t in tasks if t[0] == allowed[0])
+        revised = [TaskRevisionDraft(task_key=target[0], task=_task_draft(target[0], target[1], target[2], "fixed"))]
+        new_task, close = None, []
+        if self.repair_mode == "rogue":
+            other = next((t for t in tasks if t[0] not in allowed), None)
+            if other:
+                revised.append(TaskRevisionDraft(task_key=other[0], task=_task_draft(other[0], other[1], other[2], "rogue")))
+        if self.repair_mode == "new_task":
+            new_task = _task_draft("FE-fix-" + number, "frontend", target[2], "new")
+        if self.repair_mode == "close_new":
+            close = [t[0] for t in tasks if t[3]]
+        fixes.append(FindingFixDraft(finding=int(number), revised_tasks=revised, new_task=new_task, close_tasks=close))
+    ac = [AcceptanceCriterion(given="a member", when="they act", then=f"{key} handles it"),
+          AcceptanceCriterion(given="a member", when="it fails", then="an error message is shown")]
+    content = StoryContentDraft(as_a="user", i_want=f"fixed {key}", so_that="the finding is resolved",
+                                business_description="Fixed.", business_value="Value.", acceptance_criteria=ac,
+                                edge_cases=[], dependencies=[], definition_of_done=["Fixed"])
+    return StoryRepairDraft(story=content, fixes=fixes)
+
+
+FakeLLM._repair = _repair
