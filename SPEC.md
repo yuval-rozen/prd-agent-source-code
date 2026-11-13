@@ -116,6 +116,7 @@ S7 check_plan (code validators P1–P11 + LLM critic)
 - In repair rounds 2-3 the critic reviews only the repaired items (the stories/tasks that repair_plan regenerated); it still receives the whole plan as context, and its findings on other items are discarded. Earlier critic findings on items that were not repaired are carried over. The deterministic validators still run on the whole plan every round.
 - repair_plan routing: a finding on a story or task regenerates that story; a CRIT-OVERLAP finding also regenerates every story whose task it names; a finding with only requirement IDs (e.g. P1) adds the requirement to the story that cites most requirements of the same PRD section. A regenerated story sees its findings, its current version and the tasks of all other stories. Its new tasks get dependencies from S6 (only their edges, and new edges pointing to them, change).
 - Deterministic findings and critic findings are merged into one ReviewReport.
+- Open-findings ledger: every blocking critic finding gets an ID and stays open across repair rounds, keep-best restores and G1 resets until the critic explicitly confirms it is fixed. Each critic call receives the open findings and must put each ID in `resolved` (fixed in the current plan) or `still_open`; a finding the critic does not mention stays open. When keep-best restores an earlier plan, that round's open findings come back and findings raised later stay open too.
 - Fail → repair_plan regenerates ONLY the failing stories/tasks, using their findings, and merges them back by key.
 
 S8 render_preview (code: tools/renderer.py)
@@ -130,6 +131,7 @@ S8 render_preview (code: tools/renderer.py)
 G1 approve_plan (human, interrupt)
 - Show the requirements summary (and the requirement diff in an update run), the ticket tree, the status, and the findings.
 - Answers: approve | feedback (sent to repair_plan as extra findings) | abort.
+- A decision that names a story (or its tasks) is applied to that story: the story's ACs and every task that conflicts with it are revised, not a minimal set; tasks that do not conflict stay unchanged. A decision without a ticket key is plan-wide: it is not pushed into every story; the next critic round reviews the whole plan against it, and the conflicts it finds are repaired like other findings.
 - Feedback is a reviewer decision: it stays in the state, is given to the critic and to every later repair as authoritative context (treated like PRD text), and starts a fresh repair cycle (round count, blocking history and best-round baseline reset), so a round without the decision is never restored over it. Ticket keys in the feedback target those items; feedback without a key applies to every story.
 - `--yes` auto-approves only when the status is PASS.
 

@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch11WcHfcfP7ATZYy4XWX",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 7452
+   },
+   "cache_creation_input_tokens": 7452,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 1276,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"user managing my to-do list\",\"i_want\":\"to edit an existing task\",\"so_that\":\"I can keep the task details accurate\",\"business_description\":\"The user opens an existing task in the task form, changes its fields and saves. The backend validates the update and the frontend shows the result only after the backend responds.\",\"business_value\":\"Task data stays accurate without deleting and re-creating tasks.\",\"acceptance_criteria\":[{\"given\":\"an existing task with a valid title and a Due Date not earlier than its Creation Date\",\"when\":\"the user opens the edit form, changes the title, and submits the form\",\"then\":\"the backend stores the new title and the task shows the new title in the list after the backend returns success\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user clears the title field and submits the form\",\"then\":\"the backend rejects the update, the task keeps its previous title, and an error message stating that the title is mandatory is shown\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user enters a title of 101 characters and submits the form\",\"then\":\"the backend rejects the update, the task keeps its previous title, and an error message stating that the title cannot be longer than 100 characters is shown\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user enters a title of exactly 100 characters and submits the form\",\"then\":\"the backend stores the new title and returns success\"},{\"given\":\"an existing task with Creation Date 2024-05-10\",\"when\":\"the user sets the Due Date to 2024-05-09 and submits the update\",\"then\":\"the backend rejects the update with a validation error, the stored Due Date is unchanged, and an error message is shown\"},{\"given\":\"a task update request where the backend returns an error\",\"when\":\"the frontend receives the error response\",\"then\":\"the frontend does not show the task as updated and displays an error message\"},{\"given\":\"a task update request where the backend returns success\",\"when\":\"the frontend receives the success response\",\"then\":\"the frontend displays a success message after the update action\"},{\"given\":\"a task ID that does not exist in the database\",\"when\":\"an update request is sent for that ID\",\"then\":\"the backend returns a Task Not Found error and no data is changed\"},{\"given\":\"a successful task update\",\"when\":\"the backend saves the change\",\"then\":\"the task's Last Updated Date is set to the time of the update\"}],\"edge_cases\":[\"The PRD does not define the Last Updated Date field explicitly; it is implied by the data model and should be confirmed.\",\"List auto-refresh after a successful update is covered by the task list story (FE-task-list-auto-refresh).\"],\"dependencies\":[],\"definition_of_done\":[\"All acceptance criteria pass\",\"Backend and frontend validation errors are shown to the user\",\"No optimistic UI updates on edit\"]},\"fixes\":[{\"finding\":1,\"revised_tasks\":[{\"task_key\":\"BE-task-update-endpoint\",\"task\":{\"key_slug\":\"task-update-endpoint\",\"title\":\"[BE] Add update endpoint for a task by ID with validation and error responses\",\"track\":\"backend\",\"area\":\"backend\",\"description\":\"Add an endpoint that updates an existing task by ID. Validate that the title is non-empty and at most 100 characters, and that the Due Date is not earlier than the Creation Date. Return Task Not Found, invalid input and server errors in a simple format. On a successful update, set the Last Updated Date to the time of the update.\",\"size\":\"M\",\"consumes_api\":false,\"touches_db\":true,\"requirement_ids\":[\"R-bc3213df\",\"R-03df7815\",\"R-efe1e5d4\",\"R-244669c0\",\"R-9dc414dc\",\"R-0b1853d6\"],\"is_spike\":false,\"definition_of_done\":[\"Valid update stores the changes and returns success\",\"Empty title, title over 100 characters and Due Date earlier than Creation Date are rejected without changing data\",\"Unknown task ID returns Task Not Found and changes no data\",\"Last Updated Date is set to the update time on success\"]}}]}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 7452
+     },
+     "input_tokens": 7456,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 1276,
+     "total_tokens": 8732
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

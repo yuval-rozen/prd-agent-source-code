@@ -269,13 +269,22 @@ def test_repair_cannot_change_a_task_the_finding_does_not_name():
     assert any(f.check_id == "REF-RESTORE" and "does not name" in f.message for f in found)
 
 
-def test_story_level_decision_lets_the_model_pick_the_minimal_set():
+def test_story_level_decision_revises_every_conflicting_item():
     previous, plan, diff, skeletons = _changed_plan()
     decision = _blocking("US-loans", "US-loans: renewals are limited to two.", check="G1-FEEDBACK")
-    llm = FakeLLM()
+    llm = FakeLLM(repair_mode="revise_all")  # the model finds every task in conflict with the decision
     repaired, _, touched, _ = repair_update(plan, skeletons, [decision], llm, [], previous, diff)
-    assert "may revise: any task of this story" in next(u for n, u in llm.calls if n == "StoryRepairDraft")
-    assert set(touched) == {"US-loans", plan.tasks[0].key}  # the story text and the one task the model chose
+    user = next(u for n, u in llm.calls if n == "StoryRepairDraft")
+    assert "revise the story ACs and EVERY task of this story that conflicts with it" in user
+    assert set(touched) == {"US-loans", *(t.key for t in plan.tasks)}  # all of them, not a minimal set
+    assert repaired.stories[0] != plan.stories[0]  # the story's ACs are revised too
+
+
+def test_story_level_decision_keeps_tasks_that_do_not_conflict():
+    previous, plan, diff, skeletons = _changed_plan()
+    decision = _blocking("US-loans", "US-loans: renewals are limited to two.", check="G1-FEEDBACK")
+    repaired, _, touched, _ = repair_update(plan, skeletons, [decision], FakeLLM(), [], previous, diff)
+    assert set(touched) == {"US-loans", plan.tasks[0].key}  # only what the model reported as conflicting
     for t in repaired.tasks[1:]:
         assert t in plan.tasks
 
@@ -329,3 +338,58 @@ def test_update_and_repair_calls_use_the_revision_role():
     repair_update(plan, skeletons, [_blocking("BE-renew-endpoint")], llm, [], previous, diff)
     roles = {n: r for (n, _), r in zip(llm.calls, llm.roles) if n in ("StoryUpdateDraft", "StoryRepairDraft")}
     assert roles == {"StoryUpdateDraft": "revision", "StoryRepairDraft": "revision"}
+
+
+
+# --------------------------------------------------------------------------- open findings survive G1 resets
+
+
+def test_open_findings_survive_a_g1_reset_until_the_critic_confirms_them(tmp_path):
+    """A finding that is not confirmed fixed stays open across rounds, keep-best and a G1 reset (bug 1)."""
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.types import Command
+    from rich.console import Console
+
+    from tests.test_pipeline import GENERIC_PRD
+
+    prd = tmp_path / "prd.md"
+    prd.write_text(GENERIC_PRD, encoding="utf-8")
+    clean = build_graph(FakeLLM(), console=Console(quiet=True)).invoke(
+        {"prd_path": str(prd), "out_dir": str(tmp_path / "c"), "auto_yes": True})
+    story = clean["plan"].stories[0].key
+    lost = _blocking(story, "The create form has no Status field, so In Progress is unreachable.")
+    # call 0 raises it; calls 1-3 do not mention it and do not confirm it (critic silent); call 4 confirms it.
+    llm = FakeLLM(critic_findings=[[lost]], unresolved_calls={1, 2, 3})
+    graph = build_graph(llm, console=Console(quiet=True), checkpointer=MemorySaver())
+    config = {"configurable": {"thread_id": "ledger"}}
+    first = graph.invoke({"prd_path": str(prd), "out_dir": str(tmp_path / "o")}, config)
+    open_before = [f for f in first["plan_report"].findings if "In Progress is unreachable" in f.message]
+    assert first["status"].value == "NEEDS_REVIEW" and open_before  # still open: the critic never confirmed a fix
+    other = clean["plan"].stories[-1].key
+    second = graph.invoke(Command(resume={"action": "feedback", "text": f"{other}: holds expire after 3 days."}), config)
+    assert any("In Progress is unreachable" in f.message for f in second["plan_report"].findings)  # survived reset
+    assert any(open_before[0].finding_id in ids for ids in llm.open_seen[1:])  # the critic was asked to verify it
+    third = graph.invoke(Command(resume={"action": "feedback", "text": f"{story}: add a Status field to the form."}), config)
+    assert not any("In Progress is unreachable" in f.message for f in third["plan_report"].findings)  # confirmed fixed
+    assert third["status"].value == "PASS"
+
+
+def test_plan_wide_decision_is_checked_by_the_critic_against_the_whole_plan(tmp_path):
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.types import Command
+    from rich.console import Console
+
+    from tests.test_pipeline import GENERIC_PRD
+
+    prd = tmp_path / "prd.md"
+    prd.write_text(GENERIC_PRD, encoding="utf-8")
+    llm = FakeLLM()
+    graph = build_graph(llm, console=Console(quiet=True), checkpointer=MemorySaver())
+    config = {"configurable": {"thread_id": "wide"}}
+    graph.invoke({"prd_path": str(prd), "out_dir": str(tmp_path / "o")}, config)
+    calls_before = len(llm.calls)
+    graph.invoke(Command(resume={"action": "feedback", "text": "New loans start as Open."}), config)
+    after = llm.calls[calls_before:]
+    assert not [n for n, _ in after if n in ("StoryDetailDraft", "StoryRepairDraft")]  # no blanket repair of every story
+    critic = [u for (n, u) in after if n == "ReviewReport"]
+    assert critic and "Review the whole plan." in critic[0] and "New loans start as Open." in critic[0]

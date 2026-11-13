@@ -318,6 +318,7 @@ class ReviewFinding(_Model):
     requirement_ids: list[str] = Field(default_factory=list)
     message: NonEmpty
     suggested_fix: str | None = None
+    finding_id: str | None = Field(default=None, description="Set by code; leave empty.")
 
 
 class ReviewReport(_Model):
@@ -327,6 +328,10 @@ class ReviewReport(_Model):
     blocking_count: int = 0
     warning_count: int = 0
     findings: list[ReviewFinding] = Field(default_factory=list)
+    resolved: list[str] = Field(default_factory=list, description=(
+        "IDs of open findings from earlier rounds (given in the input) that the current plan fixes."))
+    still_open: list[str] = Field(default_factory=list, description=(
+        "IDs of open findings from earlier rounds (given in the input) that are still present."))
 
     @model_validator(mode="after")
     def _counts(self) -> ReviewReport:

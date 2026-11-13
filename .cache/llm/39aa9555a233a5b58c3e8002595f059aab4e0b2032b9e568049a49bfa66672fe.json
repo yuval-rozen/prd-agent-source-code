@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch11UNdaJyqLQoLKjoot6",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 7110
+   },
+   "cache_creation_input_tokens": 7110,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 783,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"user managing my tasks\",\"i_want\":\"to delete a task after confirming a prompt\",\"so_that\":\"I can remove tasks I no longer need without deleting one by accident\",\"business_description\":\"The user can delete a task from the task list. The frontend asks for confirmation before sending the delete request, shows a success or error message after the action, and never shows a successful state when the backend request has failed. The backend exposes the delete endpoint and handles task-not-found and internal server or database errors in a simple way.\",\"business_value\":\"Users can keep their task list clean while a confirmation prompt reduces accidental deletions.\",\"acceptance_criteria\":[{\"given\":\"a task with a known ID exists in the user's list\",\"when\":\"the user selects delete on that task and cancels the confirmation prompt\",\"then\":\"no delete request is sent to the backend and the task remains in the list\"},{\"given\":\"a task with a known ID exists in the user's list\",\"when\":\"the user selects delete and confirms the prompt\",\"then\":\"the frontend sends a delete request for that task ID, the backend responds with success, and the frontend shows a success message and removes the task from the list\"},{\"given\":\"a task with a known ID exists in the user's list\",\"when\":\"the user confirms the delete prompt and the backend returns an error\",\"then\":\"the task remains visible in the list and the frontend shows an error message; no success state is shown\"},{\"given\":\"a task ID that does not exist in storage\",\"when\":\"a delete request is sent for that ID\",\"then\":\"the backend responds with a task-not-found error and no data is changed\"},{\"given\":\"the database is unavailable during a delete request\",\"when\":\"the backend attempts to delete the task\",\"then\":\"the backend responds with an internal server or database error and the task is not reported as deleted\"}],\"edge_cases\":[\"The user dismisses the confirmation prompt without choosing: treated as cancel, no request is sent.\",\"The task was already deleted elsewhere before the request arrives: the backend returns a task-not-found error and the frontend shows an error message.\",\"The PRD asks for simple error handling and does not define the exact error message text or response format; this is an open question.\"],\"dependencies\":[],\"definition_of_done\":[\"All acceptance criteria are covered by passing automated tests\",\"Delete endpoint returns not-found and server error responses as specified\",\"Frontend shows no successful state when the backend request fails\",\"Code reviewed and merged\"]},\"revised_tasks\":[],\"added_requirements\":[]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 7110
+     },
+     "input_tokens": 7114,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 783,
+     "total_tokens": 7897
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

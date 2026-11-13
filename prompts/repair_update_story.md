@@ -19,5 +19,8 @@ as little as possible.
   return it unchanged.
 - Every task you do not return is kept exactly as it is.
 - Reviewer decisions are authoritative: follow them, treat them like PRD text.
+- A finding marked "reviewer decision" must leave the WHOLE story consistent with the decision: revise the
+  story's acceptance criteria and EVERY task that conflicts with it, not a minimal set. Tasks that do not
+  conflict stay unchanged.
 
 {{ shared_rules }}

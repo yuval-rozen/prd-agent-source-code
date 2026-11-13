@@ -247,7 +247,11 @@ def test_loop_keeps_best_round_when_it_regresses(prd_file, tmp_path):
     out = tmp_path / "out"
     state = _run_to_gate(prd_file, out, FakeLLM(critic_findings=rounds))[2]
     assert state["plan_blocking_history"] == [2, 1, 2]
-    assert state["plan_report"].round == 2 and state["plan_report"].blocking_count == 1
+    # Round 2's plan is restored. Round 3's new finding (raised on the discarded plan) stays open for it too, so it
+    # is verified later instead of being lost; round 2's own open finding was re-raised in round 3 (same ID).
+    assert state["plan_report"].round == 2
+    assert {f.check_id for f in state["plan_report"].findings if f.severity.value == "blocking"} == {
+        "CRIT-MISSING", "CRIT-UNTESTABLE-AC"}
     assert "kept the plan of round 2" in state["plan_stop_reason"]
     assert "kept the plan of round 2" in (out / "validation_report.md").read_text(encoding="utf-8")
 

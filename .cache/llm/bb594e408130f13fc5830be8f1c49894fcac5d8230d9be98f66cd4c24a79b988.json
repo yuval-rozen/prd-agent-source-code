@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch11UNZ765KwRxjQ8ekyY",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 8217
+   },
+   "cache_creation_input_tokens": 8217,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 1704,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"user managing my to-do list\",\"i_want\":\"to create a new task by filling in a form with the required fields\",\"so_that\":\"I can record work to be done and have it stored reliably\",\"business_description\":\"The user opens the task creation form, enters a title and optional details, and submits it. The backend validates the input, sets the Creation Date and Last Updated Date, stores the task in the new tasks table, and the form shows a success or error message based on the backend response. Titles must be non-empty and at most 100 characters.\",\"business_value\":\"Lets users capture tasks with consistent, validated data and gives the rest of the application a reliable source of task records.\",\"acceptance_criteria\":[{\"given\":\"A user opens the task creation form and enters a non-empty title and other valid inputs\",\"when\":\"The user submits the form\",\"then\":\"The backend stores exactly one new task with a unique ID and the form shows a success message\"},{\"given\":\"A user opens the task creation form and leaves the title empty\",\"when\":\"The user submits the form\",\"then\":\"The backend rejects the task, no task is stored, and the form shows an error message that names the Title field as mandatory\"},{\"given\":\"A user enters a title of 101 characters on the task creation form\",\"when\":\"The user submits the form\",\"then\":\"The backend rejects the task with an error stating that the title cannot be longer than 100 characters, no task is stored, and the form shows that error message\"},{\"given\":\"A user enters a title of exactly 100 characters and other valid inputs\",\"when\":\"The user submits the form\",\"then\":\"The backend accepts the task and stores it with the full 100-character title\"},{\"given\":\"The backend sets the Creation Date of a new task to 2024-05-10\",\"when\":\"The user submits a Due Date of 2024-05-09 for that task\",\"then\":\"The backend rejects the task with an error stating that the Due Date cannot be earlier than the Creation Date, and no task is stored\"},{\"given\":\"The backend sets the Creation Date of a new task to 2024-05-10\",\"when\":\"The user submits a Due Date of 2024-05-10 for that task\",\"then\":\"The backend accepts the task because the Due Date is not earlier than the Creation Date\"},{\"given\":\"A create request is received with valid inputs\",\"when\":\"The backend stores the new task\",\"then\":\"The backend sets the Creation Date and the Last Updated Date of the task, and the task has a Completion Date that is empty\"},{\"given\":\"A new task has been stored\",\"when\":\"The task is read from the database\",\"then\":\"The task has the fields ID, Title, Description, Status, Priority, Creation Date, Due Date, Last Updated Date and Completion Date, and Completion Date is empty\"},{\"given\":\"The backend create request fails because of a database error\",\"when\":\"The user submits the task creation form\",\"then\":\"The form shows an error message and does not show the task as created\"},{\"given\":\"A create request has been sent but the backend has not yet responded\",\"when\":\"The form is waiting for the response\",\"then\":\"The frontend does not show a success message or add the task to any list\"}],\"edge_cases\":[\"A title of exactly 100 characters is accepted; 101 characters is rejected.\",\"A title made only of whitespace: the PRD only says the title must be non-empty, so whether whitespace counts as empty is an open question.\",\"The PRD does not state whether the 100-character limit counts characters before or after trimming whitespace; open question.\",\"A Due Date equal to the Creation Date is accepted.\",\"If the backend request fails, the form must not show a success state (no optimistic updates).\"],\"dependencies\":[],\"definition_of_done\":[\"All acceptance criteria are verified by automated tests\",\"Title length limit of 100 characters is enforced by the backend\",\"Backend errors are shown in the form without any optimistic success state\",\"Code reviewed and merged\"]},\"revised_tasks\":[],\"added_requirements\":[{\"requirement_id\":\"R-0b1853d6\",\"mode\":\"revise_existing\",\"task_key\":\"BE-create-task-endpoint\",\"task\":{\"key_slug\":\"create-task-endpoint\",\"title\":\"[BE] Add POST /tasks endpoint with title and Due Date validation\",\"track\":\"backend\",\"area\":\"backend\",\"description\":\"Add the POST /tasks endpoint that creates a task. Reject a create request with an empty title. Reject a title longer than 100 characters with an invalid-input error stating the limit, and store no task. Reject a Due Date earlier than the Creation Date. The backend sets Creation Date and Last Updated Date on create, and Completion Date stays empty.\",\"size\":\"M\",\"consumes_api\":false,\"touches_db\":true,\"requirement_ids\":[\"R-22f28530\",\"R-03df7815\",\"R-efe1e5d4\",\"R-9675bb49\",\"R-0b1853d6\"],\"is_spike\":false,\"definition_of_done\":[\"POST /tasks stores one task with a unique ID for valid input\",\"An empty title is rejected and nothing is stored\",\"A title of 101 characters is rejected with an error stating the 100-character limit and nothing is stored\",\"A title of exactly 100 characters is accepted\",\"A Due Date earlier than the Creation Date is rejected and nothing is stored\",\"Creation Date and Last Updated Date are set by the backend and Completion Date is empty\",\"Unit tests cover the title length boundaries at 100 and 101 characters\"]}}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 8217
+     },
+     "input_tokens": 8221,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 1704,
+     "total_tokens": 9925
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

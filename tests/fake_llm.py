@@ -45,11 +45,15 @@ class FakeLLM:
     drop_units: unit references the first extraction of a section silently skips (to exercise S3 repair)."""
 
     def __init__(self, critic_findings=None, drop_units=(), place_added_in=None, rogue_revise=False,
-                 repair_mode="revise_allowed"):
-        """place_added_in: put an ADDED requirement into this existing task (revise_existing) instead of a new task.
+                 repair_mode="revise_allowed", unresolved_calls=()):
+        """unresolved_calls: critic call numbers (0-based) that leave the open findings they are shown unconfirmed;
+        every other critic call confirms them as resolved.
+        place_added_in: put an ADDED requirement into this existing task (revise_existing) instead of a new task.
         rogue_revise: also return a "revision" of every KEEP task (code must ignore it)."""
         self.place_added_in = place_added_in
         self.rogue_revise = rogue_revise
+        self.unresolved_calls = set(unresolved_calls)
+        self.open_seen: list[list[str]] = []  # the open-finding IDs each critic call was asked to verify
         # repair_mode for StoryRepairDraft: revise_allowed | rogue (also edits a task it may not) | new_task | close_new
         self.repair_mode = repair_mode
         self.calls: list[tuple[str, str]] = []
@@ -67,8 +71,12 @@ class FakeLLM:
             return self._dependencies(user)
         if schema is ReviewReport:
             findings = self.critic_findings[self._critic_calls] if self._critic_calls < len(self.critic_findings) else []
+            open_ids = re.findall(r"^\[(F-[0-9a-f]{6})\]", user, re.MULTILINE)
+            self.open_seen.append(open_ids)
+            keep = self._critic_calls in self.unresolved_calls
             self._critic_calls += 1
-            return ReviewReport(stage="critic", round=0, verdict=Verdict.pass_, findings=findings)
+            return ReviewReport(stage="critic", round=0, verdict=Verdict.pass_, findings=findings,
+                                resolved=[] if keep else open_ids, still_open=open_ids if keep else [])
         if schema is RequirementDraftList:
             return self._extract(user)
         if schema is StoryPlanDraft:
@@ -203,9 +211,10 @@ def _repair(self, user: str) -> StoryRepairDraft:
              for k, tr, reqs, new in _STORY_TASK.findall(section)]
     fixes = []
     for number, scope in _FINDING.findall(user):
-        allowed = [k for k, *_ in tasks] if scope.startswith("any task") else [x.strip() for x in scope.split(",")]
+        allowed = [k for k, *_ in tasks] if "any task of this story" in scope else [x.strip() for x in scope.split(",")]
         target = next(t for t in tasks if t[0] == allowed[0])
-        revised = [TaskRevisionDraft(task_key=target[0], task=_task_draft(target[0], target[1], target[2], "fixed"))]
+        chosen = [t for t in tasks if t[0] in allowed] if self.repair_mode == "revise_all" else [target]
+        revised = [TaskRevisionDraft(task_key=t[0], task=_task_draft(t[0], t[1], t[2], "fixed")) for t in chosen]
         new_task, close = None, []
         if self.repair_mode == "rogue":
             other = next((t for t in tasks if t[0] not in allowed), None)

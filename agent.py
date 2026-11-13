@@ -32,6 +32,7 @@ from rich.table import Table
 
 from schemas import (
     TASK_KEY_RE,
+    short_hash,
     DependencyPlanDraft,
     Label,
     ParentProject,
@@ -104,6 +105,8 @@ class AgentState(TypedDict, total=False):
     best_plan: dict | None
     feedback_findings: Findings
     reviewer_decisions: Findings
+    open_findings: dict
+    review_whole_plan: bool
     run_feedback: Findings
     anchor: list
     anchor_epic: str | None
@@ -812,14 +815,24 @@ def compact_plan(plan: TicketPlan) -> str:
     return "\n".join(lines)
 
 
+def finding_id(f: ReviewFinding) -> str:
+    return "F-" + short_hash(f"{f.check_id}|{f.item_key}|{f.message}", 6)
+
+
 def critic_user_message(plan: TicketPlan, parsed: ParsedPRD, focus: list[str] | None,
-                        decisions: list[str] | None = None, update_run: bool = False) -> list[dict]:
+                        decisions: list[str] | None = None, update_run: bool = False,
+                        open_findings: Findings | None = None) -> list[dict]:
     """Two text blocks: the PRD (stable across rounds, so it carries the prompt-cache breakpoint) and the plan
     (changes every round, so it is sent as ordinary input instead of being written to the cache)."""
     prd = "PRD:\n" + _prd_block(parsed.markdown) + "\n\n"
     plan_text = "Plan:\n" + _prd_block(compact_plan(plan), "plan")
     if decisions:
         plan_text += "\n\n" + _decisions_block(decisions)
+    if open_findings:
+        plan_text += ("\n\nOpen findings from earlier rounds. Verify EACH against the current plan: its ID goes in "
+                      "`resolved` only if the plan now fixes it, otherwise in `still_open`; do not report it again:\n"
+                      + "\n".join(f"[{f.finding_id}] {f.check_id} ({f.item_key or 'plan'}) {f.message}"
+                                   for f in open_findings))
     if focus and update_run:
         plan_text += ("\n\nThe PRD changed since the plan was last approved. Review ONLY these new or changed items "
                       "(use the whole plan as context, for example to find overlap with other stories): "
@@ -833,10 +846,15 @@ def critic_user_message(plan: TicketPlan, parsed: ParsedPRD, focus: list[str] | 
 
 
 def run_critic(plan: TicketPlan, parsed: ParsedPRD, llm: StructuredLLM, round_no: int,
-               focus: list[str] | None = None, decisions: list[str] | None = None, update_run: bool = False) -> Findings:
-    """One structured call (response_format = ReviewReport) on the whole PRD and the whole plan."""
+               focus: list[str] | None = None, decisions: list[str] | None = None, update_run: bool = False,
+               open_findings: Findings | None = None) -> tuple[Findings, set[str]]:
+    """One structured call (response_format = ReviewReport) on the whole PRD and the whole plan. Returns the new
+    findings and the IDs of open findings the critic confirmed as fixed."""
     report = llm.structured(ReviewReport, system_prompt("critic"),
-                            critic_user_message(plan, parsed, focus, decisions, update_run), role="critic")
+                            critic_user_message(plan, parsed, focus, decisions, update_run, open_findings),
+                            role="critic")
+    open_ids = {f.finding_id for f in open_findings or []}
+    resolved = {i for i in report.resolved if i in open_ids and i not in set(report.still_open)}
     keys = {plan.project.key, *(s.key for s in plan.stories), *(t.key for t in plan.tasks)}
     req_ids = {r.id for r in plan.requirements}
     out = []
@@ -848,9 +866,10 @@ def run_critic(plan: TicketPlan, parsed: ParsedPRD, llm: StructuredLLM, round_no
         message = f.message if item or not f.item_key else f"(about unknown item {f.item_key!r}) {f.message}"
         if focus and item not in set(focus):
             continue  # repair rounds: findings on the repaired items only
-        out.append(f.model_copy(update={"check_id": check_id, "item_key": item, "message": message,
-                                        "requirement_ids": [r for r in f.requirement_ids if r in req_ids]}))
-    return out
+        fixed = f.model_copy(update={"check_id": check_id, "item_key": item, "message": message,
+                                     "requirement_ids": [r for r in f.requirement_ids if r in req_ids]})
+        out.append(fixed.model_copy(update={"finding_id": finding_id(fixed)}))
+    return out, resolved
 
 
 # --------------------------------------------------------------------------- repair_plan
@@ -1157,6 +1176,8 @@ def feedback_story_keys(findings: Findings, plan: TicketPlan) -> set[str]:
     task_story = {t.key: t.story_key for t in plan.tasks}
     story_keys = {s.key for s in plan.stories}
     out = set()
+    if any(f.item_key is None for f in findings):
+        return set(story_keys)  # a plan-wide decision may justify a (targeted) change in any story
     for f in findings:
         if f.item_key in story_keys:
             out.add(f.item_key)
@@ -1298,6 +1319,9 @@ def repair_update_user_message(skeleton: StorySkeleton, story: UserStory, tasks:
     finding_lines = []
     for i, (f, ok) in enumerate(zip(findings, allowed), 1):
         scope = "any task of this story" if ok is None else ", ".join(sorted(ok))
+        if f.check_id == "G1-FEEDBACK" and ok is None:
+            scope = ("reviewer decision: revise the story ACs and EVERY task of this story that conflicts with it "
+                     "(any task of this story)")
         fix = f" Suggested fix: {f.suggested_fix}" if f.suggested_fix else ""
         finding_lines.append(f"FINDING {i} [{f.check_id}] ({f.item_key or skeleton.key}) {f.message}{fix} | may revise: {scope}")
     msg = (f"Story key: {skeleton.key}\nStory title: {skeleton.title}\n\n"
@@ -1409,9 +1433,10 @@ def feedback_to_findings(text: str, plan: TicketPlan) -> Findings:
     without a key applies to every story."""
     keys = {s.key for s in plan.stories} | {t.key for t in plan.tasks}
     mentioned = [k for k in re.findall(r"\b(?:US|FE|BE|QA)-[a-z0-9-]+\b", text) if k in keys]
-    targets = mentioned or [s.key for s in plan.stories]
+    if not mentioned:  # a plan-wide decision: the critic checks the whole plan against it; conflicts get repaired
+        return [ReviewFinding(check_id="G1-FEEDBACK", severity=Severity.blocking, item_key=None, message=text.strip())]
     return [ReviewFinding(check_id="G1-FEEDBACK", severity=Severity.blocking, item_key=k, message=text.strip())
-            for k in dict.fromkeys(targets)]
+            for k in dict.fromkeys(mentioned)]
 
 
 def plan_status(state: AgentState) -> Status:
@@ -1589,22 +1614,32 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         deterministic = validators.check_plan(plan, duplicate_threshold)
         focus = (state.get("repaired_keys") or None) if round_no > 1 else None
         skip_critic = False
-        if round_no == 1 and state.get("previous_plan") is not None:
+        whole = bool(state.get("review_whole_plan"))
+        if whole:
+            focus = None  # a plan-wide reviewer decision: review the whole plan against it
+        elif round_no == 1 and state.get("previous_plan") is not None:
             # Update run: carried stories were already reviewed and approved; review only what changed (the whole
             # plan is still the context), and nothing at all when nothing changed.
             focus = changed_keys(plan, state["previous_plan"])  # only what differs from the approved plan
             skip_critic = not focus
         elif round_no > 1 and state.get("previous_plan") is not None and not state.get("repaired_keys"):
             focus, skip_critic = [], True  # the repair changed nothing: nothing new to review; earlier findings stay
-        update_round = round_no == 1 and state.get("previous_plan") is not None
-        critic = [] if skip_critic else run_critic(plan, state["parsed"], llm, round_no, focus,
-                                                   decisions_for(state.get("reviewer_decisions") or []), update_round)
-        if (focus or (skip_critic and round_no > 1)) and state.get("plan_report") is not None:
-            # carry earlier critic findings on untouched items
-            keys = {plan.project.key, *(s.key for s in plan.stories), *(t.key for t in plan.tasks)}
-            carried = [f for f in state["plan_report"].findings
-                       if f.check_id.startswith("CRIT-") and f.item_key not in set(focus) and f.item_key in keys]
-            critic = carried + critic
+        update_round = round_no == 1 and state.get("previous_plan") is not None and not whole
+        # Open-findings ledger: every blocking critic finding stays open (across rounds, keep-best restores and G1
+        # resets) until the critic explicitly confirms it is fixed.
+        ledger: dict = dict(state.get("open_findings") or {})
+        new: Findings = []
+        if not skip_critic:
+            new, resolved = run_critic(plan, state["parsed"], llm, round_no, focus,
+                                       decisions_for(state.get("reviewer_decisions") or []), update_round,
+                                       list(ledger.values()))
+            for fid in resolved:
+                ledger.pop(fid, None)
+        for f in new:
+            if f.severity is Severity.blocking:
+                ledger.setdefault(f.finding_id, f)
+        new_ids = {f.finding_id for f in new}
+        critic = new + [f for fid, f in ledger.items() if fid not in new_ids]
         report = ReviewReport(stage="check_plan", round=round_no, verdict=Verdict.pass_, findings=deterministic + critic)
         history = state["plan_blocking_history"] + [report.blocking_count]
         repair, reason = should_repair(report, state["plan_rounds"], history, max_repair_rounds)
@@ -1613,14 +1648,17 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         best = state.get("best_plan")
         update: dict = {}
         if best is None or report.blocking_count < best["report"].blocking_count:
-            best = {"plan": plan, "report": report, "skeletons": state["skeletons"]}
+            best = {"plan": plan, "report": report, "skeletons": state["skeletons"], "ledger": dict(ledger)}
             update["best_plan"] = best
         elif reason and best["report"].blocking_count < report.blocking_count:
             # Stopping on a round that is worse than an earlier one: keep the best plan seen (fewest blocking).
             reason += (f"; kept the plan of round {best['report'].round} ({best['report'].blocking_count} blocking) "
                        f"instead of round {round_no} ({report.blocking_count} blocking)")
             update.update(plan=best["plan"], skeletons=best["skeletons"])
-            report = best["report"]
+            # the restored plan predates later fixes: its open findings come back, newer ones stay open too
+            ledger = {**best.get("ledger", {}), **ledger}
+            report = ReviewReport(stage="check_plan", round=best["report"].round, verdict=Verdict.pass_,
+                                  findings=validators.check_plan(best["plan"], duplicate_threshold) + list(ledger.values()))
         n_crit = sum(f.check_id.startswith("CRIT-") for f in report.findings)
         scope_note = (", critic skipped: nothing changed" if skip_critic else
                       ", new/affected items only" if focus and round_no == 1 else
@@ -1633,7 +1671,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         if update.get("plan") is not None:
             reports.append(report.model_copy(update={"stage": "check_plan", "round": report.round}))
         return {"plan_report": report, "plan_blocking_history": history, "plan_stop_reason": reason,
-                "reports": reports, "feedback_findings": [], **update}
+                "reports": reports, "feedback_findings": [], "open_findings": ledger, "review_whole_plan": False,
+                **update}
 
     def route_plan(state: AgentState) -> str:
         repair, _ = should_repair(state["plan_report"], state["plan_rounds"], state["plan_blocking_history"], max_repair_rounds)
@@ -1707,7 +1746,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             # Feedback is a reviewer decision: it stays authoritative for the critic and every later repair, and it
             # starts a fresh repair cycle (rounds, history and the best-round baseline reset), so an earlier round
             # without the decision can never be restored over it.
-            return {"approval": "feedback", "feedback_findings": fb,
+            return {"approval": "feedback", "feedback_findings": [f for f in fb if f.item_key],
+                    "review_whole_plan": any(f.item_key is None for f in fb),
                     "reviewer_decisions": (state.get("reviewer_decisions") or []) + fb,
                     "run_feedback": (state.get("run_feedback") or []) + fb,
                     "plan_rounds": 0, "plan_blocking_history": [], "best_plan": None}
@@ -1716,6 +1756,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
     def route_approval(state: AgentState) -> str:
         if state.get("approval") == "feedback" and state.get("feedback_findings"):
             return "repair_plan"
+        if state.get("approval") == "feedback" and state.get("review_whole_plan"):
+            return "check_plan"  # plan-wide decision: the critic reviews the whole plan against it first
         if state.get("approval") == "approve" and state.get("publish"):
             return "sync_diff"
         return "summary"
@@ -1860,7 +1902,7 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
     graph.add_conditional_edges("check_plan", route_plan, ["repair_plan", "render_preview"])
     graph.add_edge("repair_plan", "check_plan")
     graph.add_edge("render_preview", "approve_plan")
-    graph.add_conditional_edges("approve_plan", route_approval, ["repair_plan", "sync_diff", "summary"])
+    graph.add_conditional_edges("approve_plan", route_approval, ["repair_plan", "check_plan", "sync_diff", "summary"])
     graph.add_edge("sync_diff", "confirm_diff")
     graph.add_conditional_edges("confirm_diff", route_publish, ["publish", "summary"])
     graph.add_edge("publish", "summary")
