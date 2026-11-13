@@ -134,9 +134,11 @@ Only run 3 produced a plan. The indicators are computed from `out/claude/plan.js
 
 ### Decision and rationale
 
-**Decision:** Claude Haiku 5.5 (`claude-haiku-5-5`) for extraction and generation, Claude Sonnet 5.5
-(`claude-sonnet-5-5`) for the critic. These are the defaults in `config.py` and `.env.example`;
-`LLM_PROVIDER=google` stays available but is not used.
+**Decision:** Claude Haiku 5.5 (`claude-haiku-5-5`) for extraction and first-pass generation (S2, S4,
+S5 on a first run, S6), Claude Sonnet 5.5 (`claude-sonnet-5-5`) for the critic, and Claude Sonnet 5.5 for
+update-run revisions and repairs (`REVISION_MODEL`: the `StoryUpdateDraft` / `StoryRepairDraft` calls).
+These are the defaults in `config.py` and `.env.example`; `LLM_PROVIDER=google` stays available but is not
+used.
 
 **Rationale:**
 
@@ -151,6 +153,14 @@ Only run 3 produced a plan. The indicators are computed from `out/claude/plan.js
   live in another story). A per-story generator cannot see them, so the critic must see the whole PRD and
   the whole plan at once. That one call per round is where the stronger model pays for itself; it is
   about three quarters of the run's cost (see the M3 runs below).
+- **Targeted revisions moved to Sonnet (M5).** In update runs the critic re-reviews exactly the tasks a
+  revision or repair touched. With Haiku writing those edits, every critic round found new gaps in them
+  (blocking findings 3 → 4 → 4 → 6 on the v2 PRD), so the loop never converged. A separate
+  `REVISION_MODEL` puts only those calls on Sonnet; first-pass generation stays on Haiku. With Sonnet the
+  count dropped (3 → 3, then 3 → 2 → 2) but still did not reach PASS within the $0.50 cap: the remaining
+  findings were an inconsistency between sibling tasks of one story after a story-level reviewer decision
+  (see Known gaps). Revisions on Sonnet cost about $0.03 per call (11 calls, $0.32 in that run), so the
+  critic is no longer the only large cost in an update run.
 
 ### Milestone 3 runs (Haiku generation, Sonnet critic, $0.30 cap)
 
@@ -271,3 +281,14 @@ the epic at [#1](https://github.com/yuval-rozen/prd-agent-issues/issues/1).
   non-empty Given/When/Then, unique labels, non-empty titles). Anything the repair loop should be able
   to fix — including the 80-character title limit (P11) — is a validator finding, so one bad title is
   repaired instead of failing the whole structured response.
+
+## Known gaps
+
+- **v2 update not yet at PASS.** On `examples/todo_prd_v2.md` the update run ends NEEDS_REVIEW, so G2
+  refuses to publish (no `--force` was used). The last retry (Sonnet revisions, $0.50 cap) stopped at
+  the cap with 2 blocking findings, both in `US-change-task-status`: the reviewer decision "the status
+  endpoint only marks a task as Completed" was applied to `BE-status-change-endpoint`, while the story's
+  AC5 and `BE-status-change-error-handling` still accept Open and reject only other values. A decision
+  that names only a story lets the model revise a minimal set of its tasks, which can leave sibling tasks
+  inconsistent. The would-be G2 at the previous attempt had 0 churn: every create / update came from a
+  requirement change or a reviewer decision.
