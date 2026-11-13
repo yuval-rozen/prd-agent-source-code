@@ -88,6 +88,19 @@ S5 detail_stories (LLM, structured → UserStory + TechnicalTask[], one call per
   - No generic titles such as "Backend work" or "Implement feature".
 - Every decision_open requirement becomes a type:spike task. Its DoD requires a documented decision with rationale and trade-offs, plus any specific aspects the PRD says must be documented.
 
+S5 in an update run — task-level update rules (code decides as much as possible; the LLM decides only where an added requirement goes):
+- Story level (S4 + code): unchanged requirements keep their previous story and constraint scope; removed requirements drop out; a changed requirement takes its old version's place. S4's output decides only where ADDED requirements go (an existing story or a new story key). A story whose requirements and applicable constraints are unchanged is carried over byte-for-byte without an LLM call; an unchanged story keeps its title, a story whose scope changed takes S4's new title. The epic keeps its key and text.
+- Task level, for every task of an affected story, code decides:
+  - KEEP: the task cites no changed or removed requirement → copied byte-for-byte by code.
+  - REVISE: the task cites a changed or removed requirement → must be revised (keeps its key, story, track and blockers; removed IDs are dropped and changed IDs mapped to their new ID by code).
+  - CLOSE: all of the task's requirements were removed → closed.
+- The LLM (one structured call per affected story, `StoryUpdateDraft`, prompt `update_story.md`) returns the revised versions of exactly the REVISE tasks, the updated story content, and for every ADDED requirement one placement: revise one existing task of the story (KEEP or REVISE) to cover it, or add a new task.
+- Code checks: a "revision" of a KEEP task that was not chosen for an added requirement is ignored (the previous version is kept); a REVISE task without a returned revision gets a deterministic fallback (same content, IDs mapped).
+- Keys: a new task reuses an old task's key only if it is in the same story and track AND shares requirements with it (for tasks without requirements: the same derived_reason); title similarity is only a tie-breaker. Otherwise it gets a new key.
+- Churn guard (after S5 and after every repair in an update run): a story or task may differ from its previous version only if it (before or after) cites an added / changed / removed requirement, or belongs to a story targeted by this run's G1 feedback — otherwise code restores the previous version. A previous task may disappear only if all its requirements were removed (or its story was removed) — otherwise code restores it. A new task needs an added or changed requirement, or feedback on its story — otherwise code drops it. Every restore / drop is recorded as a REF-CHURN / REF-RESTORE finding.
+- S6 in an update run gives blockers only to new tasks and never adds an edge to an existing task; existing tasks keep their edges (edges to closed tasks are removed). The critic's first round reviews only the stories and tasks that differ from the previous plan (nothing at all if none differ).
+- G2 shows, for every create / update / close / link, the requirement change (or G1 decision) that caused it. An action without a cause is churn; the count is shown in S9 and G2 and must be zero.
+
 S6 map_dependencies (LLM proposes, code verifies)
 - For new and affected tasks, the LLM proposes blocked_by within and across stories:
   - A task with consumes_api=true is blocked by the BE task that provides that API.
@@ -186,7 +199,7 @@ AgentState (agent.py): prd_path, units, requirements, requirement_diff, req_repo
 ## 10. GitHub idempotency & update flow
 - Every issue body ends with `<!-- prd-agent:key=<KEY>;hash=<content_hash> -->` and gets the label prd-agent. The key → issue mapping is read from GitHub. Issues without the marker are never touched.
 - content_hash is computed from the ticket's plan data (title, content fields, labels, parent key, blocked_by keys, and for a story the keys of its tasks, so its checklist is refreshed when tasks change), NOT from the rendered body, so real issue numbers do not affect it.
-- Listing: GET issues with state=all and label prd-agent, all pages (Link rel=next). Pull requests, issues without the marker, and a second issue repeating an already-seen key are reported and never touched. A managed issue that is closed but whose key is back in the plan is updated and reopened.
+- Listing: GET issues with state=all and label prd-agent, all pages (Link rel=next). Pull requests, issues without the marker, and a second issue repeating an already-seen key are reported and never touched. Reopening: when the agent closes an issue (its ticket left the plan) it marks the issue's marker with `;closed=agent`. A closed managed issue whose key is back in the plan is updated and reopened ONLY if it carries that mark. An issue closed by a human (for example as completed) has no mark: it is never reopened, never updated and never re-linked; S9 reports it as left closed.
 - Writes are spaced at least 1 s apart (GitHub's secondary rate limits). Pass 2 patches only the bodies that change once the real issue numbers are known. Close = a comment, then state closed (state_reason not_planned).
 - Diff:
   - key missing → create.

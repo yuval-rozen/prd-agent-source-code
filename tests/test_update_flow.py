@@ -83,10 +83,11 @@ def test_unchanged_stories_are_carried_over_without_calling_the_llm(tmp_path):
     assert len(diff.changed) == 1 and diff.added == diff.removed == []
     affected = {s.key for s in v2.stories if any(new in s.requirement_ids for _, new in diff.changed)}
     assert affected and set(second["carried"]) == {s.key for s in v2.stories} - affected
-    detailed = [u for n, u in llm.calls if n == "StoryDetailDraft"]
-    assert len(detailed) == len(affected)  # S5 ran only for the affected story
-    assert all(f"Story key: {k}" in detailed[0] for k in affected)
-    assert "keep the key_slug of every task" in detailed[0] and "Current version of this story" in detailed[0]
+    assert not [n for n, _ in llm.calls if n == "StoryDetailDraft"]  # no full regeneration in an update run
+    updated = [u for n, u in llm.calls if n == "StoryUpdateDraft"]
+    assert len(updated) == len(affected)  # one update call per affected story only
+    assert all(f"Story key: {k}" in updated[0] for k in affected)
+    assert "CHANGED [" in updated[0] and "Current tasks, with code's decision for each" in updated[0]
     for key in second["carried"]:  # carried stories and their tasks are copied unchanged
         assert next(s for s in v2.stories if s.key == key) == next(s for s in v1.stories if s.key == key)
         assert [t for t in v2.tasks if t.story_key == key] == [t for t in v1.tasks if t.story_key == key]

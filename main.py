@@ -169,7 +169,11 @@ def _ask_publish(payload: dict) -> dict:
     for c in payload["changes"]:
         number = f"#{c['issue']}" if c.get("issue") else "new"
         detail = c.get("title") or (f"sub-issue of {c['parent']}" if c.get("parent") else "")
-        console.print(f"  {c['action']:<7} {number:<6} {c['key']}  {detail}")
+        cause = c.get("cause")
+        why = f"  [dim]<- {'; '.join(cause)}[/]" if cause else ("  [red]<- no cause (churn)[/]" if cause is not None else "")
+        console.print(f"  {c['action']:<7} {number:<6} {c['key']}  {detail}{why}")
+    if payload.get("churn") is not None:
+        console.print(f"Changes without a requirement cause (churn): {len(payload['churn'])}")
     try:
         choice = input("confirm / abort [abort]: ").strip().lower() or "abort"
     except EOFError:
@@ -194,6 +198,7 @@ def _write_run_stats(out: Path, settings, llm: LLM, timings: dict, total_s: floa
         "cost_by_stage": {k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in llm.cost.by_stage.items()},
         "cost_by_role": {k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in llm.cost.by_role.items()},
         "status": state["status"].value if state.get("status") else None,
+        "churn": state.get("churn"),
         "publish": {"decision": state.get("publish_decision"),
                     "counts": {k: len(v) for k, v in (state.get("publish_result") or {}).items() if isinstance(v, list)},
                     "epic_issue": (state.get("publish_result") or {}).get("numbers", {}).get(

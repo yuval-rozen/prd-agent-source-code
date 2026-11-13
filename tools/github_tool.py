@@ -23,7 +23,8 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 log = logging.getLogger("prd_agent.github")
 
 API = "https://api.github.com"
-MARKER_RE = re.compile(r"<!-- prd-agent:key=([A-Z]+-[a-z0-9-]+);hash=([0-9a-f]+) -->")
+MARKER_RE = re.compile(r"<!-- prd-agent:key=([A-Z]+-[a-z0-9-]+);hash=([0-9a-f]+)(;closed=agent)? -->")
+CLOSED_FLAG = ";closed=agent"  # written into the marker when THE AGENT closes an issue (only those are ever reopened)
 AGENT_LABEL = "prd-agent"
 WRITE_INTERVAL_S = 1.0  # GitHub asks integrators to space content-creating requests (secondary rate limits)
 MAX_RATE_LIMIT_WAIT_S = 120.0
@@ -52,6 +53,7 @@ class ExistingIssue:
     key: str
     hash: str
     url: str = ""
+    closed_by_agent: bool = False  # closed and its marker carries ;closed=agent (a human-closed issue does not)
 
 
 @dataclass
@@ -59,6 +61,16 @@ class ListResult:
     issues: dict[str, ExistingIssue] = field(default_factory=dict)  # key -> issue
     ignored_unmarked: list[int] = field(default_factory=list)  # labelled prd-agent but no marker: never touched
     duplicate_keys: list[tuple[str, int]] = field(default_factory=list)  # second issue with an already-seen key
+
+
+def closed_by_agent_flag(body: str | None) -> bool:
+    match = MARKER_RE.search(body or "")
+    return bool(match and match.group(3))
+
+
+def with_closed_flag(body: str) -> str:
+    """The issue body with the agent's close mark added to its marker."""
+    return MARKER_RE.sub(lambda m: f"<!-- prd-agent:key={m.group(1)};hash={m.group(2)}{CLOSED_FLAG} -->", body, count=1)
 
 
 def parse_marker(body: str | None) -> tuple[str, str] | None:
@@ -189,6 +201,7 @@ class GitHubTool:
                 id=int(item["id"]), number=item["number"], title=item.get("title", ""), body=item.get("body") or "",
                 labels=[lb["name"] if isinstance(lb, dict) else lb for lb in item.get("labels", [])],
                 state=item.get("state", "open"), key=key, hash=digest, url=item.get("html_url", ""),
+                closed_by_agent=item.get("state") == "closed" and closed_by_agent_flag(item.get("body")),
             )
         return result
 
@@ -284,7 +297,12 @@ def sync_diff(plan: TicketPlan, listing: ListResult, sub_issues: dict[int, set[i
         issue = listing.issues.get(key)
         if issue is None:
             actions.append(SyncAction(key=key, action=SyncActionType.create, payload=payloads[key]))
+        elif issue.state != "open" and not issue.closed_by_agent:
+            # Closed by a human (for example as completed): never reopened, never updated, never re-linked.
+            actions.append(SyncAction(key=key, action=SyncActionType.unchanged, issue_number=issue.number,
+                                      payload={"note": "closed by a human; left closed"}))
         elif issue.hash != content_hash(plan, key) or issue.state != "open":
+            # Changed content, or closed by the agent earlier and back in the plan: update (and reopen).
             actions.append(SyncAction(key=key, action=SyncActionType.update, issue_number=issue.number,
                                       payload=payloads[key]))
         else:
@@ -295,10 +313,13 @@ def sync_diff(plan: TicketPlan, listing: ListResult, sub_issues: dict[int, set[i
     plan_keys = {a.key for a in actions}
     for key, issue in sorted(listing.issues.items(), key=lambda kv: kv[1].number):
         if key not in plan_keys and issue.state == "open":
-            actions.append(SyncAction(key=key, action=SyncActionType.close, issue_number=issue.number, issue_id=issue.id))
+            actions.append(SyncAction(key=key, action=SyncActionType.close, issue_number=issue.number, issue_id=issue.id,
+                                      payload={"body": with_closed_flag(issue.body)}))
     existing = sub_issues or {}
     for parent, child in tree_links(plan):
         parent_issue, child_issue = listing.issues.get(parent), listing.issues.get(child)
+        if child_issue and child_issue.state != "open" and not child_issue.closed_by_agent:
+            continue  # a human-closed issue is never touched
         if parent_issue and child_issue and child_issue.id in existing.get(parent_issue.number, set()):
             continue  # already linked: nothing to do (keeps a second run at 0 changes)
         actions.append(SyncAction(key=child, action=SyncActionType.link, payload={"parent": parent},
@@ -357,7 +378,8 @@ def publish(plan: TicketPlan, actions: list[SyncAction], gh: GitHubTool) -> Publ
     for action in actions:
         if action.action is SyncActionType.close:
             gh.comment(action.issue_number, CLOSE_COMMENT)
-            gh.update_issue(action.issue_number, state="closed", state_reason="not_planned")
+            gh.update_issue(action.issue_number, state="closed", state_reason="not_planned",
+                            body=(action.payload or {}).get("body"))
             result.closed.append(action.key)
     return result
 

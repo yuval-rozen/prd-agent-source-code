@@ -25,6 +25,9 @@ from schemas import (
     StoryDetailDraft,
     StoryPlanDraft,
     StorySkeletonDraft,
+    StoryUpdateDraft,
+    TaskRevisionDraft,
+    AddedPlacementDraft,
     TaskArea,
     TaskDraft,
     Track,
@@ -39,7 +42,11 @@ class FakeLLM:
     """critic_findings: list of ReviewFinding lists, one per critic call (missing entries = no findings).
     drop_units: unit references the first extraction of a section silently skips (to exercise S3 repair)."""
 
-    def __init__(self, critic_findings=None, drop_units=()):
+    def __init__(self, critic_findings=None, drop_units=(), place_added_in=None, rogue_revise=False):
+        """place_added_in: put an ADDED requirement into this existing task (revise_existing) instead of a new task.
+        rogue_revise: also return a "revision" of every KEEP task (code must ignore it)."""
+        self.place_added_in = place_added_in
+        self.rogue_revise = rogue_revise
         self.calls: list[tuple[str, str]] = []
         self.roles: list[str] = []
         self.critic_findings = list(critic_findings or [])
@@ -63,6 +70,8 @@ class FakeLLM:
             return self._plan(user)
         if schema is StoryDetailDraft:
             return self._detail(user)
+        if schema is StoryUpdateDraft:
+            return self._update(user)
         raise AssertionError(f"unexpected schema {schema}")
 
     def _extract(self, user: str) -> RequirementDraftList:
@@ -136,3 +145,41 @@ class FakeLLM:
             definition_of_done=["All ACs pass"],
         )
         return StoryDetailDraft(story=content, tasks=tasks)
+
+
+def _task_draft(key: str, track: str, reqs: list[str], suffix: str) -> TaskDraft:
+    t = Track(track)
+    prefix = {"frontend": "[FE]", "backend": "[BE]", "qa_general": "[QA]"}[track]
+    area = {"frontend": TaskArea.frontend, "backend": TaskArea.backend, "qa_general": TaskArea.qa}[track]
+    return TaskDraft(key_slug=key.split("-", 1)[1], title=f"{prefix} {key} {suffix}", track=t, area=area,
+                     description=f"{suffix} {key}", size=Size.S, consumes_api=False, touches_db=False,
+                     requirement_ids=reqs, derived_reason=None if reqs else "testing", is_spike=False,
+                     definition_of_done=[f"{key} done"])
+
+
+_TASK_LINE = re.compile(r"^(KEEP|REVISE|CLOSE) (\S+) \[(\w+), .*\| requirements: ([^|\n]*)", re.MULTILINE)
+
+
+def _update(self, user: str) -> StoryUpdateDraft:
+    key = re.search(r"^Story key: (\S+)", user, re.MULTILINE).group(1)
+    revised, placements = [], []
+    for mark, task_key, track, reqs in _TASK_LINE.findall(user):
+        ids = [r.strip() for r in reqs.split(",") if r.strip().startswith("R-")]
+        if mark == "REVISE" or (mark == "KEEP" and self.rogue_revise):
+            revised.append(TaskRevisionDraft(task_key=task_key, task=_task_draft(task_key, track, ids, "revised")))
+    for rid in re.findall(r"^ADDED \[(R-[0-9a-f-]+)\]", user, re.MULTILINE):
+        if self.place_added_in:
+            placements.append(AddedPlacementDraft(requirement_id=rid, mode="revise_existing", task_key=self.place_added_in,
+                                                  task=_task_draft(self.place_added_in, "backend", [], "extended")))
+        else:
+            placements.append(AddedPlacementDraft(requirement_id=rid, mode="new_task",
+                                                  task=_task_draft("BE-new-" + rid.lower(), "backend", [rid], "new")))
+    ac = [AcceptanceCriterion(given="a member", when="they act", then=f"the change for {key} is visible"),
+          AcceptanceCriterion(given="a member", when="the action fails", then="an error message is shown")]
+    content = StoryContentDraft(as_a="user", i_want=f"updated {key}", so_that="it matches the PRD",
+                                business_description="Updated.", business_value="Value.", acceptance_criteria=ac,
+                                edge_cases=[], dependencies=[], definition_of_done=["Updated"])
+    return StoryUpdateDraft(story=content, revised_tasks=revised, added_requirements=placements)
+
+
+FakeLLM._update = _update

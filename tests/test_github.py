@@ -175,15 +175,47 @@ def test_issues_without_marker_are_never_touched(plan):
     assert gh.issues[unmarked]["body"] == "Written by a human."
 
 
-def test_closed_managed_issue_is_reopened_when_back_in_plan(plan):
+def test_issue_closed_by_a_human_is_never_reopened_or_touched(plan):
     gh = FakeGitHub()
     actions, tool = _sync(plan, gh)
     numbers = publish(plan, actions, tool).numbers
-    gh.issues[numbers[plan.tasks[0].key]]["state"] = "closed"
-    again, tool2 = _sync(plan, gh)
-    assert _by_key(again)[plan.tasks[0].key] is SyncActionType.update
-    publish(plan, again, tool2)
-    assert gh.issues[numbers[plan.tasks[0].key]]["state"] == "open"
+    task = plan.tasks[0]
+    done = gh.issues[numbers[task.key]]
+    done["state"] = "closed"  # a human closed it (for example as completed); its marker has no ;closed=agent
+    body_before = done["body"]
+    # Even if the plan changes the ticket, the human-closed issue stays as the human left it.
+    changed = plan.model_copy(update={"tasks": [t.model_copy(update={"title": t.title + " v2"}) if t.key == task.key else t
+                                                for t in plan.tasks]})
+    gh.children = {p: [c for c in kids if c != done["id"]] for p, kids in gh.children.items()}  # and unlinked
+    gh.parent_of.pop(done["id"], None)
+    again, tool2 = _sync(changed, gh)
+    action = next(a for a in again if a.key == task.key and a.action is not SyncActionType.link)
+    assert action.action is SyncActionType.unchanged and "closed by a human" in action.payload["note"]
+    assert not any(a.key == task.key and a.action is SyncActionType.link for a in again)
+    before = len(gh.writes())
+    publish(changed, again, tool2)
+    assert not any(f"/issues/{numbers[task.key]}" in p for _, p in gh.writes()[before:])
+    assert done["state"] == "closed" and done["body"] == body_before
+
+
+def test_issue_closed_by_the_agent_is_reopened_when_back_in_plan(plan):
+    gh = FakeGitHub()
+    actions, tool = _sync(plan, gh)
+    numbers = publish(plan, actions, tool).numbers
+    task = plan.tasks[-1]
+    without = plan.model_copy(update={"tasks": [t for t in plan.tasks if t.key != task.key]})
+    without = without.model_copy(update={"tasks": [t.model_copy(update={"blocked_by": [b for b in t.blocked_by if b != task.key]})
+                                                   for t in without.tasks]})
+    closing, tool2 = _sync(without, gh)
+    publish(without, closing, tool2)
+    closed = gh.issues[numbers[task.key]]
+    assert closed["state"] == "closed" and ";closed=agent -->" in closed["body"]  # the agent marks what it closed
+    back, tool3 = _sync(plan, gh)
+    assert _by_key(back)[task.key] is SyncActionType.update
+    total = len(gh.issues)
+    publish(plan, back, tool3)
+    assert closed["state"] == "open" and ";closed=agent" not in closed["body"]  # reopened, mark gone
+    assert len(gh.issues) == total  # same issue, no duplicate
 
 
 def test_pagination_reads_every_page(plan):

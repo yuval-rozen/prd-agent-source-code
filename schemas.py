@@ -11,7 +11,7 @@ import hashlib
 import re
 import string
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -437,6 +437,27 @@ class StorySkeleton(_Model):
     key: StoryKey
     title: Title
     requirement_ids: list[ReqId] = Field(default_factory=list)
+
+
+class TaskRevisionDraft(_Model):
+    task_key: str = Field(description="Key of an existing task marked REVISE in the input.")
+    task: TaskDraft = Field(description="The complete revised task.")
+
+
+class AddedPlacementDraft(_Model):
+    requirement_id: str = Field(description="ID of a requirement marked ADDED in the input.")
+    mode: Literal["revise_existing", "new_task"] = Field(
+        description="revise_existing: extend one existing task of this story to cover it; new_task: add a task.")
+    task_key: str | None = Field(default=None, description="With revise_existing: the key of the existing task.")
+    task: TaskDraft = Field(description="The complete revised task (revise_existing) or the new task (new_task).")
+
+
+class StoryUpdateDraft(_Model):
+    """Update run, one affected story: code already decided which tasks are kept, revised or closed."""
+
+    story: StoryContentDraft
+    revised_tasks: list[TaskRevisionDraft] = Field(description="Exactly one entry per task marked REVISE.")
+    added_requirements: list[AddedPlacementDraft] = Field(description="Exactly one entry per ADDED requirement.")
 
 
 class DependencyEdgeDraft(_Model):
