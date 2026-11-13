@@ -20,18 +20,18 @@
     "extract_requirements": 0.1,
     "check_requirements": 0.0,
     "plan_stories": 0.0,
-    "detail_stories": 0.1,
+    "detail_stories": 0.0,
     "map_dependencies": 0.0,
     "check_plan": 0.0,
-    "repair_plan": 0.3,
-    "render_preview": 0.4,
+    "repair_plan": 0.0,
+    "render_preview": 0.2,
     "approve_plan": 0.0,
-    "sync_diff": 4.8,
+    "sync_diff": 4.9,
     "confirm_diff": 0.0,
-    "publish": 28.5,
+    "publish": 7.2,
     "summary": 0.0
   },
-  "total_seconds": 34.6,
+  "total_seconds": 12.5,
   "cost_usd": 0.0,
   "cost_by_stage": {},
   "cost_by_role": {},
@@ -41,9 +41,9 @@
     "decision": "confirm",
     "counts": {
       "created": 0,
-      "updated": 15,
+      "updated": 4,
       "closed": 0,
-      "unchanged": 34,
+      "unchanged": 45,
       "relinked": 0,
       "linked": 0,
       "labels_created": 0
@@ -61,7 +61,7 @@
     ]
   },
   "api_calls": 0,
-  "cache_hits": 34,
+  "cache_hits": 16,
   "tokens": {
     "input": 0,
     "cache_read": 0,
@@ -70,7 +70,7 @@
   },
   "rate_limit_waits": 0,
   "server_retries": 0,
-  "reference_findings": 4,
+  "reference_findings": 0,
   "exit_code": 0,
   "error": null
 }

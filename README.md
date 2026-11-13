@@ -241,6 +241,8 @@ the epic at [#1](https://github.com/yuval-rozen/prd-agent-issues/issues/1).
 | Run after the upgrade | unchanged 49, link 0 | nothing (0 writes) | — |
 | v2 PRD update ([`out/v2/`](out/v2/), PASS after 4 G1 decisions) | update 15, unchanged 34, churn 0 | 15 issues updated (each with a requirement change or G1 decision as its cause); nothing created, closed or relinked | 43 s (replayed from the cache, $0) |
 | Second v2 run | unchanged 49, churn 0 | nothing (0 writes); all 10 stories carried over, critic skipped | 28 s, $0.0027 |
+| v2 plain-language follow-up (field-level repairs + 1 G1 decision) | update 4, unchanged 45, churn 0 | #4, #6, #18, #42: only the flagged edge cases and the lines the decision needed changed; every other line byte-for-byte | replayed from the cache, $0 |
+| Second run after it | unchanged 49, churn 0 | nothing (0 writes) | $0.0021 |
 
 ## Design decisions & trade-offs
 

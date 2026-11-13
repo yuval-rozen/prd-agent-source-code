@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch1E8b77rrYJxSwtbMwr6",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 215
+   },
+   "cache_creation_input_tokens": 215,
+   "cache_read_input_tokens": 1427,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 102,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"rewrites\":[{\"number\":1,\"text\":\"The wording of the success and error messages is not specified; in particular, the success message wording is not specified.\"},{\"number\":2,\"text\":\"Editing a task that is already Completed: it is not stated whether its Status can be changed back by the edit form. This is an open question.\"}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 1427,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 215
+     },
+     "input_tokens": 1646,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 102,
+     "total_tokens": 1748
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

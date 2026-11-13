@@ -17,13 +17,8 @@
 
 ## Requirement diff (update run)
 
-1 added · 1 changed · 1 removed
+0 added · 0 changed · 0 removed
 
-| Change | Old | New |
-|---|---|---|
-| added | — | `R-0b1853d6` Task titles cannot be longer than 100 characters. |
-| changed | `R-f214002a` Sort: By Creation Date, Due Date, Status, or Priority. | `R-d482bfea` Sort: By Creation Date, Due Date, Status, Priority, or Title. |
-| removed | `R-959e2960` Revert a 'Completed' task back to 'Open'. | — |
 
 ## functional
 
@@ -69,7 +64,7 @@
 | ID | Section | Statement | Source quote | Cited by |
 |---|---|---|---|---|
 | `R-8ef41ba1` | Page 1: To-Do Management > Validation Rules & Edge Cases | Deleting a task requires the user to confirm the deletion through a prompt before it is performed. | Deleting a task requires a prompt confirmation. | `US-delete-task`, `FE-delete-confirmation-prompt`, `QA-delete-task-test-suite` |
-| `R-d57336f7` | Page 1: To-Do Management > Validation Rules & Edge Cases | The UI displays a success or error message after each create, update or delete action on a task. | Success or error messages must be displayed after create/update/delete actions. | `US-create-task`, `US-update-task`, `US-delete-task`, `FE-create-task-form`, `QA-create-task-test-suite`, `FE-task-edit-form`, `QA-task-update-tests`, `FE-delete-result-feedback`, `QA-delete-task-test-suite` |
+| `R-d57336f7` | Page 1: To-Do Management > Validation Rules & Edge Cases | The UI displays a success or error message after each create, update or delete action on a task. | Success or error messages must be displayed after create/update/delete actions. | `US-create-task`, `US-update-task`, `US-delete-task`, `US-change-task-status`, `FE-create-task-form`, `QA-create-task-test-suite`, `FE-task-edit-form`, `QA-task-update-tests`, `FE-delete-result-feedback`, `QA-delete-task-test-suite` |
 | `R-60e02b8e` | Page 1: To-Do Management > Frontend Requirements | The system provides a task list view that displays the user's to-do tasks. | Task list view. | `US-view-task-list`, `FE-task-list-view` |
 | `R-9b30a145` | Page 1: To-Do Management > Frontend Requirements | The system provides a form for creating and editing tasks. | Task creation/editing form. | `US-create-task`, `US-update-task`, `FE-create-task-form`, `FE-task-edit-form`, `QA-task-update-tests` |
 | `R-48c89e9e` | Page 1: To-Do Management > Frontend Requirements | The system displays a status indicator and a priority indicator for each task. | Status and Priority indicators. | `US-view-task-list`, `FE-task-list-view` |

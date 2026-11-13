@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch1D4rrBZbDgmwYpofY1N",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 7975
+   },
+   "cache_creation_input_tokens": 7975,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 1095,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"user managing my tasks\",\"i_want\":\"to edit an existing task\",\"so_that\":\"the task details stay accurate\",\"business_description\":\"The user opens an existing task in the task form, changes its values and saves. The backend validates the update, and the interface reports the result without showing a successful state before the backend confirms it.\",\"business_value\":\"Tasks can be corrected and kept current without deleting and recreating them.\",\"acceptance_criteria\":[{\"given\":\"an existing task with a valid title and a Due Date not earlier than its Creation Date\",\"when\":\"the user opens the edit form, changes the title, and submits the form\",\"then\":\"the backend stores the new title and the task shows the new title in the list after the backend returns success\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user clears the title field and submits the form\",\"then\":\"the backend rejects the update, the task keeps its previous title, and an error message stating that the title is mandatory is shown\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user enters a title of 101 characters and submits the form\",\"then\":\"the backend rejects the update, the task keeps its previous title, and an error message stating that the title cannot be longer than 100 characters is shown\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user enters a title of exactly 100 characters and submits the form\",\"then\":\"the backend stores the new title and returns success\"},{\"given\":\"an existing task with Creation Date 2024-05-10\",\"when\":\"the user sets the Due Date to 2024-05-09 and submits the update\",\"then\":\"the backend rejects the update with a validation error, the stored Due Date is unchanged, and an error message is shown\"},{\"given\":\"a task update request where the backend returns an error\",\"when\":\"the frontend receives the error response\",\"then\":\"the frontend does not show the task as updated and displays an error message\"},{\"given\":\"a task update request where the backend returns success\",\"when\":\"the frontend receives the success response\",\"then\":\"the frontend displays a success message after the update action\"},{\"given\":\"a task ID that does not exist in the database\",\"when\":\"an update request is sent for that ID\",\"then\":\"the backend returns a Task Not Found error and no data is changed\"},{\"given\":\"an existing task with Last Updated Date 2024-05-10\",\"when\":\"the backend successfully stores an update to that task\",\"then\":\"the task's Last Updated Date is set to the date and time of that update\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user selects Status In Progress (or Open) and submits the form\",\"then\":\"the backend stores the selected Status and the task shows that Status in the list after the backend returns success\"},{\"given\":\"an existing task being edited\",\"when\":\"an update request sets Status to Completed\",\"then\":\"the backend rejects the update with a validation error and the stored Status is unchanged\"}],\"edge_cases\":[\"The wording of the error and success messages is not specified.\",\"Editing a task that is already Completed: it is not specified whether the edit form may change its Status back to Open or In Progress. This is an open question.\",\"Updating a task that was deleted after the edit form was opened returns a Task Not Found error.\"],\"dependencies\":[],\"definition_of_done\":[\"All acceptance criteria are met and verified\",\"Validation rules are enforced by the backend\",\"The interface never shows a successful state when the backend request fails\",\"Automated tests for the update flow pass\"]},\"fixes\":[{\"finding\":1,\"revised_tasks\":[]}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 7975
+     },
+     "input_tokens": 7979,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 1095,
+     "total_tokens": 9074
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

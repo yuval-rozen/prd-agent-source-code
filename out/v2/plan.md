@@ -459,7 +459,7 @@ Keeps task data accurate and gives users clear feedback on every update.
 ### Edge cases
 
 - Completed is set only by Mark as Completed (which also sets Completion Date), not by the edit form.
-- Editing a task that is already Completed: the PRD and reviewer decision do not state whether its Status can be changed back by the edit form. This is an open question.
+- Editing a task that is already Completed: it is not stated whether its Status can be changed back by the edit form. This is an open question.
 
 ### Dependencies
 
@@ -831,13 +831,13 @@ The task list and reports reflect which tasks are done, and the user gets confir
 4. **Given** a status change request is pending and the backend has not responded yet, **When** the task list is displayed, **Then** the row still shows the previous status and no success message is displayed
 5. **Given** a status change request is sent for a task ID that does not exist, **When** the backend processes the request, **Then** the backend returns a task not found error and no stored task changes
 6. **Given** a status change request is sent with a status value other than Completed, including Open or In Progress, **When** the backend validates the request, **Then** the backend rejects the request with an invalid input error and the stored status does not change
-7. **Given** a task is marked as Completed, **When** the backend saves the change, **Then** the Completion Date field of the task is populated with the time of the change
+7. **Given** A task is marked as Completed, **When** the backend saves the change, **Then** the Completion Date field and the Last Updated Date field of the task are populated with the time of the change
 
 ### Edge cases
 
 - The status endpoint accepts only Completed; Open and In Progress are set through the edit form.
 - A task that is already Completed and is marked Completed again: PRD does not state the behavior; open question.
-- The PRD text for this story does not include the requirement ID for success and error messages (R-d57336f7); the success message wording is not specified.
+- The wording of the success and error messages is not specified. Marking a task Completed also sets its Last Updated Date.
 
 ### Dependencies
 
@@ -846,7 +846,7 @@ The task list and reports reflect which tasks are done, and the user gets confir
 ### Definition of Done
 
 - [ ] All acceptance criteria are covered by passing tests
-- [ ] Status change endpoint accepts only Completed and sets Completion Date
+- [ ] Status change endpoint accepts only Completed and sets Completion Date and Last Updated Date
 - [ ] Frontend shows success or error messages only after the backend responds and has no optimistic updates
 
 ### Tasks
@@ -862,6 +862,7 @@ The task list and reports reflect which tasks are done, and the user gets confir
 - `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of to-do items.
 - `R-9dc414dc` (backend) The backend must handle errors for task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.
 - `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend request has failed; optimistic UI updates are not allowed.
+- `R-d57336f7` (frontend) The UI displays a success or error message after each create, update or delete action on a task.
 
 ### Task: [BE] Add status change endpoint that accepts only Completed
 
@@ -873,7 +874,7 @@ The task list and reports reflect which tasks are done, and the user gets confir
 
 #### Description
 
-Add an endpoint that sets an existing task to Completed and populates the Completion Date with the time of the change. The endpoint accepts only the value Completed. Open and In Progress are set through the edit form, not this endpoint.
+Add an endpoint that sets an existing task to Completed and populates the Completion Date and the Last Updated Date with the time of the change. The endpoint accepts only the value Completed. Open and In Progress are set through the edit form, not this endpoint.
 
 #### Blocked by
 
@@ -881,7 +882,7 @@ Add an endpoint that sets an existing task to Completed and populates the Comple
 
 #### Definition of Done
 
-- [ ] Endpoint sets status to Completed and stores Completion Date
+- [ ] Endpoint sets status to Completed and stores Completion Date and Last Updated Date
 - [ ] Endpoint accepts no status value other than Completed
 - [ ] Task in Open or In Progress can be completed
 
@@ -955,7 +956,7 @@ Add a Mark as Completed control on each task that is not Completed. Send the sta
 
 #### Description
 
-Test the status change endpoint and the Mark as Completed control: Completed accepted and Completion Date set, non-Completed values rejected, unknown ID returns not found, success message shown after a successful change, error message and unchanged status on failure, previous status and no success message while pending.
+Test the status change endpoint and the Mark as Completed control: Completed accepted and Completion Date and Last Updated Date set, non-Completed values rejected, unknown ID returns not found, success message shown after a successful change, error message and unchanged status on failure, previous status and no success message while pending.
 
 #### Blocked by
 
@@ -967,7 +968,7 @@ Test the status change endpoint and the Mark as Completed control: Completed acc
 
 - [ ] Test asserts a success message is shown after a successful Mark as Completed
 - [ ] Test asserts no success message on failure or while pending
-- [ ] Endpoint tests cover Completed, invalid value and not-found cases
+- [ ] Endpoint tests cover Completed with Completion Date and Last Updated Date set, invalid value and not-found cases
 
 #### Requirements
 
