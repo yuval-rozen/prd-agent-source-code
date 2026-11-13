@@ -330,6 +330,9 @@ class ReviewFinding(_Model):
     requirement_ids: list[str] = Field(default_factory=list)
     message: NonEmpty
     suggested_fix: str | None = None
+    open_question: str | None = Field(
+        default=None, description="Only for CRIT-PRD-GAP: the open question the story lists, in plain product "
+                                  "language, for example 'The PRD does not state who sets the Due Date.'")
     finding_id: str | None = Field(default=None, description="Set by code; leave empty.")
 
 

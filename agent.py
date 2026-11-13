@@ -27,6 +27,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel
 from rapidfuzz import fuzz
+from rapidfuzz.utils import default_process
 from rich.console import Console
 from rich.table import Table
 
@@ -79,7 +80,11 @@ PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 DEFAULT_PARALLEL_CALLS = 4
 DEFAULT_MAX_REPAIR_ROUNDS = 3
 CRITIC_CHECKS = {"CRIT-MISSING", "CRIT-MISREPRESENTED", "CRIT-UNREQUESTED", "CRIT-UNTESTABLE-AC", "CRIT-CONSTRAINT",
-                 "CRIT-OVERLAP"}
+                 "CRIT-OVERLAP", "CRIT-PRD-GAP"}
+# A critic finding is blocking only when the plan leaves a PRD requirement uncovered (MISSING, CONSTRAINT not
+# reflected), contradicts the PRD (MISREPRESENTED), or states something the PRD does not say (UNREQUESTED).
+# Everything else, a detail the PRD is silent on (PRD-GAP) in particular, is a warning; code enforces it.
+CRITIC_BLOCKING_CHECKS = {"CRIT-MISSING", "CRIT-MISREPRESENTED", "CRIT-UNREQUESTED", "CRIT-CONSTRAINT"}
 
 T = TypeVar("T", bound=BaseModel)
 Findings = list[ReviewFinding]
@@ -113,6 +118,7 @@ class AgentState(TypedDict, total=False):
     reviewer_decisions: Findings
     repair_causes: dict
     open_findings: dict
+    open_questions: list  # [story key, question] from CRIT-PRD-GAP warnings
     review_whole_plan: bool
     run_feedback: Findings
     anchor: list
@@ -827,25 +833,78 @@ def map_dependencies(plan: TicketPlan, llm: StructuredLLM, findings: Findings, e
 # --------------------------------------------------------------------------- S7 critic
 
 
-def compact_plan(plan: TicketPlan) -> str:
-    lines = [f"EPIC {plan.project.key}: {plan.project.title} (requirements: "
-             f"{', '.join(plan.project.requirement_ids) or '-'})", f"  Scope: {plan.project.scope}"]
-    lines += [f"  Goal: {g.text} (requirements: {', '.join(g.requirement_ids) or '-'})"
-              for g in plan.project.business_goals]
+def critic_plan_view(plan: TicketPlan) -> str:
+    """The whole plan as the critic sees it: every epic, story and task field. Requirement text appears once, in
+    the REQUIREMENTS list at the end; everywhere else requirements are referred to by ID."""
+    def ids(values) -> str:
+        return ", ".join(values) or "-"
+
+    e = plan.project
+    lines = [f"EPIC {e.key}: {e.title} (requirements: {ids(e.requirement_ids)})", f"  Scope: {e.scope}"]
+    lines += [f"  Goal: {g.text} (requirements: {ids(g.requirement_ids)})" for g in e.business_goals]
     for s in plan.stories:
-        lines.append(f"STORY {s.key}: {s.title} (requirements: {', '.join(s.requirement_ids) or '-'}; "
-                     f"depends on: {', '.join(s.dependencies) or '-'})")
-        lines.append(f"  As a {s.as_a}, I want {s.i_want}, so that {s.so_that}.")
-        lines += [f"  AC{i}: Given {a.given}; When {a.when}; Then {a.then}" for i, a in enumerate(s.acceptance_criteria, 1)]
-        if s.edge_cases:
-            lines.append(f"  Edge cases: {'; '.join(s.edge_cases)}")
+        lines += [f"STORY {s.key}: {s.title}",
+                  f"  Requirements: {ids(s.requirement_ids)}",
+                  f"  Depends on: {ids(s.dependencies)}",
+                  f"  As a {s.as_a}, I want {s.i_want}, so that {s.so_that}.",
+                  f"  Business description: {s.business_description}",
+                  f"  Business value: {s.business_value}"]
+        lines += [f"  AC{i}: Given {a.given}; When {a.when}; Then {a.then}"
+                  for i, a in enumerate(s.acceptance_criteria, 1)]
+        lines += [f"  Edge case {i}: {x}" for i, x in enumerate(s.edge_cases, 1)]
+        lines += [f"  DoD {i}: {x}" for i, x in enumerate(s.definition_of_done, 1)]
         for t in (t for t in plan.tasks if t.story_key == s.key):
-            lines.append(f"  TASK {_task_line(t)}")
-            lines.append(f"    {t.description[:400]}")
-            lines.append(f"    requirements: {', '.join(t.requirement_ids) or '-'}; blocked_by: {', '.join(t.blocked_by) or '-'}")
-    lines.append("REQUIREMENTS")
-    lines += [_req_line(r) for r in plan.requirements]
-    return "\n".join(lines)
+            flags = [f"derived: {t.derived_reason.value}"] if t.derived_reason else []
+            flags += ["spike"] if Label.type_spike in t.labels else []
+            lines += [f"  TASK {_task_line(t)}" + (f" ({', '.join(flags)})" if flags else ""),
+                      f"    Requirements: {ids(t.requirement_ids)}",
+                      f"    Blocked by: {ids(t.blocked_by)}",
+                      f"    Description: {t.description}"]
+            lines += [f"    DoD {i}: {x}" for i, x in enumerate(t.definition_of_done, 1)]
+    lines.append("REQUIREMENTS (the PRD text itself is in <prd>)")
+    lines += [f"[{r.id}] ({r.kind.value}) {r.statement}" for r in plan.requirements]
+    return chr(10).join(lines)
+
+
+def gap_questions(findings: Findings, plan: TicketPlan) -> list[tuple[str, str]]:
+    """(story key, open question) for every CRIT-PRD-GAP finding on a story or a task of it."""
+    task_story = {t.key: t.story_key for t in plan.tasks}
+    stories = {s.key for s in plan.stories}
+    out = []
+    for f in findings:
+        if f.check_id != "CRIT-PRD-GAP" or not f.open_question:
+            continue
+        story = f.item_key if f.item_key in stories else task_story.get(f.item_key or "")
+        if story:
+            out.append((story, f.open_question))
+    return out
+
+
+def add_open_questions(plan: TicketPlan, questions: list[tuple[str, str]], findings: Findings
+                       ) -> tuple[TicketPlan, list[str]]:
+    """A detail the PRD is silent on is listed in the story as an open question (appended to its edge cases, where
+    the plan states open questions). Field-level: nothing else changes. A question already listed (near-identical
+    wording) is not added again; one with an internal note (P12) is not added and is logged."""
+    by_key = {s.key: s for s in plan.stories}
+    touched: list[str] = []
+    for key, text in questions:
+        story = by_key.get(key)
+        text = " ".join(text.split())
+        if story is None or not text:
+            continue
+        if _note_labels(text):
+            findings.append(_finding("REF-RESTORE", f"Open question not added (internal note in it): {text[:120]!r}",
+                                     item_key=key))
+            continue
+        if any(fuzz.token_set_ratio(text, e, processor=default_process) >= 90 for e in story.edge_cases):
+            continue
+        by_key[key] = story.model_copy(update={"edge_cases": [*story.edge_cases, text]})
+        touched.append(key)
+    if not touched:
+        return plan, []
+    stories = [by_key[s.key] for s in plan.stories]
+    new_plan = TicketPlan.model_validate(plan.model_copy(update={"stories": stories}).model_dump())
+    return new_plan, list(dict.fromkeys(touched))
 
 
 def finding_id(f: ReviewFinding) -> str:
@@ -858,7 +917,7 @@ def critic_user_message(plan: TicketPlan, parsed: ParsedPRD, focus: list[str] | 
     """Two text blocks: the PRD (stable across rounds, so it carries the prompt-cache breakpoint) and the plan
     (changes every round, so it is sent as ordinary input instead of being written to the cache)."""
     prd = "PRD:\n" + _prd_block(parsed.markdown) + "\n\n"
-    plan_text = "Plan:\n" + _prd_block(compact_plan(plan), "plan")
+    plan_text = "Plan:\n" + _prd_block(critic_plan_view(plan), "plan")
     if decisions:
         plan_text += "\n\n" + _decisions_block(decisions)
     if open_findings:
@@ -899,8 +958,11 @@ def run_critic(plan: TicketPlan, parsed: ParsedPRD, llm: StructuredLLM, round_no
         message = f.message if item or not f.item_key else f"(about unknown item {f.item_key!r}) {f.message}"
         if focus and item not in set(focus):
             continue  # repair rounds: findings on the repaired items only
-        fixed = f.model_copy(update={"check_id": check_id, "item_key": item, "message": message,
-                                     "requirement_ids": [r for r in f.requirement_ids if r in req_ids]})
+        severity = f.severity if check_id in CRITIC_BLOCKING_CHECKS else Severity.warning
+        question = (f.open_question or "").strip() or None
+        fixed = f.model_copy(update={"check_id": check_id, "item_key": item, "message": message, "severity": severity,
+                                     "requirement_ids": [r for r in f.requirement_ids if r in req_ids],
+                                     "open_question": question if check_id == "CRIT-PRD-GAP" else None})
         out.append(fixed.model_copy(update={"finding_id": finding_id(fixed)}))
     return out, resolved
 
@@ -1934,6 +1996,22 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             ledger = {**best.get("ledger", {}), **ledger}
             report = ReviewReport(stage="check_plan", round=best["report"].round, verdict=Verdict.pass_,
                                   findings=validators.check_plan(best["plan"], duplicate_threshold) + list(ledger.values()))
+        # PRD gaps (warnings) become open questions in their stories; kept across rounds, restores and resets.
+        questions = list(dict.fromkeys([*map(tuple, state.get("open_questions") or []),
+                                        *gap_questions(new, plan)]))
+        asked, asked_keys = add_open_questions(update.get("plan") or plan, questions, update.setdefault("ref", []))
+        if asked_keys:
+            update["plan"] = asked
+            causes = dict(state.get("repair_causes") or {})
+            for key in asked_keys:
+                if "finding CRIT-PRD-GAP" not in causes.setdefault(key, []):
+                    causes[key].append("finding CRIT-PRD-GAP")
+            update["repair_causes"] = causes
+            console.print(f"open questions added from PRD gaps: {', '.join(asked_keys)}")
+        update["open_questions"] = [list(q) for q in questions]
+        found_refs = update.pop("ref")
+        if found_refs:
+            update["reference_findings"] = refs(state, found_refs)
         n_crit = sum(f.check_id.startswith("CRIT-") for f in report.findings)
         scope_note = (", critic skipped: nothing changed" if skip_critic else
                       ", new/affected items only" if focus and round_no == 1 else

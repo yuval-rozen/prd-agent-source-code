@@ -109,12 +109,12 @@ def test_critic_runs_once_on_whole_plan_when_clean(prd_file, tmp_path):
     assert state["status"] is Status.PASS and state["plan_rounds"] == 0
 
 
-def test_critic_overlap_triggers_repair_of_that_story_only(prd_file, tmp_path):
+def test_critic_blocking_finding_triggers_repair_of_that_story_only(prd_file, tmp_path):
     first = FakeLLM()
     _, _, clean = _run_to_gate(prd_file, tmp_path / "clean", first)
     target = clean["plan"].tasks[-1]  # a task of the last story
     other_story = clean["plan"].stories[0].key
-    overlap = _blocking("CRIT-OVERLAP", target.key, "Duplicates the migration of another story.")
+    overlap = _blocking("CRIT-UNREQUESTED", target.key, "Adds an export format the PRD does not ask for.")
     noise = ReviewFinding(check_id="crit-overlap", severity=Severity.warning, item_key=other_story, message="x")
     llm = FakeLLM(critic_findings=[[overlap], [noise]])  # round 2 reports on a non-repaired item -> filtered out
     _, _, state = _run_to_gate(prd_file, tmp_path / "out", llm)
@@ -241,9 +241,9 @@ def test_cli_checkpoint_serde_allows_schema_types():
 def test_loop_keeps_best_round_when_it_regresses(prd_file, tmp_path):
     clean = _run_to_gate(prd_file, tmp_path / "clean", FakeLLM())[2]
     s1, s2 = clean["plan"].stories[0].key, clean["plan"].stories[1].key
-    rounds = [[_blocking("CRIT-OVERLAP", s1), _blocking("CRIT-OVERLAP", s2)],  # round 1: 2 blocking
-              [_blocking("CRIT-MISSING", s1)],                                 # round 2: 1 blocking (best)
-              [_blocking("CRIT-MISSING", s1), _blocking("CRIT-UNTESTABLE-AC", s1)]]  # round 3: 2 -> not improving
+    rounds = [[_blocking("CRIT-UNREQUESTED", s1), _blocking("CRIT-UNREQUESTED", s2)],  # round 1: 2 blocking
+              [_blocking("CRIT-MISSING", s1)],                                         # round 2: 1 blocking (best)
+              [_blocking("CRIT-MISSING", s1), _blocking("CRIT-MISREPRESENTED", s1)]]   # round 3: 2 -> not improving
     out = tmp_path / "out"
     state = _run_to_gate(prd_file, out, FakeLLM(critic_findings=rounds))[2]
     assert state["plan_blocking_history"] == [2, 1, 2]
@@ -251,7 +251,7 @@ def test_loop_keeps_best_round_when_it_regresses(prd_file, tmp_path):
     # is verified later instead of being lost; round 2's own open finding was re-raised in round 3 (same ID).
     assert state["plan_report"].round == 2
     assert {f.check_id for f in state["plan_report"].findings if f.severity.value == "blocking"} == {
-        "CRIT-MISSING", "CRIT-UNTESTABLE-AC"}
+        "CRIT-MISSING", "CRIT-MISREPRESENTED"}
     assert "kept the plan of round 2" in state["plan_stop_reason"]
     assert "kept the plan of round 2" in (out / "validation_report.md").read_text(encoding="utf-8")
 
@@ -284,7 +284,7 @@ def test_g1_feedback_is_authoritative_and_never_rolled_back(prd_file, tmp_path):
     decision = f"{story}: the backend sets the loan date on create."
     rounds = [[_blocking("CRIT-MISSING", story)],                                   # round 1: 1 blocking
               [_blocking("CRIT-MISSING", story)],                                   # round 2: 1 (no decrease -> stop)
-              [_blocking("CRIT-UNREQUESTED", story), _blocking("CRIT-UNTESTABLE-AC", story)],  # after feedback: 2
+              [_blocking("CRIT-UNREQUESTED", story), _blocking("CRIT-MISREPRESENTED", story)],  # after feedback: 2
               []]                                                                   # feedback repair round 2: clean
     llm = FakeLLM(critic_findings=rounds)
     graph, config, first = _run_to_gate(prd_file, tmp_path / "out", llm)
@@ -310,3 +310,73 @@ def test_p13_epic_finding_goes_to_the_epic_repair_not_a_story(prd_file, tmp_path
     assert names.count("StoryDetailDraft") == len(state["plan"].stories)  # no story regenerated for the epic
     assert state["status"] is Status.PASS and state["plan"].project.requirement_ids
     assert state["plan_rounds"] == 1 and state["plan"].project.key in state["repaired_keys"]
+
+
+# --------------------------------------------------------------------------- critic view and severity rules
+
+
+def test_critic_sees_every_field_and_each_requirement_text_once(prd_file, tmp_path):
+    from agent import critic_plan_view
+
+    plan = _run_to_gate(prd_file, tmp_path / "out", FakeLLM())[2]["plan"]
+    view = critic_plan_view(plan)
+    s, t = plan.stories[0], plan.tasks[0]
+    for text in (s.as_a, s.i_want, s.so_that, s.business_description, s.business_value,
+                 *(a.then for a in s.acceptance_criteria), *s.edge_cases, *s.definition_of_done,
+                 t.description, *t.definition_of_done):
+        assert text in view, text
+    assert f"Depends on: {', '.join(s.dependencies) or '-'}" in view
+    assert f"Blocked by: {', '.join(t.blocked_by) or '-'}" in view
+    for r in plan.requirements:
+        assert view.count(r.statement) == 1, r.id  # the text once, in the REQUIREMENTS list
+        assert view.index(r.statement) > view.index("REQUIREMENTS")
+
+
+def test_critic_blocking_only_for_unrequested_contradiction_or_uncovered(prd_file, tmp_path):
+    clean = _run_to_gate(prd_file, tmp_path / "clean", FakeLLM())[2]
+    key = clean["plan"].stories[0].key
+    raised = [_blocking(c, key, f"{c} problem") for c in (
+        "CRIT-MISSING", "CRIT-MISREPRESENTED", "CRIT-UNREQUESTED", "CRIT-CONSTRAINT",
+        "CRIT-OVERLAP", "CRIT-UNTESTABLE-AC", "CRIT-PRD-GAP", "CRIT-SOMETHING")]
+    from agent import run_critic
+
+    found, _ = run_critic(clean["plan"], clean["parsed"], FakeLLM(critic_findings=[raised]), 1)
+    severity = {f.check_id: f.severity.value for f in found}
+    assert severity == {"CRIT-MISSING": "blocking", "CRIT-MISREPRESENTED": "blocking",
+                        "CRIT-UNREQUESTED": "blocking", "CRIT-CONSTRAINT": "blocking",
+                        "CRIT-OVERLAP": "warning", "CRIT-UNTESTABLE-AC": "warning", "CRIT-PRD-GAP": "warning",
+                        "CRIT-OTHER": "warning"}
+
+
+def test_prd_gap_is_a_warning_and_the_story_lists_it_as_an_open_question(prd_file, tmp_path):
+    clean = _run_to_gate(prd_file, tmp_path / "clean", FakeLLM())[2]
+    story, task = clean["plan"].stories[0], next(t for t in clean["plan"].tasks
+                                                 if t.story_key == clean["plan"].stories[1].key)
+    question = "The PRD does not state who sets the Due Date when it is left empty."
+    gaps = [ReviewFinding(check_id="CRIT-PRD-GAP", severity=Severity.blocking, item_key=story.key, message="gap",
+                          open_question=question),
+            ReviewFinding(check_id="CRIT-PRD-GAP", severity=Severity.warning, item_key=task.key, message="gap 2",
+                          open_question="The PRD does not state the default Priority."),
+            ReviewFinding(check_id="CRIT-PRD-GAP", severity=Severity.warning, item_key=story.key, message="gap 3",
+                          open_question=f"See {task.key} for the default.")]  # internal note: not added
+    state = _run_to_gate(prd_file, tmp_path / "out", FakeLLM(critic_findings=[gaps]))[2]
+    assert state["status"] is Status.PASS and state["plan_rounds"] == 0  # warnings only: no repair round
+    after = {s.key: s for s in state["plan"].stories}
+    assert after[story.key].edge_cases == [*story.edge_cases, question]
+    assert after[task.story_key].edge_cases[-1] == "The PRD does not state the default Priority."
+    before = {s.key: s for s in clean["plan"].stories}
+    for key, s in after.items():
+        assert s.model_dump(exclude={"edge_cases"}) == before[key].model_dump(exclude={"edge_cases"})
+    assert state["plan"].tasks == clean["plan"].tasks
+    assert all(f.severity.value == "warning" for f in state["plan_report"].findings if f.check_id == "CRIT-PRD-GAP")
+
+
+def test_open_question_already_listed_is_not_added_twice(prd_file, tmp_path):
+    from agent import add_open_questions
+
+    plan = _run_to_gate(prd_file, tmp_path / "out", FakeLLM())[2]["plan"]
+    key = plan.stories[0].key
+    q = "The PRD does not state who sets the Due Date."
+    once, touched = add_open_questions(plan, [(key, q)], [])
+    twice, again = add_open_questions(once, [(key, q), (key, "the PRD does not state who sets the due date")], [])
+    assert touched == [key] and again == [] and twice == once
