@@ -275,9 +275,48 @@ def check_p11_titles(plan: TicketPlan) -> list[ReviewFinding]:
     return out
 
 
+# Ticket text is read by the team, not by the pipeline: no requirement IDs, ticket keys or references to how the
+# plan was produced. ("The PRD does not state ..." open questions are product language and are allowed.)
+INTERNAL_NOTES = [
+    ("a requirement ID", re.compile(r"\bR-[0-9a-f]{8}(?:-\d+)?\b")),
+    ("a ticket key", re.compile(r"\b(?:US|FE|BE|QA|EPIC)-[a-z0-9]+(?:-[a-z0-9]+)*\b")),
+    ("'requirement ID'", re.compile(r"\brequirement ids?\b", re.IGNORECASE)),
+    ("'reviewer decision'", re.compile(r"\breviewer decisions?\b", re.IGNORECASE)),
+    ("'finding'", re.compile(r"\bfindings?\b", re.IGNORECASE)),
+    ("'critic'", re.compile(r"\bcritic\b", re.IGNORECASE)),
+    ("'the PRD text'", re.compile(r"\bthe prd text\b", re.IGNORECASE)),
+]
+
+
+def _story_texts(s) -> list[tuple[str, str]]:
+    out = [("title", s.title), ("as a / I want / so that", f"{s.as_a} {s.i_want} {s.so_that}"),
+           ("business description", s.business_description), ("business value", s.business_value)]
+    out += [(f"AC {i}", f"{a.given} {a.when} {a.then}") for i, a in enumerate(s.acceptance_criteria, 1)]
+    out += [(f"edge case {i}", e) for i, e in enumerate(s.edge_cases, 1)]
+    out += [(f"DoD item {i}", d) for i, d in enumerate(s.definition_of_done, 1)]
+    return out
+
+
+def check_p12_plain_language(plan: TicketPlan) -> list[ReviewFinding]:
+    out = []
+    items = [(s.key, _story_texts(s)) for s in plan.stories]
+    items += [(t.key, [("title", t.title), ("description", t.description)]
+               + [(f"DoD item {i}", d) for i, d in enumerate(t.definition_of_done, 1)]) for t in plan.tasks]
+    for key, fields in items:
+        for field, text in fields:
+            hits = [label for label, rx in INTERNAL_NOTES if rx.search(text)]
+            if hits:
+                out.append(_f("P12", f"{field} contains {', '.join(hits)} (internal note, not product language): "
+                              f"{text[:160]!r}", item_key=key,
+                              suggested_fix="Rewrite it in plain product language; state an open question plainly "
+                                            "(for example 'The wording of the confirmation message is not specified.')."))
+    return out
+
+
 PLAN_CHECKS = (
     check_p1_coverage, check_p2_citations, check_p3_acceptance_criteria, check_p4_tracks, check_p5_labels,
     check_p7_dependencies, check_p8_constraints, check_p9_decisions, check_p10_sizing, check_p11_titles,
+    check_p12_plain_language,
 )
 
 
@@ -286,5 +325,5 @@ def check_plan(plan: TicketPlan, duplicate_threshold: float = 90.0) -> list[Revi
     for check in PLAN_CHECKS:
         findings += check(plan)
     findings += check_p6_duplicate_titles(plan, duplicate_threshold)
-    order = {f"P{i}": i for i in range(1, 12)}
+    order = {f"P{i}": i for i in range(1, 13)}
     return sorted(findings, key=lambda f: (order.get(f.check_id, 99), f.item_key or ""))

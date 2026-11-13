@@ -162,14 +162,19 @@ class FakeLLM:
         return StoryDetailDraft(story=content, tasks=tasks)
 
 
+def _words(key: str) -> str:
+    """Plain words for a ticket key (ticket text must not contain keys)."""
+    return key.split("-", 1)[1].replace("-", " ")
+
+
 def _task_draft(key: str, track: str, reqs: list[str], suffix: str) -> TaskDraft:
     t = Track(track)
     prefix = {"frontend": "[FE]", "backend": "[BE]", "qa_general": "[QA]"}[track]
     area = {"frontend": TaskArea.frontend, "backend": TaskArea.backend, "qa_general": TaskArea.qa}[track]
-    return TaskDraft(key_slug=key.split("-", 1)[1], title=f"{prefix} {key} {suffix}", track=t, area=area,
-                     description=f"{suffix} {key}", size=Size.S, consumes_api=False, touches_db=False,
+    return TaskDraft(key_slug=key.split("-", 1)[1], title=f"{prefix} {_words(key)} {suffix}", track=t, area=area,
+                     description=f"{suffix} {_words(key)}", size=Size.S, consumes_api=False, touches_db=False,
                      requirement_ids=reqs, derived_reason=None if reqs else "testing", is_spike=False,
-                     definition_of_done=[f"{key} done"])
+                     definition_of_done=[f"{_words(key)} done"])
 
 
 _TASK_LINE = re.compile(r"^(KEEP|REVISE|CLOSE) (\S+) \[(\w+), .*\| requirements: ([^|\n]*)", re.MULTILINE)
@@ -189,9 +194,9 @@ def _update(self, user: str) -> StoryUpdateDraft:
         else:
             placements.append(AddedPlacementDraft(requirement_id=rid, mode="new_task",
                                                   task=_task_draft("BE-new-" + rid.lower(), "backend", [rid], "new")))
-    ac = [AcceptanceCriterion(given="a member", when="they act", then=f"the change for {key} is visible"),
+    ac = [AcceptanceCriterion(given="a member", when="they act", then=f"the change for {_words(key)} is visible"),
           AcceptanceCriterion(given="a member", when="the action fails", then="an error message is shown")]
-    content = StoryContentDraft(as_a="user", i_want=f"updated {key}", so_that="it matches the PRD",
+    content = StoryContentDraft(as_a="user", i_want=f"updated {_words(key)}", so_that="it matches the PRD",
                                 business_description="Updated.", business_value="Value.", acceptance_criteria=ac,
                                 edge_cases=[], dependencies=[], definition_of_done=["Updated"])
     return StoryUpdateDraft(story=content, revised_tasks=revised, added_requirements=placements)
@@ -225,9 +230,9 @@ def _repair(self, user: str) -> StoryRepairDraft:
         if self.repair_mode == "close_new":
             close = [t[0] for t in tasks if t[3]]
         fixes.append(FindingFixDraft(finding=int(number), revised_tasks=revised, new_task=new_task, close_tasks=close))
-    ac = [AcceptanceCriterion(given="a member", when="they act", then=f"{key} handles it"),
+    ac = [AcceptanceCriterion(given="a member", when="they act", then=f"{_words(key)} handles it"),
           AcceptanceCriterion(given="a member", when="it fails", then="an error message is shown")]
-    content = StoryContentDraft(as_a="user", i_want=f"fixed {key}", so_that="the finding is resolved",
+    content = StoryContentDraft(as_a="user", i_want=f"fixed {_words(key)}", so_that="the problem is resolved",
                                 business_description="Fixed.", business_value="Value.", acceptance_criteria=ac,
                                 edge_cases=[], dependencies=[], definition_of_done=["Fixed"])
     return StoryRepairDraft(story=content, fixes=fixes)

@@ -48,4 +48,11 @@ Shared work across stories:
 - If you receive review findings and the current version of this story, fix every finding, keep what is
   correct, and do not repeat work that the listed tasks of other stories already do.
 
+Plain product language (ticket text is read by the team):
+
+- Story and task text (acceptance criteria, edge cases, descriptions, Definition of Done) never contains
+  requirement IDs, ticket keys, or references to how the plan was made (requirement IDs, findings, reviews,
+  reviewer decisions, "the PRD text for this story"). Requirement IDs belong only in `requirement_ids`.
+- State an open question plainly, for example: "The wording of the confirmation message is not specified."
+
 {{ shared_rules }}

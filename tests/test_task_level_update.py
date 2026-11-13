@@ -47,9 +47,10 @@ def _req(text):
 def _task(key, track, req_ids, story="US-loans", derived=None, blocked_by=()):
     area = {Track.backend: Label.area_backend, Track.frontend: Label.area_frontend, Track.qa_general: Label.area_qa}[track]
     prefix = {Track.backend: "[BE]", Track.frontend: "[FE]", Track.qa_general: "[QA]"}[track]
-    return TechnicalTask(key=key, story_key=story, title=f"{prefix} {key} work", track=track, description=f"Do {key}.",
+    words = key.split("-", 1)[1].replace("-", " ")  # ticket text never contains keys (P12)
+    return TechnicalTask(key=key, story_key=story, title=f"{prefix} {words} work", track=track, description=f"Do {words}.",
                          size=Size.S, requirement_ids=list(req_ids), derived_reason=derived, blocked_by=list(blocked_by),
-                         definition_of_done=[f"{key} done"], labels=[Label.type_task, area, Label.prd_agent])
+                         definition_of_done=[f"{words} done"], labels=[Label.type_task, area, Label.prd_agent])
 
 
 def _plan(reqs, tasks, story_reqs):
@@ -393,3 +394,86 @@ def test_plan_wide_decision_is_checked_by_the_critic_against_the_whole_plan(tmp_
     assert not [n for n, _ in after if n in ("StoryDetailDraft", "StoryRepairDraft")]  # no blanket repair of every story
     critic = [u for (n, u) in after if n == "ReviewReport"]
     assert critic and "Review the whole plan." in critic[0] and "New loans start as Open." in critic[0]
+
+
+# --------------------------------------------------------------------------- citations from findings / decisions
+
+
+from agent import cited_requirements  # noqa: E402
+
+
+def test_cited_requirements_takes_only_existing_ids():
+    reqs = [_req(t) for t in TEXTS]
+    f = _blocking("US-loans", f"The story must cite {reqs[2].id} and also R-deadbeef, which does not exist.")
+    assert cited_requirements(f, reqs) == [reqs[2].id]
+    f2 = ReviewFinding(check_id="CRIT-MISSING", severity=Severity.blocking, item_key="US-loans", message="x",
+                       requirement_ids=[reqs[0].id, "R-00000000"])
+    assert cited_requirements(f2, reqs) == [reqs[0].id]
+
+
+def test_cited_requirements_by_quote_but_not_by_paraphrase():
+    reqs = [_req(t) for t in TEXTS]
+    by_quote = _blocking("US-loans", f'The PRD says "{TEXTS[3]}" but no AC covers it.')
+    assert cited_requirements(by_quote, reqs) == [reqs[3].id]
+    paraphrase = _blocking("US-loans", "Late items should be shown somewhere.")
+    assert cited_requirements(paraphrase, reqs) == []
+
+
+def test_repair_adds_cited_ids_to_the_story_and_the_revised_task():
+    previous, plan, diff, skeletons = _changed_plan()
+    msg_id = plan.requirements[3].id  # cited by FE-overdue-list only, not by BE-renew-endpoint
+    decision = _blocking("BE-renew-endpoint", f"BE-renew-endpoint must also show overdue loans ({msg_id}).",
+                         check="G1-FEEDBACK")
+    repaired, new_skeletons, _, _ = repair_update(plan, skeletons, [decision], FakeLLM(), [], previous, diff)
+    renew = next(t for t in repaired.tasks if t.key == "BE-renew-endpoint")
+    assert msg_id in renew.requirement_ids  # added by code, not by the model
+    assert msg_id in repaired.stories[0].requirement_ids
+    assert msg_id in next(s for s in new_skeletons if s.key == "US-loans").requirement_ids
+    others = [t for t in repaired.tasks if t.key != "BE-renew-endpoint"]
+    assert others == [t for t in plan.tasks if t.key != "BE-renew-endpoint"]  # not added to tasks it does not cover
+
+
+# --------------------------------------------------------------------------- P12 plain language
+
+
+from tools.validators import check_p12_plain_language  # noqa: E402
+
+
+def test_p12_flags_internal_notes():
+    plan = _four_task_story()
+    rid = plan.requirements[0].id
+    story = plan.stories[0].model_copy(update={"edge_cases": [
+        f"The PRD text for this story does not include the requirement ID ({rid}).",
+        "Editing a Completed task: the reviewer decision does not say.",
+        "See BE-renew-endpoint for details.",
+        "The critic found this unclear.",
+        "The PRD does not state the maximum number of renewals (open question)."]})
+    findings = check_p12_plain_language(plan.model_copy(update={"stories": [story]}))
+    assert [f.check_id for f in findings] == ["P12"] * 4 and all(f.severity.value == "blocking" for f in findings)
+    assert "edge case 5" not in " ".join(f.message for f in findings)  # a plain open question is fine
+
+
+def test_p12_passes_plain_text_and_checks_tasks():
+    plan = _four_task_story()
+    assert check_p12_plain_language(plan) == []
+    bad = plan.model_copy(update={"tasks": [plan.tasks[0].model_copy(update={"description": "Implements R-4a5d9f72."}),
+                                            *plan.tasks[1:]]})
+    assert [f.item_key for f in check_p12_plain_language(bad)] == [plan.tasks[0].key]
+
+
+def test_story_prompts_carry_the_plain_language_rule():
+    from agent import system_prompt
+
+    for name in ("detail_stories", "update_story", "repair_update_story"):
+        assert "Plain product language" in system_prompt(name) and "Requirement IDs belong only in" in system_prompt(name)
+
+
+def test_finding_fix_is_a_cause_and_survives_the_churn_guard():
+    previous = _four_task_story()
+    fixed = previous.model_copy(update={"stories": [previous.stories[0].model_copy(update={"edge_cases": ["Plain."]})]})
+    guarded = churn_guard(fixed, previous, None, set(), [], finding_keys={"US-loans"})
+    assert guarded.stories[0].edge_cases == ["Plain."]  # caused by a finding fix: kept
+    restored = churn_guard(fixed, previous, None, set(), [])
+    assert restored.stories[0] == previous.stories[0]  # no cause: restored
+    causes = change_causes(fixed, previous, None, set(), {"US-loans": ["finding P12"]})
+    assert causes["US-loans"] == ["finding P12"]

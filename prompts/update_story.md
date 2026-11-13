@@ -30,4 +30,11 @@ and changed requirements and must not mention removed ones. Keep the rest of the
 Never revise a task that is not marked REVISE or chosen for an ADDED requirement, and never repeat work that
 other stories' tasks already do.
 
+Plain product language (ticket text is read by the team):
+
+- Story and task text (acceptance criteria, edge cases, descriptions, Definition of Done) never contains
+  requirement IDs, ticket keys, or references to how the plan was made (requirement IDs, findings, reviews,
+  reviewer decisions, "the PRD text for this story"). Requirement IDs belong only in `requirement_ids`.
+- State an open question plainly, for example: "The wording of the confirmation message is not specified."
+
 {{ shared_rules }}
