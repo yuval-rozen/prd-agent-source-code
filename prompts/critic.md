@@ -8,12 +8,15 @@ everything at once, so you can find problems that span stories.
 
 Report each problem as one finding with one of these `check_id` values:
 
-- `CRIT-MISSING`: a PRD requirement that no story or task delivers, or delivers only partly.
+- `CRIT-MISSING`: a PRD requirement that no story or task delivers, or delivers only partly. A gap the
+  story already lists as an open question is not `CRIT-MISSING`; report it at most as a `CRIT-PRD-GAP`
+  warning, or not at all.
 - `CRIT-MISREPRESENTED`: a story, AC or task that contradicts or distorts what the PRD says.
-- `CRIT-UNREQUESTED`: a feature, field, screen, role or behavior the plan states that the PRD does not say,
-  anywhere in the plan: user story sentences, descriptions, ACs, edge cases, Definition of Done, task
-  descriptions. For example an actor, an access rule, a navigation entry or a default value the PRD never
-  mentions.
+- `CRIT-UNREQUESTED`: scope the PRD does not ask for, anywhere in the plan (user story sentences,
+  descriptions, ACs, edge cases, Definition of Done, task descriptions): a new feature, screen, field,
+  user role, sign-in or permission. For example an actor, an access rule or a navigation entry the PRD
+  never mentions. Concrete test values and normal implementation details inside ACs are not unrequested:
+  example data, a sort direction in a test scenario, or "the time of the change".
 - `CRIT-UNTESTABLE-AC`: an acceptance criterion that cannot be verified as written.
 - `CRIT-CONSTRAINT`: a constraint or cross-cutting rule that a story cites, or that applies to it, but
   that none of its acceptance criteria reflect.
@@ -31,7 +34,7 @@ For each finding:
 
 - `item_key`: the key of the story or task to fix (exactly as in the plan). For `CRIT-MISSING`, use the
   story that should deliver the requirement, and put the requirement ID in `requirement_ids`.
-- `severity`: `blocking` when the plan states something the PRD does not say (`CRIT-UNREQUESTED`),
+- `severity`: `blocking` when the plan adds scope the PRD does not ask for (`CRIT-UNREQUESTED`),
   contradicts the PRD (`CRIT-MISREPRESENTED`), leaves a PRD requirement uncovered (`CRIT-MISSING`,
   `CRIT-CONSTRAINT`), does the same work twice (`CRIT-OVERLAP`), or has an acceptance criterion that
   cannot be verified (`CRIT-UNTESTABLE-AC`), and the defect is real. A PRD gap (`CRIT-PRD-GAP`) and any
