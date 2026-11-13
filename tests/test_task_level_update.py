@@ -558,3 +558,13 @@ def test_story_edits_with_a_bad_number_are_ignored():
     assert len([f for f in found if f.check_id == "REF-RESTORE"]) == 2
     edits = StoryEditsDraft(acceptance_criteria=[CriterionEditDraft(op="remove", number=1)])
     assert apply_story_edits(story, edits, []).acceptance_criteria == story.acceptance_criteria[1:]
+
+
+def test_p12_rewrite_names_the_notes_and_retries_once_when_a_note_is_left_in():
+    plan, _ = _with_notes(_four_task_story())
+    llm = FakeLLM()
+    llm.plain_sloppy_once = True
+    fixed, _, _ = plain_rewrite(plan, [], check_p12_plain_language(plan), llm, [])
+    users = [u for n, u in llm.calls if n == "PlainRewriteDraft"]
+    assert len(users) == 2 and "remove: a ticket key" in users[0]
+    assert check_p12_plain_language(fixed) == []

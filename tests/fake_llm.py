@@ -247,12 +247,16 @@ def _repair(self, user: str) -> StoryRepairDraft:
 
 FakeLLM._repair = _repair
 
-_NUMBERED = re.compile(r"^\[(\d+)\] \([^)]*\) (.+)$", re.MULTILINE)
+_NUMBERED = re.compile(r"^\[(\d+)\] \([^;]*; remove: [^)]*\) (.+)$", re.MULTILINE)
 _NOTE = re.compile(r"\s*\(?\b(?:R-[0-9a-f]{8}(?:-\d+)?|(?:US|FE|BE|QA)-[a-z0-9]+(?:-[a-z0-9]+)*)\b\)?|"
                    r"\b(?:requirement ids?|reviewer decisions?|findings?|critic|the prd text)\b", re.IGNORECASE)
 
 
 def _plain(self, user: str) -> PlainRewriteDraft:
+    if getattr(self, "plain_sloppy_once", False):  # first rewrite leaves the notes in (code must retry)
+        self.plain_sloppy_once = False
+        return PlainRewriteDraft(rewrites=[PlainRewriteItemDraft(number=int(n), text=text)
+                                           for n, text in _NUMBERED.findall(user)])
     return PlainRewriteDraft(rewrites=[PlainRewriteItemDraft(number=int(n), text=_NOTE.sub("", text).strip())
                                        for n, text in _NUMBERED.findall(user)])
 

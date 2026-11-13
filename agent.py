@@ -1443,7 +1443,11 @@ def _plain_units(item) -> list[tuple[tuple, str]]:
     else:
         fields = [(("title",), item.title), (("description",), item.description)]
     fields += [(("definition_of_done", i), d) for i, d in enumerate(item.definition_of_done)]
-    return [(path, text) for path, text in fields if any(rx.search(text) for _, rx in validators.INTERNAL_NOTES)]
+    return [(path, text) for path, text in fields if _note_labels(text)]
+
+
+def _note_labels(text: str) -> list[str]:
+    return [label for label, rx in validators.INTERNAL_NOTES if rx.search(text)]
 
 
 def _set_unit(item, path: tuple, text: str):
@@ -1464,12 +1468,21 @@ def plain_rewrite(plan: TicketPlan, skeletons: list[StorySkeleton], findings: Fi
     units = [(key, path, text) for key in keys if key in items for path, text in _plain_units(items[key])]
     if not units:
         return plan, skeletons, []
-    user = ("Rewrite each numbered text in plain product language. Keep its meaning, facts and level of detail; "
-            "remove only the internal notes.\n\n" + "\n".join(
-                f"[{n}] ({key}, {' '.join(str(x + 1) if isinstance(x, int) else x for x in path)}) {text}"
-                for n, (key, path, text) in enumerate(units, 1)))
-    draft = llm.structured(PlainRewriteDraft, system_prompt("plain_language"), user, role="revision")
-    rewrites = {r.number: r.text for r in draft.rewrites if r.text.strip()}
+    def where(key: str, path: tuple) -> str:
+        return f"{key}, {' '.join(str(x + 1) if isinstance(x, int) else x for x in path)}"
+
+    rewrites: dict[int, str] = {}
+    todo = list(range(1, len(units) + 1))
+    for _ in range(2):  # one retry, only for texts whose rewrite still contains an internal note
+        user = ("Rewrite each numbered text in plain product language. Keep its meaning, facts and level of detail; "
+                "remove only the internal notes listed for it.\n\n" + "\n".join(
+                    f"[{n}] ({where(*units[n - 1][:2])}; remove: {', '.join(_note_labels(units[n - 1][2]))}) "
+                    f"{units[n - 1][2]}" for n in todo))
+        draft = llm.structured(PlainRewriteDraft, system_prompt("plain_language"), user, role="revision")
+        rewrites |= {r.number: r.text for r in draft.rewrites if r.number in todo and r.text.strip()}
+        todo = [n for n in todo if n not in rewrites or _note_labels(rewrites[n])]
+        if not todo:
+            break
     known = {r.id for r in plan.requirements}
     touched: list[str] = []
     for n, (key, path, text) in enumerate(units, 1):
