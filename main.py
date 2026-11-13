@@ -186,9 +186,9 @@ def _write_run_stats(out: Path, settings, llm: LLM, timings: dict, total_s: floa
     state = outcome.get("state") or {}
     stats = {
         "provider": settings.llm_provider,
-        "models": {role: settings.model_for(role) for role in ("extract", "generation", "critic")},
+        "models": {role: settings.model_for(role) for role in ("extract", "generation", "revision", "critic")},
         "google_thinking_level": settings.google_thinking_level if settings.llm_provider == "google" else None,
-        "effort": {role: settings.effort_for(role) for role in ("extract", "generation", "critic")}
+        "effort": {role: settings.effort_for(role) for role in ("extract", "generation", "revision", "critic")}
         if settings.llm_provider == "anthropic" else None,
         "replay": replay,
         "max_run_cost_usd": settings.max_run_cost_usd,

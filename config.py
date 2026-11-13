@@ -14,7 +14,8 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 Provider = Literal["anthropic", "google"]
-Role = Literal["extract", "generation", "critic"]
+Role = Literal["extract", "generation", "revision", "critic"]
+ROLES: tuple[Role, ...] = ("extract", "generation", "revision", "critic")
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
 
 DEFAULT_MAX_RUN_COST_USD = 0.30
@@ -24,8 +25,12 @@ DEFAULT_MAX_RUN_COST_USD = 0.30
 # Google's model list and pricing page (2026-11-12): all three defaults are on the Gemini free tier.
 DEFAULT_MODELS: dict[Provider, dict[Role, str]] = {
     # A cheap model generates, a stronger model reviews (README "Model selection").
-    "anthropic": {"extract": "claude-haiku-5-5", "generation": "claude-haiku-5-5", "critic": "claude-sonnet-5-5"},
-    "google": {"extract": "gemini-3.5-flash-lite", "generation": "gemini-3.8-flash", "critic": "gemini-3.8-flash"},
+    # revision = update-run revisions and repairs (StoryUpdateDraft / StoryRepairDraft): targeted edits that the
+    # strict critic re-reviews, where a cheap model kept leaving gaps (README "Model selection").
+    "anthropic": {"extract": "claude-haiku-5-5", "generation": "claude-haiku-5-5", "revision": "claude-sonnet-5-5",
+                  "critic": "claude-sonnet-5-5"},
+    "google": {"extract": "gemini-3.5-flash-lite", "generation": "gemini-3.8-flash", "revision": "gemini-3.8-flash",
+               "critic": "gemini-3.8-flash"},
 }
 MODEL_PREFIX: dict[Provider, str] = {"anthropic": "claude-", "google": "gemini-"}
 
@@ -83,12 +88,14 @@ class Settings(BaseModel):
     # None = the provider's default for that stage (DEFAULT_MODELS).
     extract_model: str | None = None
     generation_model: str | None = None
+    revision_model: str | None = None
     critic_model: str | None = None
 
     # Reasoning effort per role (Anthropic output_config.effort; not sent to Google). Thinking tokens are
     # billed as output, so these are the main cost lever after model choice.
     extract_effort: Effort = "low"
     generation_effort: Effort = "medium"
+    revision_effort: Effort = "medium"
     critic_effort: Effort = "medium"
 
     # Gemini thinking level for the generation and critic stages (low | high; None = the model's default).
@@ -104,18 +111,20 @@ class Settings(BaseModel):
     req_diff_threshold: float = Field(default=85.0, ge=0, le=100)
 
     def model_for(self, role: Role) -> str:
-        explicit = {"extract": self.extract_model, "generation": self.generation_model, "critic": self.critic_model}[role]
+        explicit = {"extract": self.extract_model, "generation": self.generation_model,
+                    "revision": self.revision_model, "critic": self.critic_model}[role]
         return explicit or DEFAULT_MODELS[self.llm_provider][role]
 
     def effort_for(self, role: Role) -> Effort:
-        return {"extract": self.extract_effort, "generation": self.generation_effort, "critic": self.critic_effort}[role]
+        return {"extract": self.extract_effort, "generation": self.generation_effort,
+                "revision": self.revision_effort, "critic": self.critic_effort}[role]
 
     @property
     def parallel_calls(self) -> int:
         return self.max_parallel_calls or DEFAULT_MAX_PARALLEL[self.llm_provider]
 
     def models(self) -> list[str]:
-        return [self.model_for(r) for r in ("extract", "generation", "critic")]
+        return [self.model_for(r) for r in ROLES]
 
     def require_models(self) -> None:
         """Every configured model must belong to the provider and have a price (or the cap is unenforceable)."""
@@ -196,9 +205,11 @@ _FIELDS = {
     "github_repo": "GITHUB_REPO",
     "extract_model": "EXTRACT_MODEL",
     "generation_model": "GENERATION_MODEL",
+    "revision_model": "REVISION_MODEL",
     "critic_model": "CRITIC_MODEL",
     "extract_effort": "EXTRACT_EFFORT",
     "generation_effort": "GENERATION_EFFORT",
+    "revision_effort": "REVISION_EFFORT",
     "critic_effort": "CRITIC_EFFORT",
     "google_thinking_level": "GOOGLE_THINKING_LEVEL",
     "max_run_cost_usd": "MAX_RUN_COST_USD",

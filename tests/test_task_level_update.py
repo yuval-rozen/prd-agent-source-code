@@ -320,3 +320,12 @@ def test_g1_feedback_in_an_update_run_uses_the_task_level_path(tmp_path):
     assert len(changed) == 1  # one task revised for the decision; every other task byte-for-byte
     assert all(after[k] == v1_t for k, v1_t in {t.key: t for t in v1.tasks}.items()
                if k in after and next(t for t in v1.tasks if t.key == k).story_key != story)
+
+
+def test_update_and_repair_calls_use_the_revision_role():
+    previous, plan, diff, skeletons = _changed_plan()
+    llm = FakeLLM()
+    _update(previous, [_req(TEXTS[0]), _req(TEXTS[1]), _req(CHANGED), _req(TEXTS[3])], llm)
+    repair_update(plan, skeletons, [_blocking("BE-renew-endpoint")], llm, [], previous, diff)
+    roles = {n: r for (n, _), r in zip(llm.calls, llm.roles) if n in ("StoryUpdateDraft", "StoryRepairDraft")}
+    assert roles == {"StoryUpdateDraft": "revision", "StoryRepairDraft": "revision"}

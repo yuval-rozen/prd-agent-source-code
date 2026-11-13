@@ -702,7 +702,7 @@ def detail_stories(skeletons: list[StorySkeleton], requirements: list[Requiremen
         mine = decisions_for(decisions or [], {sk.key, *(t.key for t in old_tasks)})
         user = update_story_user_message(sk, prev_story[sk.key], old_tasks, classes[sk.key], diff,
                                          previous.requirements, requirements, others, mine or None)
-        return llm.structured(StoryUpdateDraft, update_system, user)
+        return llm.structured(StoryUpdateDraft, update_system, user, role="revision")
 
     drafts = dict(zip([s.key for s in fresh], _parallel(call, fresh, _workers(llm))))
     updates = dict(zip([s.key for s in affected], _parallel(update_call, affected, _workers(llm))))
@@ -1376,7 +1376,7 @@ def repair_update(plan: TicketPlan, skeletons: list[StorySkeleton], findings: Fi
         mine = decisions_for(decisions or [], {key, *(t.key for t in tasks)})
         user = repair_update_user_message(sk_by_key[key], story_by_key[key], tasks, targets[key], scopes[key],
                                           new_this_run, plan.requirements, others, mine or None)
-        return llm.structured(StoryRepairDraft, system, user)
+        return llm.structured(StoryRepairDraft, system, user, role="revision")
 
     drafts = _parallel(call, order, _workers(llm))
     known = {r.id for r in plan.requirements}

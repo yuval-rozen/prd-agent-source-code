@@ -1,0 +1,72 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011CgzzgPWsGcJgEUaS9kcGR",
+  "model": "claude-haiku-5-5",
+  "model_name": "claude-haiku-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 3229
+   },
+   "cache_creation_input_tokens": 3229,
+   "cache_read_input_tokens": 3729,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 1920,
+   "output_tokens_details": {
+    "thinking_tokens": 777
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": [
+     {
+      "signature": "CAQS0BUKEAgTGAI4AUIIdGhpbmtpbmcSDH03Tjoe5AM9NDBAThoMgli+ZcHq/CRTVjHJIjDeJMbPNZV85tMeUfSDRjbk/xLz9VKe/gUGXTFZpHF76j4aLJhXJsMVz+kM3dQgvkUq7RTfUHM/XUTF7Uk8JOZh0xnClKOsIuaavQvW0xbCiTgy/byVeZvYBkokBAviYen1t38MSUt1eOIrV9v3kELHN3VJpmsX24LP/TvXPB/2czZw2sN8K3THEzsE3Cg6uQw7eFSID6cJL8i8ukX6VmsVy73uF10LiLNOz2P43LmAN6U6wcTKcfiEPcnjSO/E3jfrdP4oFfbVIBRrVL+BC4aF/xBOJSw1TGgpZ3+mtxRa7KkHEQjt1QKF+Gjd8brTPZl2TV4g37/+4b67WwOsnP/0ELvDtT9doWHbgJBkWElJUU3XVfEP3mN2sREt+c2CuM/XbEJoCy0RUaj76oirl+IoMkG6xQrmyx9DhvjDvoJE4CTOwztP5C2gs61gcGMnrn2unbd1wVFb5zgWFEkGp2kk72BxxdIbrrI78twM7/2vEu3btQmEnq/hUYrsbPiNnq3BU3Wsxlv1N8Ax9dZfmQSoWY9kMFt5V+vk86ltYyK9mcNXXnY56ZasqT5qlOUFsAaPG/1O6wDUrSTxAWSvn88pNAN0Fn9mLpHxx5iZFiH77aM6zI/9zKEYMUAIfFBTWCzDelbJxovlf/Pku7eeveRe5qr13vxwBz9LdoS0P7lbRVLhhV5KSDvv7sVMtmqs9wbNHRn0YtigyNtUoTPuuI+hUKhl8QiNVYThneG6d7Jsw2DsKAiUW0aMklhm51N8DpdQks6PfPxJRS0hPOKB/arbRXZTCdza37VuW/qczRh+JbieM+R7E9E6SzkY4YK9eNFbTGUyRfcFrNjVMTqyJxaOgmUu0QBL2JcGM6PiPIRG+KzNoCfTB1cGOgEiw4Xjt46LYtF5HefUQPlO/SaHYwbV/j8J0pSkfbG5Hc0GALYUcJws3wKy859JKAjwuQEo/w2dKVitg6cQxjQ+XmxLFD/BuQmZQ47tlcfJx/GeUN6NXPZN8opuvxtK2jHAMxuP4I9crZNRcTKjlBGtjMP+xe/fB/RjSgQD4WHqshY2TQJ9E8jvRb4Um8YJgfpoen9o7za5gNL3tlr3SmLkEd+GFxq6GPa19gPWjhif6R1gDBf26Hyvz+BtukbPUpxJNuyHqyiR/hk6HOhv50RSEHKIrje1AL44uLRVc9vq3d/UJh1GoosOoO34BscK2gwW9oY93UF9hsR/szOIXwciIvr5Fk0XrUcm79ad+lkxFMbbW9qiY7XP8mpj3nzG9bRU8tW+83Xzv1Qwizp0dX1On7aFlYiFpamuj/Slr7kl/0pIsjb9XE5mAQD34C7xu7w3DdyJPKr/GPfBVl22bAaPlDTnBQWfr1UOfMgaLHsxeN0FJJUCP+PdaffAlFIxcichIggCX9eVJQkta75uH/tmHd96kfM+iP1thS2K50uOqTu0QsY831+ds+ecsJbt9u/3wxe7K18VfnxFCGgmNpEzPVfvdodTU92uR1Na9FDl6h9Pi4hEOXy76gHvjsIeNV/OI+mGsSmF8kZevzg7M3vH3AFBAdHhkAHBb2xKpunaXD1N1hIsAyAVruw8aJZWtgzDs3T5qfftZ1dSpH/MUwKp4PNO1TlCUHMHZQrpjAY7hwbvmAhSmv/8yMjRMlC4otx15/6Q/v5232sPfaC7dgNVgDY9Lp+MqYBLoiKCWRKpA49EKU16c2CcuALUcotUDFtnSSd1X3FY6+tlB2fNQKwE0hYjDEo0ie8M9Tl+Eqs4Vw3p5Ihjm8v6NhS2XrfnEt1F/FAecVKE/HVIgbyXJZ0k6jBGtAXVg24Q5qMo5qCkhCHvMFh0xXkuZjXIxVGXmGDdXm2qClaWitrSMNQhfZFu1q3ZxBHbQwNzqPCPp0dIzw6R96c2w/527HfHxQnnWG7Pnxu9FGXJHrR1GXcQ6rqIckITXHo7/AYA/KMk9iBuKOWYCdqVQS7xDqNTKj658yJ4HT16kqF4g5FcblbSHao0Hs5GEeBlSo2MBigVamx2/NJhycwef13sAeXzxqoDlNGfPZ/7Stp6z5kDj4KIeGXu8/m+kPdA/7JGvzkDsyDD5Ej1r5V89dYv5CSGcziUeEOBWHe/THn+3Kz38vBqMAWJgQwpiHMyzfeA25UqLxbuhnfVLPT8ep240qfbdZ160J24AKdudtb6QVtDhUfdxFaRkTnMkY7awOsFmalijrnipJVgLoE11IjKc4BTebvfFHr1HK8ulPB9l0uFanLJrrk48AiD9YH51VS0jGA08J9koyMs6IHlFWWCIkZH9YSwoX8K+Si0lMGOqs5uGMgfh8i1o5CBF3I6or35zqMojR/QIoVCdWInhFRcvWsMpRH/OTSeSgHWmE/gXh2MKBVn34yvlqtQJgp+ghj+DiqO686/ExOn3GbOt1MN7j/t0f1CgVcuf1ijR+hNT+J5O/EKYHd+KwURMuZo9PKjqeaR0lnhVQO9fBcKFukdo6cBpDQcKinMiXP0sqfysFJNd69Utp8omLAimmrNwyJNVA/4SuMPqlZ4dLRFkP5hQOzOsSU9FwwyGr7ZSWteXVMpb45DxnleopxbGpUW3jdSR2UZy2t3ZMcWcCUYmWnBVWd72DoBKwxV+Fn3dCnlkeib9RLsa+JTbeE/4f1Sp69rPjcHVCslY1lVMkG2A88rnRv3wVF+aoFb91dnBWCyPgjkIUPtRow5jLpBLqFfKAcwhDGQK4fnH+m0mc1IA4b05QHjQnSBQbrkSjoG5hgnjSmBqRXdkJpfz0X0ii38OOxjvd2tvPH+AXO/3POwj5EDfEt8bVB5uPXvZYcdI61Q5TKDu3w6NyTsMUjL3PJZTrl8z2uUvP3B05TU/4l/R7UfUO+PbY4vqd6bRMf3UtNw4E8uEo54Q+AdvEtxZk5IhWmwq5SxbUoJpBsPr0sPR03/7USj38gZ/zdQE0nZaqu4ebvfn2CU69UaL28gbCKiFMiwtu+A3ya1n4MQadpX//xEBS7p/793m68wRSPz3jqPN0WKeHeG6E7D+epBsmvv3nj6aKqN0fKc7shiJnGby/aVm66vnaw7XZ0wG07X4GWwl4WsFuDpZlnthG1LzZIngDHyAv0yicBuLm8HrH+zgBVC3/hUvI2zqlaOB8KC/h3RMhBiUPOv/gvUh/aXeNJCa82O8As5WS7plh+If7yHyAfIsbGfcZAKgSDsS8xecORpyKZirOo1ZxtOhzaXRW5RIYsf9rjkZ1PeGvcQf3pJXOrrqyRBzXnAXkdehSXGspCs70BrsisIVZC3MQmBpITRdrKAGFQ/KSOzGg8gekQz2H4wu/Sy5c84KbEuKs+eHAtRDLkAjpY4EGN6H0GL7fCECdF18g5uO9czPmRXO9jHiNcShT2YDmM2+fY/rajW68/UNsrkkiig70GPLu1isUcOffLfvlkaijAgE4pd3O/pAopIFZwvGSIudMe14B86KvKkbDYlc5oF1T0jEfMdDWrUIPhtilSJoxzPacei9a9EJUunlNc8mqd7ctH+JXxTTeZ64wpO1MdwAl3X5e/xg4nX59qhdr31eoYVPtvpkKHOo9IDJ11IpGe+my7BhwTI9UhBBNSIkWWF2qdUAPP9/+446Ai9uYLsmrf/10Mw6RSdfBgB",
+      "thinking": "",
+      "type": "thinking"
+     },
+     {
+      "text": "{\"story\":{\"as_a\":\"user of the Task Reporting page\",\"i_want\":\"to sort the report tasks by Creation Date, Due Date, Status, Priority or Title\",\"so_that\":\"I can view tasks in the order I need\",\"business_description\":\"The Task Reporting page lets the user sort the task table by Creation Date, Due Date, Status, Priority or Title. The report API supports the same sort fields.\",\"business_value\":\"Users can find and compare tasks by the field that matters to them.\",\"acceptance_criteria\":[{\"given\":\"The Task Reporting page displays at least two tasks with different Creation Dates\",\"when\":\"The user selects the sort option Creation Date\",\"then\":\"The table rows are reordered so that the Creation Date values are in a single consistent order (ascending or descending, as defined by the sort control) and the sort option shown as selected is Creation Date\"},{\"given\":\"The Task Reporting page displays tasks with different Due Dates\",\"when\":\"The user selects the sort option Due Date\",\"then\":\"The table rows are reordered by the Due Date field and the sort option shown as selected is Due Date\"},{\"given\":\"The Task Reporting page displays tasks with different Status values\",\"when\":\"The user selects the sort option Status\",\"then\":\"The table rows are reordered by the Status field and the sort option shown as selected is Status\"},{\"given\":\"The Task Reporting page displays tasks with different Priority values\",\"when\":\"The user selects the sort option Priority\",\"then\":\"The table rows are reordered by the Priority field and the sort option shown as selected is Priority\"},{\"given\":\"The Task Reporting page displays at least two tasks with different Titles\",\"when\":\"The user selects the sort option Title\",\"then\":\"The table rows are reordered so that the Title values are in a single consistent alphabetical order (ascending or descending, as defined by the sort control) and the sort option shown as selected is Title\"},{\"given\":\"The report API is called with a sort field of creation_date, due_date, status, priority or title\",\"when\":\"The request is processed by the backend\",\"then\":\"The response contains the matching tasks ordered by that field\"},{\"given\":\"The report API is called with a sort field that is not one of creation_date, due_date, status, priority or title\",\"when\":\"The request is processed by the backend\",\"then\":\"The backend returns an invalid input error and no task data is returned\"}],\"edge_cases\":[\"The sort direction (ascending or descending) is not specified in the PRD; it is defined by the sort control.\"],\"dependencies\":[],\"definition_of_done\":[\"All five sort options work on the Task Reporting page and in the report API\",\"Invalid sort values are rejected with an invalid input error\"]},\"fixes\":[{\"finding\":1,\"revised_tasks\":[{\"task_key\":\"BE-report-api-sort-parameter\",\"task\":{\"key_slug\":\"report-api-sort-parameter\",\"title\":\"[BE] Accept title as a fifth sort field on the task report endpoint\",\"track\":\"backend\",\"area\":\"backend\",\"description\":\"Extend the sort parameter of the task report endpoint so it accepts five sort fields: creation_date, due_date, status, priority and title. Each value returns the matching tasks ordered by that field. Any other value returns an invalid input error and no task data.\",\"size\":\"M\",\"consumes_api\":false,\"touches_db\":true,\"requirement_ids\":[\"R-8007d6b5\"],\"is_spike\":false,\"definition_of_done\":[\"Endpoint accepts creation_date, due_date, status, priority and title as sort values\",\"Endpoint returns an invalid input error and no task data for any other sort value\"]}}]}]}",
+      "type": "text"
+     }
+    ],
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 3729,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 3229
+     },
+     "input_tokens": 6962,
+     "output_token_details": {
+      "reasoning": 777
+     },
+     "output_tokens": 1920,
+     "total_tokens": 8882
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-haiku-5-5",
+ "provider": "anthropic"
+}

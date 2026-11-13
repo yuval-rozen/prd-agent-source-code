@@ -33,6 +33,7 @@ Python 3.11+, uv, LangGraph (StateGraph, conditional edges for the repair loops,
 Provider: LLM_PROVIDER=anthropic|google (default anthropic). Both stay supported; llm.py has one factory that builds ChatAnthropic or ChatGoogleGenerativeAI behind the same cache, cost and retry layer.
 Model IDs come from config, one per stage: EXTRACT_MODEL (S2 and repair_requirements), GENERATION_MODEL (S4, S5, S6 and repair_plan) and CRITIC_MODEL (S7 critic). Empty means the provider's default:
 - anthropic: claude-haiku-5-5 / claude-haiku-5-5 / claude-sonnet-5-5 (a cheap model generates, a stronger model reviews). During development all three can be set to claude-haiku-5-5.
+- REVISION_MODEL (default claude-sonnet-5-5; google: gemini-3.8-flash) is used only in update runs, for the targeted revisions and repairs (StoryUpdateDraft / StoryRepairDraft): the strict critic re-reviews exactly those edits, and the cheap model kept leaving gaps there. Extraction and first-pass generation stay on Haiku.
 - google (free tier only): gemini-3.5-flash-lite / gemini-3.8-flash / gemini-3.8-flash.
 A model must belong to the selected provider and have an entry in the price table, otherwise the run is refused.
 Provider-specific features: prompt caching and reasoning effort are Anthropic-only and are not sent to Google (no clear equivalent is enabled; Gemini context caching is not used). Sampling parameters are sent to neither (for Gemini the library's temperature default is removed explicitly).

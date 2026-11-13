@@ -10,7 +10,7 @@ def test_defaults_without_env():
     assert s.llm_provider == "anthropic"
     assert s.max_repair_rounds == 3
     assert s.anthropic_api_key is None
-    assert s.models() == ["claude-haiku-5-5", "claude-haiku-5-5", "claude-sonnet-5-5"]
+    assert s.models() == ["claude-haiku-5-5", "claude-haiku-5-5", "claude-sonnet-5-5", "claude-sonnet-5-5"]
     assert s.max_run_cost_usd == 0.30
 
 
@@ -102,7 +102,7 @@ def test_google_provider_defaults(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "Google")
     s = load_settings(env_file=None)
     assert s.llm_provider == "google"
-    assert s.models() == ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.8-flash"]
+    assert s.models() == ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.8-flash", "gemini-3.8-flash"]
     assert s.parallel_calls == 1
     s.require_models()
 
@@ -145,3 +145,10 @@ def test_repo_url_is_normalized(monkeypatch, value):
     monkeypatch.setenv("GITHUB_TOKEN", FAKE_KEY)
     monkeypatch.setenv("GITHUB_REPO", value)
     assert load_settings(env_file=None).require_github()[1] == "owner/name"
+
+
+def test_revision_model_is_a_separate_setting(monkeypatch):
+    monkeypatch.setenv("REVISION_MODEL", "claude-opus-5-5")
+    s = load_settings(env_file=None)
+    assert s.model_for("revision") == "claude-opus-5-5"
+    assert s.model_for("generation") == "claude-haiku-5-5" and s.model_for("critic") == "claude-sonnet-5-5"
