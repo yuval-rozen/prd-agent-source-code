@@ -474,11 +474,50 @@ class FindingFixDraft(_Model):
                                    description="Keys of tasks created in this run that the fix makes redundant.")
 
 
+class LineEditDraft(_Model):
+    op: Literal["replace", "add", "remove"] = Field(
+        description="replace or remove the numbered line; add appends a new line at the end.")
+    number: int | None = Field(default=None, description="With replace/remove: the line number shown in the input.")
+    text: str | None = Field(default=None, description="With replace/add: the complete new line.")
+
+
+class CriterionEditDraft(_Model):
+    op: Literal["replace", "add", "remove"] = Field(
+        description="replace or remove the numbered criterion; add appends a new criterion at the end.")
+    number: int | None = Field(default=None, description="With replace/remove: the AC number shown in the input.")
+    criterion: AcceptanceCriterion | None = Field(default=None, description="With replace/add: the complete criterion.")
+
+
+class StoryEditsDraft(_Model):
+    """Edits to the story text. Every line and field not named here stays exactly as it is."""
+
+    acceptance_criteria: list[CriterionEditDraft] = Field(default_factory=list)
+    edge_cases: list[LineEditDraft] = Field(default_factory=list)
+    definition_of_done: list[LineEditDraft] = Field(default_factory=list)
+    as_a: str | None = Field(default=None, description="Only to change it; null keeps it.")
+    i_want: str | None = Field(default=None, description="Only to change it; null keeps it.")
+    so_that: str | None = Field(default=None, description="Only to change it; null keeps it.")
+    business_description: str | None = Field(default=None, description="Only to change it; null keeps it.")
+    business_value: str | None = Field(default=None, description="Only to change it; null keeps it.")
+
+
 class StoryRepairDraft(_Model):
     """Update run, repair or G1 feedback on one story: change only what the findings need."""
 
-    story: StoryContentDraft
+    story_edits: StoryEditsDraft = Field(
+        description="Edits to the story text; empty lists and nulls keep the story exactly as it is.")
     fixes: list[FindingFixDraft] = Field(description="One entry per finding in the input.")
+
+
+class PlainRewriteItemDraft(_Model):
+    number: int = Field(description="Number of the text in the input.")
+    text: str = Field(description="The rewritten text, same meaning, plain product language.")
+
+
+class PlainRewriteDraft(_Model):
+    """Field-level plain-language repair: one rewrite per numbered text, nothing else."""
+
+    rewrites: list[PlainRewriteItemDraft] = Field(description="Exactly one entry per numbered text in the input.")
 
 
 class DependencyEdgeDraft(_Model):

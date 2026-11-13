@@ -15,8 +15,14 @@ as little as possible.
     this story or another story already does.
   - `close_tasks`: only for tasks marked "created in this run" that the fix makes redundant (for example a
     duplicate). Existing published tasks are never closed here.
-- Return `story` (the story content). Change it only where a finding is about the story itself; otherwise
-  return it unchanged.
+- Return `story_edits`: edits to the story text, by the numbers shown in "Current story". Edit it only where a
+  finding is about the story itself; otherwise return empty lists and nulls.
+  - `acceptance_criteria`, `edge_cases`, `definition_of_done`: `replace` (number + the complete new line),
+    `remove` (number), or `add` (a new line, appended). Replace only the lines the fix needs; a line that is
+    still correct is never rewritten, reworded or dropped.
+  - `as_a`, `i_want`, `so_that`, `business_description`, `business_value`: a new value only if the fix needs it,
+    otherwise null.
+  - Every line and field you do not edit is kept exactly as it is.
 - Every task you do not return is kept exactly as it is.
 - Reviewer decisions are authoritative: follow them, treat them like PRD text.
 - A finding marked "reviewer decision" must leave the WHOLE story consistent with the decision: revise the

@@ -477,3 +477,84 @@ def test_finding_fix_is_a_cause_and_survives_the_churn_guard():
     assert restored.stories[0] == previous.stories[0]  # no cause: restored
     causes = change_causes(fixed, previous, None, set(), {"US-loans": ["finding P12"]})
     assert causes["US-loans"] == ["finding P12"]
+
+
+# --------------------------------------------------------------------------- field-level repairs
+
+
+from agent import apply_story_edits, plain_rewrite  # noqa: E402
+from schemas import CriterionEditDraft, LineEditDraft, StoryEditsDraft  # noqa: E402
+
+
+def _with_notes(plan):
+    rid = plan.requirements[1].id
+    story = plan.stories[0].model_copy(update={
+        "edge_cases": ["A member renews twice: the second renewal is refused.",
+                       "Renewing a returned loan: handled as in BE-borrow-endpoint.",
+                       "Last Updated Date is set on every successful renewal."],
+        "definition_of_done": ["Renew endpoint returns documented error responses.",
+                               f"Due date stored as in {rid}."]})
+    task = plan.tasks[0].model_copy(update={"definition_of_done": ["borrow done", "The critic finding is resolved."]})
+    return plan.model_copy(update={"stories": [story], "tasks": [task, *plan.tasks[1:]]}), rid
+
+
+def test_p12_repair_rewrites_only_the_flagged_lines_and_keeps_the_rest_byte_for_byte():
+    plan, rid = _with_notes(_four_task_story())
+    findings = check_p12_plain_language(plan)
+    assert sorted(f.item_key for f in findings) == sorted(["US-loans", "US-loans", plan.tasks[0].key])
+    llm = FakeLLM()
+    skeletons = [StorySkeleton(key="US-loans", title="Manage loans", requirement_ids=plan.stories[0].requirement_ids)]
+    fixed, _, touched, = plain_rewrite(plan, skeletons, findings, llm, [])
+    assert set(touched) == {"US-loans", plan.tasks[0].key}
+    assert [n for n, _ in llm.calls] == ["PlainRewriteDraft"] and llm.roles == ["revision"]  # one small call, no story rewrite
+    before, after = plan.stories[0], fixed.stories[0]
+    assert after.edge_cases[0] == before.edge_cases[0] and after.edge_cases[2] == before.edge_cases[2]
+    assert after.edge_cases[1] != before.edge_cases[1] and "BE-" not in after.edge_cases[1]
+    assert after.definition_of_done[0] == before.definition_of_done[0]
+    assert rid not in after.definition_of_done[1]
+    for name in ("title", "as_a", "i_want", "so_that", "business_description", "business_value",
+                 "acceptance_criteria", "dependencies"):
+        assert getattr(after, name) == getattr(before, name)
+    assert after.requirement_ids == before.requirement_ids  # the cited ID was already on the story
+    task_before, task_after = plan.tasks[0], fixed.tasks[0]
+    assert task_after.definition_of_done[0] == "borrow done" and "critic" not in task_after.definition_of_done[1]
+    assert task_after.model_dump(exclude={"definition_of_done"}) == task_before.model_dump(exclude={"definition_of_done"})
+    for t_before, t_after in zip(plan.tasks[1:], fixed.tasks[1:]):
+        assert t_after.model_dump_json() == t_before.model_dump_json()
+    assert check_p12_plain_language(fixed) == []
+
+
+def test_p12_repair_moves_a_named_requirement_id_into_the_citations():
+    plan, rid = _with_notes(_four_task_story())
+    task = plan.tasks[0]
+    assert rid not in task.requirement_ids
+    plan = plan.model_copy(update={"tasks": [task.model_copy(update={"description": f"Do borrow ({rid})."}),
+                                             *plan.tasks[1:]]})
+    findings = [f for f in check_p12_plain_language(plan) if f.item_key == task.key]
+    fixed, _, _ = plain_rewrite(plan, [], findings, FakeLLM(), [])
+    assert fixed.tasks[0].requirement_ids == [*task.requirement_ids, rid] and rid not in fixed.tasks[0].description
+
+
+def test_story_level_repair_edits_only_the_named_lines():
+    previous, plan, diff, skeletons = _changed_plan()
+    plan, _ = _with_notes(plan)
+    repaired, _, touched, _ = repair_update(plan, skeletons, [_blocking("US-loans")], FakeLLM(), [], previous, diff)
+    before, after = plan.stories[0], repaired.stories[0]
+    assert "US-loans" in touched
+    assert after.acceptance_criteria[0] != before.acceptance_criteria[0]  # edited: AC 1 replaced
+    assert after.acceptance_criteria[1:] == before.acceptance_criteria[1:]
+    assert after.edge_cases == before.edge_cases  # not named by an edit: byte-for-byte
+    assert after.definition_of_done == [*before.definition_of_done, "Fixed"]  # one line added, none dropped
+    for name in ("as_a", "i_want", "so_that", "business_description", "business_value"):
+        assert getattr(after, name) == getattr(before, name)
+
+
+def test_story_edits_with_a_bad_number_are_ignored():
+    story = _four_task_story().stories[0]
+    found = []
+    edits = StoryEditsDraft(definition_of_done=[LineEditDraft(op="remove", number=9)],
+                            acceptance_criteria=[CriterionEditDraft(op="replace", number=2)])
+    assert apply_story_edits(story, edits, found) == story
+    assert len([f for f in found if f.check_id == "REF-RESTORE"]) == 2
+    edits = StoryEditsDraft(acceptance_criteria=[CriterionEditDraft(op="remove", number=1)])
+    assert apply_story_edits(story, edits, []).acceptance_criteria == story.acceptance_criteria[1:]

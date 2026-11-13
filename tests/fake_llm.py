@@ -27,6 +27,11 @@ from schemas import (
     StorySkeletonDraft,
     StoryUpdateDraft,
     StoryRepairDraft,
+    StoryEditsDraft,
+    CriterionEditDraft,
+    LineEditDraft,
+    PlainRewriteDraft,
+    PlainRewriteItemDraft,
     FindingFixDraft,
     TaskRevisionDraft,
     AddedPlacementDraft,
@@ -87,6 +92,8 @@ class FakeLLM:
             return self._update(user)
         if schema is StoryRepairDraft:
             return self._repair(user)
+        if schema is PlainRewriteDraft:
+            return self._plain(user)
         raise AssertionError(f"unexpected schema {schema}")
 
     def _extract(self, user: str) -> RequirementDraftList:
@@ -230,12 +237,24 @@ def _repair(self, user: str) -> StoryRepairDraft:
         if self.repair_mode == "close_new":
             close = [t[0] for t in tasks if t[3]]
         fixes.append(FindingFixDraft(finding=int(number), revised_tasks=revised, new_task=new_task, close_tasks=close))
-    ac = [AcceptanceCriterion(given="a member", when="they act", then=f"{_words(key)} handles it"),
-          AcceptanceCriterion(given="a member", when="it fails", then="an error message is shown")]
-    content = StoryContentDraft(as_a="user", i_want=f"fixed {_words(key)}", so_that="the problem is resolved",
-                                business_description="Fixed.", business_value="Value.", acceptance_criteria=ac,
-                                edge_cases=[], dependencies=[], definition_of_done=["Fixed"])
-    return StoryRepairDraft(story=content, fixes=fixes)
+    # story-level edit: replace AC 1 and add one DoD line; everything else must stay byte-for-byte
+    edits = StoryEditsDraft(
+        acceptance_criteria=[CriterionEditDraft(op="replace", number=1, criterion=AcceptanceCriterion(
+            given="a member", when="they act", then=f"{_words(key)} handles it"))],
+        definition_of_done=[LineEditDraft(op="add", text="Fixed")])
+    return StoryRepairDraft(story_edits=edits, fixes=fixes)
 
 
 FakeLLM._repair = _repair
+
+_NUMBERED = re.compile(r"^\[(\d+)\] \([^)]*\) (.+)$", re.MULTILINE)
+_NOTE = re.compile(r"\s*\(?\b(?:R-[0-9a-f]{8}(?:-\d+)?|(?:US|FE|BE|QA)-[a-z0-9]+(?:-[a-z0-9]+)*)\b\)?|"
+                   r"\b(?:requirement ids?|reviewer decisions?|findings?|critic|the prd text)\b", re.IGNORECASE)
+
+
+def _plain(self, user: str) -> PlainRewriteDraft:
+    return PlainRewriteDraft(rewrites=[PlainRewriteItemDraft(number=int(n), text=_NOTE.sub("", text).strip())
+                                       for n, text in _NUMBERED.findall(user)])
+
+
+FakeLLM._plain = _plain

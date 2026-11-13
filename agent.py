@@ -48,6 +48,8 @@ from schemas import (
     Status,
     StoryDetailDraft,
     StoryPlanDraft,
+    PlainRewriteDraft,
+    StoryEditsDraft,
     StoryRepairDraft,
     StoryUpdateDraft,
     StorySkeleton,
@@ -1323,7 +1325,6 @@ def repair_update_user_message(skeleton: StorySkeleton, story: UserStory, tasks:
                                decisions: list[str] | None) -> str:
     reqs = {r.id: r for r in requirements}
     own = [reqs[i] for i in skeleton.requirement_ids if i in reqs]
-    acs = "\n".join(f"  AC: Given {a.given}; When {a.when}; Then {a.then}" for a in story.acceptance_criteria)
     task_lines = [f"{_task_line(t)} | requirements: {', '.join(t.requirement_ids) or '-'}"
                   + (" | created in this run" if t.key in new_this_run else "") for t in tasks]
     finding_lines = []
@@ -1336,7 +1337,8 @@ def repair_update_user_message(skeleton: StorySkeleton, story: UserStory, tasks:
         finding_lines.append(f"FINDING {i} [{f.check_id}] ({f.item_key or skeleton.key}) {f.message}{fix} | may revise: {scope}")
     msg = (f"Story key: {skeleton.key}\nStory title: {skeleton.title}\n\n"
            f"Requirements of this story:\n{_prd_block(chr(10).join(_req_line(r) for r in own))}\n\n"
-           f"Current story:\n{story.title}\n{acs}\n\n"
+           f"Current story (edit it by number; every line you do not edit stays exactly as it is):\n"
+           f"{_numbered_story(story)}\n\n"
            "Current tasks of this story:\n" + "\n".join(task_lines) + "\n\n"
            "Findings to fix:\n" + "\n".join(finding_lines))
     if other_tasks:
@@ -1368,6 +1370,122 @@ def cited_requirements(finding: ReviewFinding, requirements: list[Requirement]) 
 def _with_ids(item, ids: list[str]):
     missing = [i for i in ids if i not in item.requirement_ids]
     return item.model_copy(update={"requirement_ids": [*item.requirement_ids, *missing]}) if missing else item
+
+
+def _numbered_story(story: UserStory) -> str:
+    lines = [f"Title: {story.title}", f"As a: {story.as_a}", f"I want: {story.i_want}", f"So that: {story.so_that}",
+             f"Business description: {story.business_description}", f"Business value: {story.business_value}"]
+    lines += [f"AC {i}: Given {a.given}; When {a.when}; Then {a.then}" for i, a in enumerate(story.acceptance_criteria, 1)]
+    lines += [f"Edge case {i}: {e}" for i, e in enumerate(story.edge_cases, 1)]
+    lines += [f"DoD item {i}: {d}" for i, d in enumerate(story.definition_of_done, 1)]
+    return "\n".join(lines)
+
+
+def _edit_lines(old: list, edits: list, value, label: str, story_key: str, findings: Findings) -> list:
+    """Apply numbered edits to a list: replace/remove refer to the input numbering, add appends. Every line that no
+    edit names stays byte-for-byte; an edit with a bad number or no content is ignored (reference finding)."""
+    replaced: dict[int, Any] = {}
+    removed: set[int] = set()
+    added: list = []
+    for e in edits:
+        new = value(e)
+        if e.op == "add":
+            if new is not None:
+                added.append(new)
+            continue
+        if e.number is None or not 1 <= e.number <= len(old) or (e.op == "replace" and new is None):
+            findings.append(_finding("REF-RESTORE", f"Story edit {e.op} {label} {e.number} ignored (no such line "
+                                     "or no new text).", item_key=story_key))
+            continue
+        if e.op == "remove":
+            removed.add(e.number)
+        else:
+            replaced[e.number] = new
+    return [replaced.get(i, x) for i, x in enumerate(old, 1) if i not in removed] + added
+
+
+def apply_story_edits(story: UserStory, edits: StoryEditsDraft | None, findings: Findings) -> UserStory:
+    """Code applies the model's edits to the story; nothing the edits do not name changes."""
+    if edits is None:
+        return story
+    new_acs = _edit_lines(story.acceptance_criteria, edits.acceptance_criteria, lambda e: e.criterion,
+                          "AC", story.key, findings)
+    fresh = [a for a in new_acs if not any(a is old for old in story.acceptance_criteria)]
+    if fresh:
+        normalized, stripped = normalize_acceptance_criteria(fresh)
+        swap = {id(a): n for a, n in zip(fresh, normalized)}
+        new_acs = [swap.get(id(a), a) for a in new_acs]
+        if stripped:
+            findings.append(_finding("REF-AC", f"Removed a repeated Given/When/Then keyword from {stripped} AC part(s).",
+                                     item_key=story.key))
+    text = lambda e: e.text if e.text and e.text.strip() else None  # noqa: E731
+    update: dict[str, Any] = {
+        "acceptance_criteria": new_acs,
+        "edge_cases": _edit_lines(story.edge_cases, edits.edge_cases, text, "edge case", story.key, findings),
+        "definition_of_done": _edit_lines(story.definition_of_done, edits.definition_of_done, text, "DoD item",
+                                          story.key, findings),
+    }
+    for name in ("as_a", "i_want", "so_that", "business_description", "business_value"):
+        value = getattr(edits, name)
+        if value is not None and value.strip():
+            update[name] = value
+    return story.model_copy(update=update)
+
+
+def _plain_units(item) -> list[tuple[tuple, str]]:
+    """The smallest texts of a story or task that contain an internal note (same rules as P12), with their path."""
+    if isinstance(item, UserStory):
+        fields = [(("title",), item.title)] + [((n,), getattr(item, n)) for n in
+                                                ("as_a", "i_want", "so_that", "business_description", "business_value")]
+        fields += [(("acceptance_criteria", i, part), getattr(a, part))
+                   for i, a in enumerate(item.acceptance_criteria) for part in ("given", "when", "then")]
+        fields += [(("edge_cases", i), e) for i, e in enumerate(item.edge_cases)]
+    else:
+        fields = [(("title",), item.title), (("description",), item.description)]
+    fields += [(("definition_of_done", i), d) for i, d in enumerate(item.definition_of_done)]
+    return [(path, text) for path, text in fields if any(rx.search(text) for _, rx in validators.INTERNAL_NOTES)]
+
+
+def _set_unit(item, path: tuple, text: str):
+    if len(path) == 1:
+        return item.model_copy(update={path[0]: text})
+    values = list(getattr(item, path[0]))
+    values[path[1]] = text if len(path) == 2 else values[path[1]].model_copy(update={path[2]: text})
+    return item.model_copy(update={path[0]: values})
+
+
+def plain_rewrite(plan: TicketPlan, skeletons: list[StorySkeleton], findings: Findings, llm: StructuredLLM,
+                  ref_findings: Findings) -> tuple[TicketPlan, list[StorySkeleton], list[str]]:
+    """P12 repair, field level: only the flagged texts (one AC part, edge case, DoD line, description ...) are
+    rewritten; every other field of the item and every other item stays byte-for-byte. A requirement ID that the
+    flagged text named is moved by code into the item's requirement_ids (only IDs that exist)."""
+    keys = list(dict.fromkeys(f.item_key for f in findings if f.check_id == "P12" and f.item_key))
+    items = {i.key: i for i in [*plan.stories, *plan.tasks]}
+    units = [(key, path, text) for key in keys if key in items for path, text in _plain_units(items[key])]
+    if not units:
+        return plan, skeletons, []
+    user = ("Rewrite each numbered text in plain product language. Keep its meaning, facts and level of detail; "
+            "remove only the internal notes.\n\n" + "\n".join(
+                f"[{n}] ({key}, {' '.join(str(x + 1) if isinstance(x, int) else x for x in path)}) {text}"
+                for n, (key, path, text) in enumerate(units, 1)))
+    draft = llm.structured(PlainRewriteDraft, system_prompt("plain_language"), user, role="revision")
+    rewrites = {r.number: r.text for r in draft.rewrites if r.text.strip()}
+    known = {r.id for r in plan.requirements}
+    touched: list[str] = []
+    for n, (key, path, text) in enumerate(units, 1):
+        if n not in rewrites:
+            ref_findings.append(_finding("REF-RESTORE", f"No plain-language rewrite returned for text {n}; kept as is.",
+                                         item_key=key))
+            continue
+        item = _set_unit(items[key], path, rewrites[n])
+        items[key] = _with_ids(item, [i for i in _REQ_ID_IN_TEXT.findall(text) if i in known])
+        touched.append(key)
+    touched = list(dict.fromkeys(touched))
+    sk = [s.model_copy(update={"requirement_ids": list(items[s.key].requirement_ids), "title": items[s.key].title})
+          if s.key in touched else s for s in skeletons]
+    new_plan = plan.model_copy(update={"stories": [items[s.key] for s in plan.stories],
+                                       "tasks": [items[t.key] for t in plan.tasks]})
+    return TicketPlan.model_validate(new_plan.model_dump()), sk, touched
 
 
 def apply_story_repair(skeleton: StorySkeleton, draft: StoryRepairDraft, story: UserStory, tasks: list[TechnicalTask],
@@ -1406,11 +1524,9 @@ def apply_story_repair(skeleton: StorySkeleton, draft: StoryRepairDraft, story: 
                                              "can be removed by a repair.", item_key=skeleton.key))
         if fix.new_task is not None:
             new_tasks.append(_with_ids(_new_task(skeleton, fix.new_task, known, taken, ref_findings), cites))
-    story_level = any(ok is None for ok in allowed)
-    new_story = _story_from_content(skeleton, draft.story, story_keys, ref_findings) if story_level else story
+    story_level = any(ok is None for ok in allowed)  # task-level findings only: the story text is kept as it is
+    new_story = apply_story_edits(story, draft.story_edits, ref_findings) if story_level else story
     new_story = _with_ids(new_story, list(dict.fromkeys(story_ids)))  # code adds the citations, never the model
-    if not story_level and draft.story is not None:
-        pass  # task-level findings only: the story text is kept as it is
     kept = [result[t.key] for t in tasks if t.key not in closed]
     return new_story, kept + new_tasks
 
@@ -1724,21 +1840,29 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
     def n_repair_plan(state: AgentState) -> AgentState:
         stage("repair_plan")
         found: Findings = []
-        findings = list(state["plan_report"].findings) + list(state.get("feedback_findings") or [])
+        all_findings = list(state["plan_report"].findings) + list(state.get("feedback_findings") or [])
+        # P12 (plain language) is repaired field by field: only the flagged texts are rewritten.
+        plain = [f for f in all_findings if f.check_id == "P12" and f.severity is Severity.blocking]
+        findings = [f for f in all_findings if f not in plain]
+        plan, skeletons, plain_keys = plain_rewrite(state["plan"], state["skeletons"], plain, llm, found)
         previous = state.get("previous_plan")
         if previous is not None:  # update run: task-level repair (revise only what is named; keep the rest)
             plan, skeletons, repaired, unroutable = repair_update(
-                state["plan"], state["skeletons"], findings, llm, found, previous, state.get("requirement_diff"),
+                plan, skeletons, findings, llm, found, previous, state.get("requirement_diff"),
                 state.get("reviewer_decisions") or [])
         else:
-            plan, skeletons, repaired, unroutable = repair_plan(state["plan"], state["skeletons"], findings, llm, found,
+            plan, skeletons, repaired, unroutable = repair_plan(plan, skeletons, findings, llm, found,
                                                                 state.get("reviewer_decisions") or [])
+        finding_keys, repaired = repaired, list(dict.fromkeys([*plain_keys, *repaired]))
         repair_causes = dict(state.get("repair_causes") or {})
+        for key in plain_keys:
+            if "finding P12" not in repair_causes.setdefault(key, []):
+                repair_causes[key].append("finding P12")
         if previous is not None:  # ... and a repair may not cause churn either: each change needs a cause
             plan = match_old_keys(plan, previous, state.get("requirement_diff"), found)
             targets_by_story = resolve_repair_targets(findings, state["plan"], state["skeletons"])[0]
             task_story = {t.key: t.story_key for t in plan.tasks}
-            for key in repaired:
+            for key in finding_keys:
                 story = key if key.startswith("US-") else task_story.get(key)
                 for f in targets_by_story.get(story, []):
                     label = "G1 reviewer decision" if f.check_id == "G1-FEEDBACK" else f"finding {f.check_id}"
