@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Add test suite for task creation across API, database and form",
+  "body": "**Parent:** `US-create-task`\n\n**Track:** qa_general · **Size:** S · consumes API · touches DB\n\n## Description\n\nAutomated tests for task creation covering the POST /tasks endpoint, the stored database row and the creation form.\n\n## Blocked by\n\n- `BE-create-task-endpoint`\n- `FE-create-task-form`\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] Tests cover a valid create, an empty title, a Due Date earlier than the Creation Date, and a Due Date equal to the Creation Date.\n- [ ] Tests check that Creation Date and Last Updated Date are set by the backend and Completion Date is empty.\n- [ ] Tests check that a database failure shows an error and no task is shown as created.\n- [ ] Tests check that no success message is shown while the request is pending.\n- [ ] All tests pass in the CI pipeline.\n\n## Requirements\n\n- `R-22f28530` (functional) The user can create a new task.\n- `R-03df7815` (validation_rule) A task cannot be saved unless its title is non-empty.\n- `R-efe1e5d4` (validation_rule) A task's Due Date must not be earlier than its Creation Date.\n- `R-d57336f7` (frontend) The UI displays a success or error message after each create, update or delete action on a task.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend request has failed; optimistic UI updates are not allowed.\n\n<!-- prd-agent:key=QA-create-task-test-suite;hash=6c369812f5560a2b -->\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

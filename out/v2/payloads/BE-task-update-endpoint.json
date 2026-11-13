@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add update endpoint for a task by ID with validation and error responses",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** backend · **Size:** M · touches DB\n\n## Description\n\nAdd the update endpoint for a task by ID. Validate title (mandatory, max 100 characters) and Due Date (not earlier than Creation Date). Accept Status values Open or In Progress and reject Completed with a validation error (Completed is set only by Mark as Completed). On every successful update the backend sets Last Updated Date. Return errors for task not found, invalid input, missing mandatory fields and internal/database errors in a simple approach.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] Endpoint updates the task by ID and returns success\n- [ ] Title and Due Date validation reject invalid input\n- [ ] Last Updated Date is set on every successful update\n- [ ] Status Open or In Progress is accepted; Completed is rejected\n- [ ] Not-found and server errors return error responses\n\n## Requirements\n\n- `R-bc3213df` (functional) The user can update an existing task.\n- `R-03df7815` (validation_rule) A task cannot be saved unless its title is non-empty.\n- `R-efe1e5d4` (validation_rule) A task's Due Date must not be earlier than its Creation Date.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of to-do items.\n- `R-9dc414dc` (backend) The backend must handle errors for task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n- `R-0b1853d6` (validation_rule) A task title longer than 100 characters is rejected.\n\n<!-- prd-agent:key=BE-task-update-endpoint;hash=c8ac1504c8f415a4 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

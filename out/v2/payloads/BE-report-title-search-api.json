@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add title search parameter to the task report query",
+  "body": "**Parent:** `US-search-report-tasks`\n\n**Track:** backend · **Size:** S · touches DB\n\n## Description\n\nExtend the task report API so it accepts an optional title search value and filters the returned tasks by their Title field. Other report parameters (filtering, sorting, aggregation) belong to other stories and are not implemented here.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n- `BE-report-endpoint-with-metrics`\n\n## Definition of Done\n\n- [ ] Report API accepts an optional title search parameter.\n- [ ] Query matches on the Title field of stored tasks.\n- [ ] Requests without the parameter return the same results as before.\n- [ ] Invalid parameter input returns the error response defined by the error handling approach.\n- [ ] Unit tests cover matching, empty value and no match.\n\n## Requirements\n\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n\n<!-- prd-agent:key=BE-report-title-search-api;hash=f6642c8672a3e441 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

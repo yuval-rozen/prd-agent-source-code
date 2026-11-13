@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add Mark as Completed control with confirmed update and success message",
+  "body": "**Parent:** `US-change-task-status`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nAdd a Mark as Completed control on each task that is not Completed. Send the status change request and update the row to Completed only after the backend returns success. After a successful response, show a success message. On failure, keep the previous status and show an error message. While the request is pending, show the previous status and no success message. No optimistic updates.\n\n## Blocked by\n\n- `BE-status-change-endpoint`\n- `FE-task-list-view`\n\n## Definition of Done\n\n- [ ] Row shows Completed and a success message only after the backend confirms\n- [ ] Failure keeps the previous status and shows an error message\n- [ ] Pending request shows the previous status and no success message\n- [ ] No optimistic UI update\n\n## Requirements\n\n- `R-2304218f` (functional) The user can mark a task as 'Completed'.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend request has failed; optimistic UI updates are not allowed.\n\n<!-- prd-agent:key=FE-status-toggle-control;hash=7a3c731d03d99252 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

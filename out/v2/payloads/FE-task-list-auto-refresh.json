@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Refresh the task list after a successful task change",
+  "body": "**Parent:** `US-view-task-list`\n\n**Track:** frontend · **Size:** S · consumes API\n\n## Description\n\nMake the task list reload from the backend after a create, update, delete or status change is confirmed by the backend. The list must not change before the backend confirms the action.\n\n## Blocked by\n\n- `BE-tasks-read-endpoints`\n\n## Definition of Done\n\n- [ ] List refetches after each successful task change event\n- [ ] No list update occurs before backend confirmation\n- [ ] Test verifies refetch after a mocked successful change and no refetch after a failed change\n\n## Requirements\n\n- `R-6a73fa71` (frontend) The task list refreshes automatically when a task is changed.\n\n<!-- prd-agent:key=FE-task-list-auto-refresh;hash=f5f62b9cd5cffaf1 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

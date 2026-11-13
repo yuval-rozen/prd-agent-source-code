@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Reuse task form in edit mode with existing values pre-filled",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nReuse the task form in edit mode with existing values pre-filled, including a Status field that offers only Open and In Progress. Show a success message only after the backend confirms the update and an error message when it fails; do not update the UI optimistically.\n\n## Blocked by\n\n- `BE-task-update-endpoint`\n- `FE-create-task-form`\n\n## Definition of Done\n\n- [ ] Form pre-fills existing values including Status\n- [ ] Status field offers only Open and In Progress\n- [ ] Success message shown only after backend success\n- [ ] Error message shown and no updated state on backend failure\n\n## Requirements\n\n- `R-9b30a145` (frontend) The system provides a form for creating and editing tasks.\n- `R-d57336f7` (frontend) The UI displays a success or error message after each create, update or delete action on a task.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend request has failed; optimistic UI updates are not allowed.\n- `R-bc3213df` (functional) The user can update an existing task.\n\n<!-- prd-agent:key=FE-task-edit-form;hash=eb538cebd5f4c8a8 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

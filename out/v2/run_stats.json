@@ -1,0 +1,76 @@
+{
+  "provider": "anthropic",
+  "models": {
+    "extract": "claude-haiku-5-5",
+    "generation": "claude-haiku-5-5",
+    "revision": "claude-sonnet-5-5",
+    "critic": "claude-sonnet-5-5"
+  },
+  "google_thinking_level": null,
+  "effort": {
+    "extract": "low",
+    "generation": "medium",
+    "revision": "medium",
+    "critic": "medium"
+  },
+  "replay": false,
+  "max_run_cost_usd": 0.5,
+  "stage_seconds": {
+    "load_prd": 0.0,
+    "extract_requirements": 0.1,
+    "check_requirements": 0.0,
+    "plan_stories": 0.0,
+    "detail_stories": 0.1,
+    "map_dependencies": 0.0,
+    "check_plan": 0.0,
+    "repair_plan": 0.3,
+    "render_preview": 0.4,
+    "approve_plan": 0.0,
+    "sync_diff": 4.8,
+    "confirm_diff": 0.0,
+    "publish": 28.5,
+    "summary": 0.0
+  },
+  "total_seconds": 34.6,
+  "cost_usd": 0.0,
+  "cost_by_stage": {},
+  "cost_by_role": {},
+  "status": "PASS",
+  "churn": [],
+  "publish": {
+    "decision": "confirm",
+    "counts": {
+      "created": 0,
+      "updated": 15,
+      "closed": 0,
+      "unchanged": 34,
+      "relinked": 0,
+      "linked": 0,
+      "labels_created": 0
+    },
+    "epic_issue": 1
+  },
+  "requirement_rounds": 0,
+  "plan_repair_rounds": 1,
+  "blocking_history": {
+    "check_requirements": [
+      0
+    ],
+    "check_plan": [
+      0
+    ]
+  },
+  "api_calls": 0,
+  "cache_hits": 34,
+  "tokens": {
+    "input": 0,
+    "cache_read": 0,
+    "cache_write": 0,
+    "output": 0
+  },
+  "rate_limit_waits": 0,
+  "server_retries": 0,
+  "reference_findings": 4,
+  "exit_code": 0,
+  "error": null
+}

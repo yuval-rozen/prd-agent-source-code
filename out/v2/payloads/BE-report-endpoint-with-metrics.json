@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add GET report endpoint with all tasks and Total, Open, Completed counts",
+  "body": "**Parent:** `US-view-task-report`\n\n**Track:** backend · **Size:** M · touches DB\n\n## Description\n\nAdd a GET report endpoint that returns all tasks of the current user with Title, Status, Priority and Due Date, plus the Total, Open and Completed counts computed from those tasks. Filtering, search and sorting are out of scope for this story.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] GET report endpoint returns all of the user's tasks when no parameters are given.\n- [ ] Response includes Total, Open and Completed counts computed from the returned tasks.\n- [ ] Endpoint returns a clear error response on internal or database failure.\n- [ ] Unit tests cover the count calculation and the empty-task case.\n\n## Requirements\n\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n\n<!-- prd-agent:key=BE-report-endpoint-with-metrics;hash=71c51f7b83d314e6 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

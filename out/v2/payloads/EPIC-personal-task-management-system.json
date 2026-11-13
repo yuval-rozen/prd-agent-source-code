@@ -1,0 +1,8 @@
+{
+  "title": "Personal task management system",
+  "body": "## Scope\n\nA personal task management system for tracking daily tasks and generating status reports. Page 1 manages the user's to-do list: create, view, update, delete, and change task status, with a defined task data model and validation rules. Page 2 is a task reporting page that shows an aggregated, filterable, searchable, sortable table with metrics and an Excel export. Where the PRD leaves choices open, such as where the Excel file is generated and the wording of the no-data message, these remain open questions.\n\n## Business goals\n\n- Track daily tasks\n- Generate status reports\n\n## User stories\n\n- [ ] `US-create-task` Create a new task with required fields\n- [ ] `US-view-task-list` View the task list with status and priority indicators\n- [ ] `US-update-task` Edit an existing task\n- [ ] `US-delete-task` Delete a task after confirmation\n- [ ] `US-change-task-status` Mark a task as Completed\n- [ ] `US-view-task-report` View all tasks in a report table with metrics\n- [ ] `US-filter-report-tasks` Filter report tasks by status, priority and date range\n- [ ] `US-search-report-tasks` Search report tasks by title\n- [ ] `US-sort-report-tasks` Sort report tasks by creation date, due date, status, priority or title\n- [ ] `US-export-report-excel` Export the filtered report tasks to an Excel file\n\n<!-- prd-agent:key=EPIC-personal-task-management-system;hash=86f1728432196b03 -->\n",
+  "labels": [
+    "type:epic",
+    "prd-agent"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add Status, Priority and Date Range filter controls to the report page",
+  "body": "**Parent:** `US-filter-report-tasks`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nAdd Status and Priority selectors and a Date Range control to the task reporting page. Changing a filter calls the report endpoint with the filter values and renders the returned tasks in the report table. Show the loading and error states while the request runs.\n\n## Blocked by\n\n- `BE-report-tasks-filter-api`\n- `FE-task-report-page-table`\n\n## Definition of Done\n\n- [ ] Status, Priority and Date Range controls are visible on the reporting page.\n- [ ] Each filter change calls the filtered report endpoint and updates the table only after the response arrives.\n- [ ] Clearing a filter restores the unfiltered results for that filter.\n- [ ] Loading and error states are shown while the filtered request runs or fails.\n\n## Requirements\n\n- `R-5f4ef76c` (functional) The report lets the user filter tasks by Status, Priority, and Date Range.\n\n<!-- prd-agent:key=FE-report-filter-controls;hash=972f338b1a1f5388 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

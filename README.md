@@ -239,6 +239,8 @@ the epic at [#1](https://github.com/yuval-rozen/prd-agent-issues/issues/1).
 | Second run, same PRD | unchanged 49 | nothing (0 writes) | — |
 | Sub-issue upgrade, same 49 issues | unchanged 49, link 48 | 48 native sub-issue links (10 stories under the epic, 38 tasks under their stories); no issue writes | 99 s total |
 | Run after the upgrade | unchanged 49, link 0 | nothing (0 writes) | — |
+| v2 PRD update ([`out/v2/`](out/v2/), PASS after 4 G1 decisions) | update 15, unchanged 34, churn 0 | 15 issues updated (each with a requirement change or G1 decision as its cause); nothing created, closed or relinked | 43 s (replayed from the cache, $0) |
+| Second v2 run | unchanged 49, churn 0 | nothing (0 writes); all 10 stories carried over, critic skipped | 28 s, $0.0027 |
 
 ## Design decisions & trade-offs
 
@@ -284,7 +286,7 @@ the epic at [#1](https://github.com/yuval-rozen/prd-agent-issues/issues/1).
 
 ## Known gaps
 
-- **v2 update not yet at PASS.** On `examples/todo_prd_v2.md` the update run ends NEEDS_REVIEW, so G2
+- **v2 update reached PASS only after reviewer decisions (resolved).** On `examples/todo_prd_v2.md` the update run ends NEEDS_REVIEW, so G2
   refuses to publish (no `--force` was used). The last retry (Sonnet revisions, $0.50 cap) stopped at
   the cap with 2 blocking findings, both in `US-change-task-status`: the reviewer decision "the status
   endpoint only marks a task as Completed" was applied to `BE-status-change-endpoint`, while the story's

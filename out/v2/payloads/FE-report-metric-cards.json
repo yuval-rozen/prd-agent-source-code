@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Show Total, Open and Completed metrics on Task Reporting page",
+  "body": "**Parent:** `US-view-task-report`\n\n**Track:** frontend · **Size:** S · consumes API\n\n## Description\n\nShow the Total Tasks, Open Tasks and Completed Tasks metrics on the Task Reporting page using the counts returned by the report endpoint.\n\n## Blocked by\n\n- `BE-report-endpoint-with-metrics`\n- `FE-task-report-page-table`\n\n## Definition of Done\n\n- [ ] Page shows Total Tasks, Open Tasks and Completed Tasks.\n- [ ] Displayed values equal the counts in the endpoint response.\n- [ ] Metrics show 0 when the user has no tasks.\n\n## Requirements\n\n- `R-4ffbfafa` (frontend) The report displays the metrics Total Tasks, Open Tasks, and Completed Tasks.\n\n<!-- prd-agent:key=FE-report-metric-cards;hash=fb9e5d5a3b3c2374 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

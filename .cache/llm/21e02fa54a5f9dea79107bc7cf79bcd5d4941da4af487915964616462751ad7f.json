@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch13Q1yijjHS2KmjM93h9",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 3966
+   },
+   "cache_creation_input_tokens": 3966,
+   "cache_read_input_tokens": 3816,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 2141,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"user managing my tasks\",\"i_want\":\"to edit an existing task, including its title, Due Date and Status\",\"so_that\":\"my task details stay current\",\"business_description\":\"Users update an existing task through the shared task form. The backend validates the input, stores the change, sets Last Updated Date, and the UI reports success or failure without showing an unconfirmed change.\",\"business_value\":\"Keeps task data accurate and gives users clear feedback on every update.\",\"acceptance_criteria\":[{\"given\":\"an existing task with a valid title and a Due Date not earlier than its Creation Date\",\"when\":\"the user opens the edit form, changes the title, and submits the form\",\"then\":\"the backend stores the new title and the task shows the new title in the list after the backend returns success\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user clears the title field and submits the form\",\"then\":\"the backend rejects the update, the task keeps its previous title, and an error message stating that the title is mandatory is shown\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user enters a title of 101 characters and submits the form\",\"then\":\"the backend rejects the update, the task keeps its previous title, and an error message stating that the title cannot be longer than 100 characters is shown\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user enters a title of exactly 100 characters and submits the form\",\"then\":\"the backend stores the new title and returns success\"},{\"given\":\"an existing task with Creation Date 2024-05-10\",\"when\":\"the user sets the Due Date to 2024-05-09 and submits the update\",\"then\":\"the backend rejects the update with a validation error, the stored Due Date is unchanged, and an error message is shown\"},{\"given\":\"a task update request where the backend returns an error\",\"when\":\"the frontend receives the error response\",\"then\":\"the frontend does not show the task as updated and displays an error message\"},{\"given\":\"a task update request where the backend returns success\",\"when\":\"the frontend receives the success response\",\"then\":\"the frontend displays a success message after the update action\"},{\"given\":\"a task ID that does not exist in the database\",\"when\":\"an update request is sent for that ID\",\"then\":\"the backend returns a Task Not Found error and no data is changed\"},{\"given\":\"an existing task with Last Updated Date 2024-05-10\",\"when\":\"the backend successfully stores an update to that task\",\"then\":\"the task's Last Updated Date is set to the date and time of that update\"},{\"given\":\"an existing task being edited in the form\",\"when\":\"the user selects Status In Progress (or Open) and submits the form\",\"then\":\"the backend stores the selected Status and the task shows that Status in the list after the backend returns success\"},{\"given\":\"an existing task being edited\",\"when\":\"an update request sets Status to Completed\",\"then\":\"the backend rejects the update with a validation error and the stored Status is unchanged\"}],\"edge_cases\":[\"Completed is set only by Mark as Completed (which also sets Completion Date), not by the edit form.\",\"Editing a task that is already Completed: the PRD and reviewer decision do not state whether its Status can be changed back by the edit form. This is an open question.\"],\"dependencies\":[],\"definition_of_done\":[\"All acceptance criteria pass in automated tests\",\"Update endpoint returns documented error responses\",\"Success and error messages are shown after each update\",\"Last Updated Date is set on every successful update\"]},\"fixes\":[{\"finding\":1,\"revised_tasks\":[{\"task_key\":\"BE-task-update-endpoint\",\"task\":{\"key_slug\":\"task-update-endpoint\",\"title\":\"[BE] Add update endpoint for a task by ID with validation and error responses\",\"track\":\"backend\",\"area\":\"backend\",\"description\":\"Add the update endpoint for a task by ID. Validate title (mandatory, max 100 characters) and Due Date (not earlier than Creation Date). Accept Status values Open or In Progress and reject Completed with a validation error (Completed is set only by Mark as Completed). On every successful update the backend sets Last Updated Date. Return errors for task not found, invalid input, missing mandatory fields and internal/database errors in a simple approach.\",\"size\":\"M\",\"consumes_api\":false,\"touches_db\":true,\"requirement_ids\":[\"R-bc3213df\",\"R-03df7815\",\"R-efe1e5d4\",\"R-244669c0\",\"R-9dc414dc\",\"R-0b1853d6\"],\"is_spike\":false,\"definition_of_done\":[\"Endpoint updates the task by ID and returns success\",\"Title and Due Date validation reject invalid input\",\"Last Updated Date is set on every successful update\",\"Status Open or In Progress is accepted; Completed is rejected\",\"Not-found and server errors return error responses\"]}}]},{\"finding\":2,\"revised_tasks\":[{\"task_key\":\"FE-task-edit-form\",\"task\":{\"key_slug\":\"task-edit-form\",\"title\":\"[FE] Reuse task form in edit mode with existing values pre-filled\",\"track\":\"frontend\",\"area\":\"frontend\",\"description\":\"Reuse the task form in edit mode with existing values pre-filled, including a Status field that offers only Open and In Progress. Show a success message only after the backend confirms the update and an error message when it fails; do not update the UI optimistically.\",\"size\":\"M\",\"consumes_api\":true,\"touches_db\":false,\"requirement_ids\":[\"R-9b30a145\",\"R-d57336f7\",\"R-ab9e9cb0\",\"R-bc3213df\"],\"is_spike\":false,\"definition_of_done\":[\"Form pre-fills existing values including Status\",\"Status field offers only Open and In Progress\",\"Success message shown only after backend success\",\"Error message shown and no updated state on backend failure\"]}},{\"task_key\":\"QA-task-update-tests\",\"task\":{\"key_slug\":\"task-update-tests\",\"title\":\"[QA] Test suite for editing an existing task\",\"track\":\"qa_general\",\"area\":\"qa\",\"description\":\"Test suite covering the update acceptance criteria: title validation, Due Date validation, not-found, success and error messages with no optimistic UI, Last Updated Date set on update, Status set to Open or In Progress from the edit form, and Completed rejected by the update endpoint.\",\"size\":\"S\",\"consumes_api\":true,\"touches_db\":false,\"requirement_ids\":[\"R-bc3213df\",\"R-9b30a145\",\"R-03df7815\",\"R-efe1e5d4\",\"R-d57336f7\",\"R-244669c0\",\"R-9dc414dc\",\"R-ab9e9cb0\"],\"is_spike\":false,\"definition_of_done\":[\"All update acceptance criteria are covered by tests\",\"Last Updated Date and Status cases are tested\",\"Tests pass in CI\"]}}]}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 3816,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 3966
+     },
+     "input_tokens": 7786,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 2141,
+     "total_tokens": 9927
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

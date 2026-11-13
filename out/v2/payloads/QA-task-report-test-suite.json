@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Add test suite for the task report table and metrics",
+  "body": "**Parent:** `US-view-task-report`\n\n**Track:** qa_general · **Size:** S\n\n## Description\n\nAdd the automated test suite for the Task Reporting page table and metrics, covering the report endpoint and page behaviour.\n\n## Blocked by\n\n- `BE-report-endpoint-with-metrics`\n- `FE-task-report-page-table`\n- `FE-report-metric-cards`\n\n## Definition of Done\n\n- [ ] Tests cover 5 tasks (2 Open, 3 Completed) and 0 tasks.\n- [ ] Tests check that table values match the endpoint response.\n- [ ] Tests check the metric changes after a status change.\n- [ ] All tests pass in the CI pipeline.\n\n## Requirements\n\n- `R-d0e0fe7a` (frontend) The Task Reporting page presents an aggregated view of the user's tasks.\n- `R-a1b267a3` (frontend) The report shows all tasks in a tabular display.\n- `R-4ffbfafa` (frontend) The report displays the metrics Total Tasks, Open Tasks, and Completed Tasks.\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n\n<!-- prd-agent:key=QA-task-report-test-suite;hash=d8f4b344d3649e99 -->\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

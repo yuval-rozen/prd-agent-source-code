@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Add test suite for the Excel export",
+  "body": "**Parent:** `US-export-report-excel`\n\n**Track:** qa_general · **Size:** M · consumes API\n\n## Description\n\nTest suite covering the export endpoint, the export control, the file content and the filename, as well as the no-data case and the filter and sort behaviour of the export.\n\n## Blocked by\n\n- `BE-export-report-tasks-endpoint`\n- `FE-export-to-excel-button`\n- `FE-excel-file-build-and-naming`\n\n## Definition of Done\n\n- [ ] Tests verify that the exported rows match the applied filters and sort.\n- [ ] Tests verify headers, date format and filename timestamp in the generated file.\n- [ ] Tests verify that no file is produced and the message is shown when there is no data.\n- [ ] Tests verify error handling for failed export requests.\n- [ ] Test suite runs in the continuous integration pipeline and passes.\n\n## Requirements\n\n- Derived task: testing.\n\n<!-- prd-agent:key=QA-export-excel-test-suite;hash=4ec277eeb314e779 -->\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

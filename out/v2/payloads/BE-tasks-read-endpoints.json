@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add GET /tasks and GET /tasks/{id} read endpoints with not-found handling",
+  "body": "**Parent:** `US-view-task-list`\n\n**Track:** backend · **Size:** M · touches DB\n\n## Description\n\nImplement the read-all and read-by-ID endpoints for the user's to-do items. Return only the requesting user's tasks. Return a task-not-found error for an unknown ID, and use the shared simple error response format for internal and database errors. Create and write endpoints belong to other stories.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] GET /tasks returns the requesting user's tasks including status and priority\n- [ ] GET /tasks/{id} returns one task or a task-not-found error\n- [ ] Internal and database errors return the shared error response format\n- [ ] Unit and integration tests cover both endpoints and the not-found case\n\n## Requirements\n\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of to-do items.\n- `R-9dc414dc` (backend) The backend must handle errors for task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n- `R-4bed9064` (functional) The user can view the task list.\n\n<!-- prd-agent:key=BE-tasks-read-endpoints;hash=24ac254ff6e39d3a -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

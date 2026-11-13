@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add sort parameter to the task report endpoint",
+  "body": "**Parent:** `US-sort-report-tasks`\n\n**Track:** backend · **Size:** M · touches DB\n\n## Description\n\nAdd a sort parameter to the task report endpoint accepting creation_date, due_date, status, priority or title. Order ascending: creation_date oldest first, due_date earliest first, status Open then In Progress then Completed, priority Low then Medium then High, title A to Z ignoring letter case. Any other value returns an invalid input error and no task data.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n- `BE-report-endpoint-with-metrics`\n\n## Definition of Done\n\n- [ ] All five sort values return tasks in the defined ascending order\n- [ ] Status and Priority use the explicit rank order, not alphabetical order\n- [ ] An unsupported sort value returns an invalid input error with no task data\n- [ ] Unit tests cover each sort value and the invalid value\n\n## Requirements\n\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n\n<!-- prd-agent:key=BE-report-api-sort-parameter;hash=41fbe214a6900973 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

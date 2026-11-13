@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add task creation form with title, description, priority and due date",
+  "body": "**Parent:** `US-create-task`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nAdd the create mode of the task form with inputs for Title, Description, Priority and Due Date. The form does not collect Creation Date or Last Updated Date, because the backend sets them. The form calls POST /tasks and shows a success or error message only after the backend responds. It does not add the task to any list before the backend confirms the create.\n\n## Blocked by\n\n- `BE-create-task-endpoint`\n\n## Definition of Done\n\n- [ ] Form has Title, Description, Priority and Due Date inputs.\n- [ ] Success message is shown only after the backend confirms the create.\n- [ ] Validation errors from the backend are shown next to the relevant input or as a clear message.\n- [ ] No task is shown as created while the request is pending or after it fails.\n\n## Requirements\n\n- `R-9b30a145` (frontend) The system provides a form for creating and editing tasks.\n- `R-d57336f7` (frontend) The UI displays a success or error message after each create, update or delete action on a task.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend request has failed; optimistic UI updates are not allowed.\n\n<!-- prd-agent:key=FE-create-task-form;hash=63b6998ad4be11b7 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

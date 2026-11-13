@@ -1,0 +1,62 @@
+{
+ "llm_output": {
+  "container": null,
+  "diagnostics": null,
+  "id": "msg_011Ch13MrRCQiyKdrBTy15sr",
+  "model": "claude-sonnet-5-5",
+  "model_name": "claude-sonnet-5-5",
+  "stop_details": null,
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+   "cache_creation": {
+    "ephemeral_1h_input_tokens": 0,
+    "ephemeral_5m_input_tokens": 7003
+   },
+   "cache_creation_input_tokens": 7003,
+   "cache_read_input_tokens": 0,
+   "inference_geo": "global",
+   "input_tokens": 4,
+   "output_tokens": 892,
+   "output_tokens_details": {
+    "thinking_tokens": 0
+   },
+   "server_tool_use": null,
+   "service_tier": "standard",
+   "speed": "standard"
+  }
+ },
+ "messages": [
+  {
+   "data": {
+    "additional_kwargs": {},
+    "content": "{\"story\":{\"as_a\":\"user\",\"i_want\":\"to mark a task as Completed\",\"so_that\":\"I can see which tasks are done\",\"business_description\":\"The user marks a task as Completed from the task list. The backend stores the new status and the frontend shows it only after the backend confirms the change.\",\"business_value\":\"Users can track finished work and the report can count Completed tasks.\",\"acceptance_criteria\":[{\"given\":\"a task with status Open exists\",\"when\":\"the user marks the task as Completed\",\"then\":\"the backend stores the status Completed and the task list shows the task with status Completed\"},{\"given\":\"the status change request for an existing task fails in the backend\",\"when\":\"the frontend receives the failure\",\"then\":\"the task list still shows the previous status and an error message is displayed\"},{\"given\":\"a status change request is pending and the backend has not responded yet\",\"when\":\"the task list is displayed\",\"then\":\"the row still shows the previous status and no success message is displayed\"},{\"given\":\"a status change request is sent for a task ID that does not exist\",\"when\":\"the backend processes the request\",\"then\":\"the backend returns a task not found error and no stored task changes\"},{\"given\":\"a status change request is sent with a status value other than Completed\",\"when\":\"the backend validates the request\",\"then\":\"the backend rejects the request with an invalid input error and the stored status does not change\"},{\"given\":\"a task is marked as Completed\",\"when\":\"the backend saves the change\",\"then\":\"the Completion Date field of the task is populated with the time of the change\"}],\"edge_cases\":[\"Reverting a Completed task to Open is not required by the PRD and is not supported by this story.\",\"The PRD does not say what happens when a task that is already Completed is marked Completed again; this is an open question.\"],\"dependencies\":[],\"definition_of_done\":[\"All acceptance criteria are covered by passing tests\",\"Backend errors are returned for missing task and invalid status value\",\"Frontend never shows Completed before the backend confirms\"]},\"fixes\":[{\"finding\":1,\"revised_tasks\":[{\"task_key\":\"BE-status-change-error-handling\",\"task\":{\"key_slug\":\"status-change-error-handling\",\"title\":\"[BE] Return errors for status change on missing task and non-Completed status\",\"track\":\"backend\",\"area\":\"backend\",\"description\":\"For the status change endpoint, return a task not found error when the task ID does not exist. Accept only the status value Completed; reject any other value with an invalid input error. Neither error changes the stored task. Keep error handling simple.\",\"size\":\"S\",\"consumes_api\":false,\"touches_db\":false,\"requirement_ids\":[\"R-9dc414dc\"],\"is_spike\":false,\"definition_of_done\":[\"Unknown task ID returns a task not found error and changes nothing\",\"Any status value other than Completed returns an invalid input error and the stored status does not change\"]}}]}]}",
+    "id": null,
+    "invalid_tool_calls": [],
+    "name": null,
+    "response_metadata": {
+     "model_provider": "anthropic"
+    },
+    "tool_calls": [],
+    "type": "ai",
+    "usage_metadata": {
+     "input_token_details": {
+      "cache_creation": 0,
+      "cache_read": 0,
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 7003
+     },
+     "input_tokens": 7007,
+     "output_token_details": {
+      "reasoning": 0
+     },
+     "output_tokens": 892,
+     "total_tokens": 7899
+    }
+   },
+   "type": "ai"
+  }
+ ],
+ "model": "claude-sonnet-5-5",
+ "provider": "anthropic"
+}

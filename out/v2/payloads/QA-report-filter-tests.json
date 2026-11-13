@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Test suite for report task filters",
+  "body": "**Parent:** `US-filter-report-tasks`\n\n**Track:** qa_general · **Size:** M · consumes API\n\n## Description\n\nWrite the automated tests for the report filters: API tests for each filter, combined filters, empty results and invalid values, and UI tests for the filter controls and the resulting table rows.\n\n## Blocked by\n\n- `BE-report-tasks-filter-api`\n- `FE-report-filter-controls`\n\n## Definition of Done\n\n- [ ] API tests cover status, priority and date range filters, combined filters, empty results and invalid values.\n- [ ] UI tests cover selecting each filter and checking the visible table rows.\n- [ ] All tests pass in the continuous integration pipeline.\n\n## Requirements\n\n- `R-5f4ef76c` (functional) The report lets the user filter tasks by Status, Priority, and Date Range.\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n\n<!-- prd-agent:key=QA-report-filter-tests;hash=bdf68b9962ec9683 -->\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}
