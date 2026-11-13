@@ -2,7 +2,7 @@
  "llm_output": {
   "container": null,
   "diagnostics": null,
-  "id": "msg_011CgyS9Ae8dZt42iKpX7yJD",
+  "id": "msg_011Ch1SSss5X7eP6YwbsYYSF",
   "model": "claude-haiku-5-5",
   "model_name": "claude-haiku-5-5",
   "stop_details": null,
@@ -17,7 +17,7 @@
    "cache_read_input_tokens": 2144,
    "inference_geo": "global",
    "input_tokens": 4,
-   "output_tokens": 330,
+   "output_tokens": 347,
    "output_tokens_details": {
     "thinking_tokens": 0
    },
@@ -30,7 +30,7 @@
   {
    "data": {
     "additional_kwargs": {},
-    "content": "{\"requirements\":[{\"unit_ids\":[\"u1\"],\"source_quote\":\"The file must reflect the currently applied filters and sorting.\",\"kind\":\"functional\",\"statement\":\"The exported Excel file must reflect the filters and sorting currently applied to the task view.\"},{\"unit_ids\":[\"u2\"],\"source_quote\":\"Clear column headers and consistent date formatting.\",\"kind\":\"non_functional\",\"statement\":\"The exported Excel file must have clear column headers and use one consistent date format throughout.\"},{\"unit_ids\":[\"u3\"],\"source_quote\":\"Filename must include the generation timestamp.\",\"kind\":\"functional\",\"statement\":\"The filename of the exported Excel file must include the timestamp of when the file was generated.\"},{\"unit_ids\":[\"u4\"],\"source_quote\":\"User-friendly message if there is no data to export.\",\"kind\":\"frontend\",\"statement\":\"When there is no data to export, the system must show a message to the user instead of producing an empty file. The exact wording of the message is not specified and is an open question.\"}]}",
+    "content": "{\"requirements\":[{\"unit_ids\":[\"u1\"],\"source_quote\":\"The file must reflect the currently applied filters and sorting.\",\"kind\":\"functional\",\"statement\":\"The exported Excel file must contain only the rows matching the currently applied filters, in the currently applied sort order.\"},{\"unit_ids\":[\"u2\"],\"source_quote\":\"Clear column headers and consistent date formatting.\",\"kind\":\"constraint\",\"statement\":\"Every exported Excel file must have clear column headers and use one consistent date format across all date columns.\"},{\"unit_ids\":[\"u3\"],\"source_quote\":\"Filename must include the generation timestamp.\",\"kind\":\"functional\",\"statement\":\"The name of each exported Excel file must include the timestamp at which the file was generated.\"},{\"unit_ids\":[\"u4\"],\"source_quote\":\"User-friendly message if there is no data to export.\",\"kind\":\"frontend\",\"statement\":\"When there is no data to export, the system must show a message to the user instead of producing an empty file. The PRD does not define the message wording or whether a file is still produced; this is an open question.\"}]}",
     "id": null,
     "invalid_tool_calls": [],
     "name": null,
@@ -50,8 +50,8 @@
      "output_token_details": {
       "reasoning": 0
      },
-     "output_tokens": 330,
-     "total_tokens": 2606
+     "output_tokens": 347,
+     "total_tokens": 2623
     }
    },
    "type": "ai"

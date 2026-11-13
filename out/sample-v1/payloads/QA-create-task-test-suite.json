@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Create test suite for task creation",
+  "body": "**Parent:** `US-create-task`\n\n**Track:** qa_general · **Size:** S · consumes API\n\n## Description\n\nCreate the automated test suite for creating a task, covering the endpoint and the form behaviour for the required fields and validation rules.\n\n## Blocked by\n\n- `BE-create-task-endpoint`\n- `FE-task-creation-form`\n\n## Definition of Done\n\n- [ ] Tests cover a valid create, an empty title, a Due Date earlier than the Creation Date, a server or database failure, and invalid Status or Priority values.\n- [ ] Tests confirm the Creation Date and Last Updated Date are set and the Completion Date is empty on create.\n- [ ] Tests confirm the form does not show success when the backend call fails.\n- [ ] The test suite runs in the continuous integration pipeline and passes.\n\n## Requirements\n\n- `R-22f28530` (functional) Users can create a new task.\n- `R-03df7815` (validation_rule) A task cannot be saved unless its title is non-empty.\n- `R-efe1e5d4` (validation_rule) The system rejects a task whose Due Date is earlier than its Creation Date.\n- `R-d57336f7` (frontend) The UI displays a success or error message after every create, update and delete action.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend call has failed; optimistic UI updates are not allowed.\n- `R-9dc414dc` (backend) The backend must handle task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n\n<!-- prd-agent:key=QA-create-task-test-suite;hash=dd9842cfb9346a59 -->\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

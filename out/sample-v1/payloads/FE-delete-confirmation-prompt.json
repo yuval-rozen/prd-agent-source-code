@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add delete confirmation prompt and result messages to task actions",
+  "body": "**Parent:** `US-delete-task`\n\n**Track:** frontend · **Size:** S · consumes API\n\n## Description\n\nShow a confirmation prompt when the user chooses delete on a task. Send the delete request only after the user confirms. Remove the task from the list only after a success response, and show a success or error message with the result.\n\n## Blocked by\n\n- `BE-delete-task-endpoint`\n- `FE-task-list-view`\n\n## Definition of Done\n\n- [ ] Choosing delete shows a confirmation prompt and sends no request\n- [ ] Cancelling the prompt sends no request and leaves the task in the list\n- [ ] Confirming sends the delete request for that task\n- [ ] The task is removed from the list only after a success response\n- [ ] A success message is shown after a successful delete\n- [ ] An error message is shown and the task stays in the list after a failed delete\n\n## Requirements\n\n- `R-8ef41ba1` (functional) Deleting a task requires the user to confirm the deletion first.\n- `R-8523b9ec` (functional) Users can delete a task.\n- `R-d57336f7` (frontend) The UI displays a success or error message after every create, update and delete action.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend call has failed; optimistic UI updates are not allowed.\n\n<!-- prd-agent:key=FE-delete-confirmation-prompt;hash=bd533b058a4c3813 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

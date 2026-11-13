@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add Completed and Open status toggle to each task",
+  "body": "**Parent:** `US-change-task-status`\n\n**Track:** frontend · **Size:** S · consumes API\n\n## Description\n\nAdd a control on each task that marks the task as Completed or reverts it to Open. The control calls the status change endpoint and waits for the backend response before changing the displayed status.\n\n## Blocked by\n\n- `BE-task-status-endpoint`\n- `FE-task-list-view`\n\n## Definition of Done\n\n- [ ] Each task shows a control to mark it Completed or revert it to Open.\n- [ ] The displayed status changes only after the backend confirms the change.\n- [ ] A failed backend call leaves the previous status displayed.\n- [ ] The control is disabled while the request is in progress.\n\n## Requirements\n\n- `R-2304218f` (functional) Users can mark a task as 'Completed'.\n- `R-959e2960` (functional) Users can revert a 'Completed' task back to 'Open'.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend call has failed; optimistic UI updates are not allowed.\n\n<!-- prd-agent:key=FE-task-status-toggle;hash=8abaa34813987b5d -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

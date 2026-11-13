@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Return not found, invalid input and internal errors from PUT /tasks/{id}",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** backend · **Size:** S · touches DB\n\n## Description\n\nMake PUT /tasks/{id} return a not found error when the task does not exist, an invalid input error when a submitted field value is not accepted, and an error response for internal server or database failures. A failed save must leave no partial changes in the database.\n\n## Blocked by\n\n- `BE-put-task-endpoint-with-validation`\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] Updating a task that does not exist returns a task not found error and stores nothing\n- [ ] A field value the backend does not accept returns an invalid input error and stores nothing\n- [ ] An internal server or database error returns an error response and leaves no partial changes\n- [ ] Automated tests cover each error response\n\n## Requirements\n\n- `R-9dc414dc` (backend) The backend must handle task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n\n<!-- prd-agent:key=BE-put-task-error-responses;hash=409fd48ec3d02fb5 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

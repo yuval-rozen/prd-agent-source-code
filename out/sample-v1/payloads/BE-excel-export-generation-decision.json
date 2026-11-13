@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Decide and document where the task report Excel file is generated",
+  "body": "**Parent:** `US-export-report-excel`\n\n**Track:** backend · **Size:** S\n\n## Description\n\nChoose whether the Excel file is generated on the frontend or the backend, and record the rationale and trade-offs. The generator and export action tasks start only after this decision is documented.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] A decision record states whether the Excel file is generated on the frontend or the backend, with rationale and trade-offs\n- [ ] The decision record states which component produces the file and what the frontend receives when a file is produced\n- [ ] The decision record is shared with the team before the generator and export action tasks start\n\n## Requirements\n\n- `R-3a63e0ce` (decision_open) The development team decides whether the Excel file is generated on the frontend or the backend.\n\n<!-- prd-agent:key=BE-excel-export-generation-decision;hash=b98eb19c3785e04b -->\n",
+  "labels": [
+    "type:spike",
+    "area:backend",
+    "prd-agent"
+  ]
+}

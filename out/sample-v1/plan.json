@@ -1,0 +1,2595 @@
+{
+  "prd_hash": "f7c62be79d6e3075872bce1b2b063f6c020d39454fd66d1d23eba451dea18825",
+  "project": {
+    "key": "EPIC-personal-task-management-and-status",
+    "title": "Personal task management and status reporting",
+    "scope": "A personal task management system where a user manages a personal task list on a To-Do page and views an aggregated, filterable task report with metrics and Excel export on a Task Reporting page. The backend stores tasks in a new table in the existing persistence database.",
+    "business_goals": [
+      {
+        "text": "Let a user track daily tasks",
+        "requirement_ids": [
+          "R-a62b5beb",
+          "R-eed06908"
+        ]
+      },
+      {
+        "text": "Generate status reports from the user's tasks",
+        "requirement_ids": [
+          "R-a62b5beb",
+          "R-d0e0fe7a"
+        ]
+      }
+    ],
+    "requirement_ids": [
+      "R-a62b5beb",
+      "R-f7f96b9a",
+      "R-eed06908",
+      "R-d0e0fe7a"
+    ],
+    "story_keys": [
+      "US-create-task",
+      "US-view-task-list",
+      "US-update-task",
+      "US-delete-task",
+      "US-change-task-status",
+      "US-view-task-report",
+      "US-filter-search-sort-report",
+      "US-export-report-excel"
+    ],
+    "labels": [
+      "type:epic",
+      "prd-agent"
+    ]
+  },
+  "stories": [
+    {
+      "key": "US-create-task",
+      "title": "Create a new task with its required fields",
+      "as_a": "user",
+      "i_want": "to create a new task with its required fields",
+      "so_that": "I can record work I need to track",
+      "business_description": "Users can create a new task. Each task stores a unique ID, a Title, a Description, a Status (Open, In Progress or Completed), a Priority (Low, Medium or High), a Creation Date, a Due Date, a Last Updated Date and a Completion Date that is populated when the task is completed. A task cannot be saved without a non-empty title, and a Due Date earlier than the Creation Date is rejected. The task data is stored in a new table in the existing persistence database.",
+      "business_value": "Users can capture their work items with the required fields, so that every task has a consistent, validated record that the other task features (listing, status, editing, reporting) can rely on.",
+      "acceptance_criteria": [
+        {
+          "given": "A user is on the task creation form and enters a non-empty title",
+          "when": "The user submits the form",
+          "then": "The task is saved, a unique ID is assigned, and a success message is shown"
+        },
+        {
+          "given": "A user is on the task creation form and leaves the title empty",
+          "when": "The user submits the form",
+          "then": "The task is not saved, the title is reported as mandatory, and no success message is shown"
+        },
+        {
+          "given": "A user enters a Due Date earlier than the Creation Date",
+          "when": "The user submits the form",
+          "then": "The task is rejected, an error message is shown, and no task is saved"
+        },
+        {
+          "given": "The backend create request fails because of a server or database error",
+          "when": "The frontend receives the failure",
+          "then": "The frontend shows an error message and does not show the task as saved"
+        },
+        {
+          "given": "A task is created with a Status of Open, In Progress or Completed, and a Priority of Low, Medium or High",
+          "when": "The task is saved",
+          "then": "The stored Status and Priority values are one of the allowed values"
+        },
+        {
+          "given": "A task is created",
+          "when": "The task is saved",
+          "then": "Its Completion Date is empty until the task is completed"
+        },
+        {
+          "given": "A task is created",
+          "when": "The task is saved",
+          "then": "The Creation Date and the Last Updated Date are set by the system"
+        }
+      ],
+      "edge_cases": [
+        "A Due Date equal to the Creation Date is not earlier than the Creation Date, so the PRD rules allow it to be saved.",
+        "A Due Date is optional in the PRD only if the PRD says so; the PRD does not state whether a task without a Due Date can be saved. This is an open question.",
+        "The PRD does not state whether the Description field is required or has a maximum length. This is an open question.",
+        "The PRD does not state a maximum length for the Title. This is an open question.",
+        "A value outside Open, In Progress, Completed for Status, or outside Low, Medium, High for Priority, is invalid input and must not be saved."
+      ],
+      "dependencies": [],
+      "definition_of_done": [
+        "A new table for tasks exists in the persistence database with fields for ID, Title, Description, Status, Priority, Creation Date, Due Date, Last Updated Date and Completion Date.",
+        "The create endpoint rejects an empty title and a Due Date earlier than the Creation Date, and returns a clear error for each case.",
+        "The create endpoint sets the ID, Creation Date and Last Updated Date on save and leaves the Completion Date empty.",
+        "The creation form shows a success message after a saved task and an error message after a rejected or failed save.",
+        "The frontend does not show a task as saved until the backend confirms the save.",
+        "Automated tests cover the success path, the empty title, the Due Date rule, the server or database failure, and the allowed Status and Priority values."
+      ],
+      "requirement_ids": [
+        "R-22f28530",
+        "R-9675bb49",
+        "R-aaf23206",
+        "R-c9046f7a",
+        "R-576b7e59",
+        "R-9fb58566",
+        "R-1c2262bc",
+        "R-71bdd372",
+        "R-31569dba",
+        "R-34e41747",
+        "R-03df7815",
+        "R-efe1e5d4",
+        "R-9b30a145",
+        "R-d57336f7",
+        "R-c55a77b3",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-ab9e9cb0"
+      ],
+      "labels": [
+        "type:story",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "US-view-task-list",
+      "title": "View all my tasks in a task list",
+      "as_a": "user",
+      "i_want": "to view all my saved tasks in a task list on the to-do management page",
+      "so_that": "I can see every task with its status and priority in one place",
+      "business_description": "The to-do management page shows the task list. The system has a single user and no sign-in, so the list shows all stored tasks. Each task appears as one row with a status indicator and a priority indicator. The list shows a loading state, an empty state and an error state, and it refreshes automatically when a task is created, updated, deleted or has its status changed.",
+      "business_value": "The user can see all tasks, their status and their priority without opening each task, and the list stays current after changes.",
+      "acceptance_criteria": [
+        {
+          "given": "I have two or more saved tasks",
+          "when": "I open the to-do management page",
+          "then": "the task list shows every saved task, with one row per task"
+        },
+        {
+          "given": "A task has the status Open and the priority High",
+          "when": "the task list is displayed",
+          "then": "that task's row shows a status indicator with the value Open and a priority indicator with the value High"
+        },
+        {
+          "given": "The task list is waiting for the task data from the backend",
+          "when": "the page is displayed",
+          "then": "a loading state is shown in place of the task list until the data arrives"
+        },
+        {
+          "given": "I have no saved tasks",
+          "when": "the task list loads successfully",
+          "then": "an empty state is shown and no task rows are displayed"
+        },
+        {
+          "given": "The backend returns an error when the task list is requested",
+          "when": "the task list loads",
+          "then": "an error state is shown, no task rows are displayed, and the page does not show a successful state"
+        },
+        {
+          "given": "The database is unavailable",
+          "when": "the backend receives a request for all tasks",
+          "then": "the backend returns an internal server error response and does not return any task data"
+        },
+        {
+          "given": "A saved task with a known ID exists",
+          "when": "the backend receives a request for that task by its ID",
+          "then": "the backend returns that one task with its stored values"
+        },
+        {
+          "given": "No saved task has the requested ID",
+          "when": "the backend receives a request for that task by its ID",
+          "then": "the backend returns a not-found error and does not return any task data"
+        },
+        {
+          "given": "I am viewing the task list",
+          "when": "a task is created, updated, deleted or has its status changed",
+          "then": "the task list refreshes automatically and shows the change without a manual page reload"
+        },
+        {
+          "given": "A create, update or delete action on a task has failed in the backend",
+          "when": "the task list is refreshed",
+          "then": "the list shows only the data the backend returns and does not show the failed change as saved"
+        }
+      ],
+      "edge_cases": [
+        "A single saved task is shown as one row in the list.",
+        "A task with the status In Progress or the priority Low or Medium is shown with the stored value in its indicator.",
+        "There is no sign-in and no per-user filtering, so the list shows all stored tasks.",
+        "The order of the rows in the list is not specified in the requirements.",
+        "It is not specified what the list shows while a second refresh is still loading after a change.",
+        "The success or error messages after create, update and delete actions are shown by the stories for those actions, not by the task list."
+      ],
+      "dependencies": [
+        "US-create-task",
+        "US-update-task",
+        "US-delete-task",
+        "US-change-task-status"
+      ],
+      "definition_of_done": [
+        "GET /tasks returns every stored task with its stored values.",
+        "GET /tasks returns an internal server error and no task data when the database is unavailable.",
+        "GET /tasks/{id} returns one task with its stored values when the ID exists.",
+        "GET /tasks/{id} returns a not-found error and no task data when the ID does not exist.",
+        "The task list shows one row per task with a status indicator and a priority indicator.",
+        "The loading, empty and error states are shown as specified and tested.",
+        "The task list refreshes after a task is created, updated, deleted or has its status changed, without a page reload.",
+        "The task list displays only data returned by the backend and does not use optimistic updates.",
+        "The task list test suite passes."
+      ],
+      "requirement_ids": [
+        "R-eed06908",
+        "R-4bed9064",
+        "R-60e02b8e",
+        "R-48c89e9e",
+        "R-d7e6667f",
+        "R-6a73fa71",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-d57336f7"
+      ],
+      "labels": [
+        "type:story",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "US-update-task",
+      "title": "Update an existing task's details",
+      "as_a": "user who owns a task",
+      "i_want": "to update the details of an existing task",
+      "so_that": "my task list stays accurate when my plans change",
+      "business_description": "Users can change the details of a task after it is created. The edit form is the same form used to create a task, pre-filled with the stored values. A change is saved only when the title is non-empty and the due date is not earlier than the creation date. The user sees a success or error message after each save. The frontend never shows a saved state before the backend confirms the save.",
+      "business_value": "Keeps task details current so that the task list and reports show the real state of the work.",
+      "acceptance_criteria": [
+        {
+          "given": "An existing task is open in the edit form",
+          "when": "The user changes the title to a non-empty value and clicks save",
+          "then": "The backend stores the new title, the saved title is shown in the task list, and a success message is displayed"
+        },
+        {
+          "given": "An existing task is open in the edit form",
+          "when": "The user clears the title field and clicks save",
+          "then": "The task is not saved, the form shows a message that the title is required, and the stored title is unchanged"
+        },
+        {
+          "given": "An existing task with a creation date of 1 March",
+          "when": "The user sets the due date to 28 February and clicks save",
+          "then": "The task is not saved, the form shows a message that the due date cannot be earlier than the creation date, and the stored due date is unchanged"
+        },
+        {
+          "given": "An existing task is open in the edit form and the backend returns an error for the save request",
+          "when": "The user clicks save",
+          "then": "The stored task keeps its previous values, an error message is displayed, and no success message is displayed"
+        },
+        {
+          "given": "A task that no longer exists is open in the edit form",
+          "when": "The user saves changes to it",
+          "then": "The backend responds with a task not found error, the form shows an error message, and no success message is displayed"
+        },
+        {
+          "given": "A save request that sends a field value the backend does not accept",
+          "when": "The backend receives the request",
+          "then": "The backend rejects the request with an invalid input error, stores no changes, and returns the error to the frontend"
+        },
+        {
+          "given": "An update request that omits the title",
+          "when": "The backend receives the request",
+          "then": "The backend rejects the request with a missing mandatory field error and stores no changes"
+        },
+        {
+          "given": "A save request that fails because of an internal server or database error",
+          "when": "The backend returns the error",
+          "then": "The backend stores no partial changes and the frontend shows an error message"
+        },
+        {
+          "given": "A task with stored values exists",
+          "when": "The user opens it for editing",
+          "then": "The edit form shows the stored values of that task"
+        },
+        {
+          "given": "The request to load a task by ID fails, for example because the task does not exist or the server returns an error",
+          "when": "The user opens the task for editing",
+          "then": "An error message is shown, the edit form does not open, and no success message is displayed"
+        },
+        {
+          "given": "A task list row for an existing task and a save of that task has failed",
+          "when": "The task list is shown after the failed save",
+          "then": "The task list shows the previous values of the task, not the values the user tried to save"
+        },
+        {
+          "given": "A task list row for an existing task",
+          "when": "The user selects the edit action on that row",
+          "then": "The edit form opens with the stored values of that task"
+        }
+      ],
+      "edge_cases": [
+        "A title made only of spaces: the rule requires a non-empty title, but the PRD does not say whether a space-only title counts as empty. This is an open question.",
+        "A due date equal to the creation date is allowed, because only a due date earlier than the creation date is rejected.",
+        "The PRD does not state whether Status and Priority can be changed through the edit form. This story does not define it. This is an open question.",
+        "The wording of the success and error messages is not specified.",
+        "Two users saving the same task at the same time is not covered by the PRD. This is an open question.",
+        "The PRD does not state whether a Due Date is required when creating or updating a task.",
+        "The PRD does not state whether a title that contains only spaces counts as empty.",
+        "The PRD does not state how the user opens an existing task for editing.",
+        "The PRD does not state which task fields the user can change when editing a task.",
+        "The PRD does not state whether the user can change the Completion Date when editing a task."
+      ],
+      "dependencies": [
+        "US-create-task",
+        "US-view-task-list"
+      ],
+      "definition_of_done": [
+        "A valid save stores the edited values and sets the Last Updated Date to the time of the save",
+        "A rejected save leaves every stored field of the task unchanged, which is checked after each rejection case",
+        "The success message appears only after the backend confirms the save",
+        "Each save error case shows an error message and no success message",
+        "The edit form shows the stored values of the task before any change is made",
+        "Acceptance criteria are covered by automated tests"
+      ],
+      "requirement_ids": [
+        "R-bc3213df",
+        "R-9b30a145",
+        "R-03df7815",
+        "R-efe1e5d4",
+        "R-d57336f7",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-ab9e9cb0"
+      ],
+      "labels": [
+        "type:story",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "US-delete-task",
+      "title": "Delete a task after confirming the deletion",
+      "as_a": "user of the to-do list",
+      "i_want": "to delete a task after confirming the deletion in a prompt",
+      "so_that": "I remove tasks I no longer need without deleting one by accident",
+      "business_description": "Users can delete a task. Deleting a task requires the user to confirm the deletion first. The frontend shows a success or error message after the delete action, and it does not show a success state when the backend call fails.",
+      "business_value": "Users can clean up their task list, and the confirmation step guards against accidental deletion of tasks.",
+      "acceptance_criteria": [
+        {
+          "given": "A task is shown in the task list",
+          "when": "The user chooses the delete action for that task",
+          "then": "A confirmation prompt is shown, the task is still shown in the list, and no delete request has been sent"
+        },
+        {
+          "given": "The confirmation prompt is shown for a task",
+          "when": "The user cancels the prompt",
+          "then": "No delete request is sent and the task remains unchanged in the list"
+        },
+        {
+          "given": "The confirmation prompt is shown for an existing task",
+          "when": "The user confirms the deletion and the backend returns a success response",
+          "then": "The task is removed from the list and a success message is displayed"
+        },
+        {
+          "given": "The user has confirmed the deletion and the delete request is still in progress",
+          "when": "The user views the task list",
+          "then": "The task still appears in the list because the frontend does not remove it before the backend confirms the deletion"
+        },
+        {
+          "given": "The user has confirmed the deletion of a task",
+          "when": "The backend returns an error response",
+          "then": "The task remains in the list and an error message is displayed instead of a success message"
+        },
+        {
+          "given": "A delete request is sent for a task ID that does not exist in the database",
+          "when": "The backend processes the request",
+          "then": "The backend returns a task not found error and no task data is changed"
+        },
+        {
+          "given": "A delete request fails because of an internal server or database error",
+          "when": "The backend processes the request",
+          "then": "The backend returns an error response and the stored task is not removed"
+        }
+      ],
+      "edge_cases": [
+        "A delete request is sent for a task that was already deleted, for example from another browser session: the backend returns a task not found error and the frontend shows an error message.",
+        "The wording of the confirmation prompt and of the success and error messages is not specified.",
+        "The PRD does not state whether a deleted task can be restored; this story does not provide restore."
+      ],
+      "dependencies": [
+        "US-create-task",
+        "US-view-task-list"
+      ],
+      "definition_of_done": [
+        "DELETE /tasks/{id} removes the task with the given ID and returns a success response",
+        "DELETE /tasks/{id} returns a task not found error for an unknown ID and changes no data",
+        "DELETE /tasks/{id} returns an error response on internal server or database errors and keeps the stored task",
+        "The delete action shows a confirmation prompt before any delete request is sent",
+        "Cancelling the prompt sends no request and leaves the task unchanged",
+        "The task is removed from the list only after a success response from the backend",
+        "A success message is shown after a successful delete and an error message after a failed delete",
+        "The test suite covers confirmation, cancel, success, not-found and server error cases"
+      ],
+      "requirement_ids": [
+        "R-8523b9ec",
+        "R-8ef41ba1",
+        "R-d57336f7",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-ab9e9cb0"
+      ],
+      "labels": [
+        "type:story",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "US-change-task-status",
+      "title": "Mark a task as Completed or revert it to Open",
+      "as_a": "user",
+      "i_want": "to mark a task as Completed or revert a Completed task back to Open",
+      "so_that": "I can track which work is finished and reopen work that needs more attention",
+      "business_description": "Users can change the status of a task between Completed and Open. The backend exposes an endpoint for the status change, and the frontend shows the result of each change.",
+      "business_value": "Users can record finished work and reopen tasks without editing the full task, which keeps the task list and reports accurate.",
+      "acceptance_criteria": [
+        {
+          "given": "an existing task with status Open",
+          "when": "the user marks the task as Completed",
+          "then": "the task status is shown as Completed and the Completion Date of the task is populated"
+        },
+        {
+          "given": "an existing task with status Completed",
+          "when": "the user reverts the task to Open",
+          "then": "the task status is shown as Open"
+        },
+        {
+          "given": "a status change request that the backend rejects or cannot complete",
+          "when": "the user submits the change",
+          "then": "the task keeps its previous status on screen and an error message is displayed"
+        },
+        {
+          "given": "a status change that the backend confirms as saved",
+          "when": "the change completes",
+          "then": "a success message is displayed to the user"
+        },
+        {
+          "given": "a task ID that does not exist in the database",
+          "when": "a status change is requested for that ID",
+          "then": "the backend returns a task not found error and no task is changed"
+        },
+        {
+          "given": "a status change request with a status value outside Open, In Progress and Completed",
+          "when": "the backend receives the request",
+          "then": "the backend rejects the request with an invalid input error and the stored status is unchanged"
+        }
+      ],
+      "edge_cases": [
+        "The task does not exist when the status change is requested, for example because it was deleted in another session; the backend returns a task not found error.",
+        "The backend call fails: the frontend must show the previous status and an error message, not the requested status.",
+        "A task that is already Completed is marked Completed again: the expected result is not specified.",
+        "A task that is already Open is reverted to Open again: the expected result is not specified.",
+        "Reverting a Completed task to Open: whether the Completion Date is cleared or kept is not specified.",
+        "Whether the Last Updated Date changes when only the status is changed is not specified.",
+        "The wording of the success and error messages for status changes is not specified."
+      ],
+      "dependencies": [
+        "US-create-task"
+      ],
+      "definition_of_done": [
+        "The status change endpoint sets a task to Completed or Open and returns the updated task.",
+        "Marking a task Completed populates its Completion Date.",
+        "The endpoint returns a task not found error for an unknown ID and an invalid input error for a status value outside the allowed values.",
+        "The frontend shows the status change only after the backend confirms it; no optimistic update is shown.",
+        "A success or error message is displayed after every status change.",
+        "Automated tests cover marking Completed, reverting to Open, not found, invalid input and backend failure.",
+        "Open questions about repeated status changes, Completion Date on revert and Last Updated Date are recorded for the product owner."
+      ],
+      "requirement_ids": [
+        "R-2304218f",
+        "R-959e2960",
+        "R-d57336f7",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-ab9e9cb0"
+      ],
+      "labels": [
+        "type:story",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "US-view-task-report",
+      "title": "View all tasks and totals in a report table",
+      "as_a": "a team member who needs an overview of work",
+      "i_want": "to view all my tasks in a table on the Task Reporting page, with Total, Open and Completed counts",
+      "so_that": "I can see the full state of my work at a glance",
+      "business_description": "The Task Reporting page gives an aggregated view of the user's tasks. It shows every stored task in a table and summarises the tasks with three metrics: Total Tasks, Open Tasks and Completed Tasks.",
+      "business_value": "Users get one place to see all tasks and their overall progress without opening each task.",
+      "acceptance_criteria": [
+        {
+          "given": "The user has at least one task stored in the system",
+          "when": "The user opens the Task Reporting page without applying any filter",
+          "then": "The table shows one row for every stored task"
+        },
+        {
+          "given": "Stored tasks with the statuses Open, In Progress and Completed exist",
+          "when": "The Task Reporting page loads",
+          "then": "Total Tasks equals the number of all stored tasks, Open Tasks equals the number of tasks with status Open, and Completed Tasks equals the number of tasks with status Completed"
+        },
+        {
+          "given": "No tasks are stored in the system",
+          "when": "The Task Reporting page loads",
+          "then": "The table has no task rows and Total Tasks, Open Tasks and Completed Tasks each show 0"
+        },
+        {
+          "given": "The metrics endpoint is called without any filter or search parameters",
+          "when": "The endpoint responds successfully",
+          "then": "The response contains the Total, Open and Completed counts of all stored tasks"
+        },
+        {
+          "given": "The metrics endpoint is called and a task has the status In Progress",
+          "when": "The endpoint responds successfully",
+          "then": "The In Progress task is included in Total Tasks and is not included in Open Tasks or Completed Tasks"
+        }
+      ],
+      "edge_cases": [
+        "A task with the status In Progress counts toward Total Tasks only; it is not counted as Open or Completed.",
+        "When no tasks are stored, the table shows no rows and all three metrics show 0.",
+        "The wording of the empty-table message on the Task Reporting page is not specified.",
+        "The PRD does not state whether In Progress tasks count as Open Tasks.",
+        "The PRD does not state whether the Total, Open and Completed metrics reflect the applied filters or all stored tasks."
+      ],
+      "dependencies": [
+        "US-create-task",
+        "US-view-task-list"
+      ],
+      "definition_of_done": [
+        "The Task Reporting page loads and shows every stored task as one table row.",
+        "Total Tasks, Open Tasks and Completed Tasks are shown and match the stored data.",
+        "The metrics endpoint returns the Total, Open and Completed counts without any filter parameters.",
+        "The task table reads its rows from the existing task list endpoint and does not add a second endpoint for the same rows.",
+        "Automated tests for the table, the metrics and the empty state pass."
+      ],
+      "requirement_ids": [
+        "R-d0e0fe7a",
+        "R-a1b267a3",
+        "R-4ffbfafa",
+        "R-8007d6b5"
+      ],
+      "labels": [
+        "type:story",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "US-filter-search-sort-report",
+      "title": "Filter, search and sort tasks in the report",
+      "as_a": "a user with tasks shown in the task report",
+      "i_want": "to filter, search and sort the tasks in the report",
+      "so_that": "I can quickly find the tasks I need to act on",
+      "business_description": "The task report page lists the user's tasks. Users need to narrow the list by Status, Priority and Date Range, find a task by its title, and order the list by Creation Date, Due Date, Status or Priority. The backend report query applies the same filters, search and sort so the table matches the user's choices.",
+      "business_value": "Users can locate specific tasks in a long list without scanning the whole table, which makes it faster to see which open or completed work needs attention.",
+      "acceptance_criteria": [
+        {
+          "given": "The report contains tasks with Status Open and tasks with Status Completed",
+          "when": "The user selects Status Open in the Status filter",
+          "then": "Only tasks with Status Open are listed in the report table"
+        },
+        {
+          "given": "The report contains tasks with Priority Low, Medium and High",
+          "when": "The user selects Priority High in the Priority filter",
+          "then": "Only tasks with Priority High are listed in the report table"
+        },
+        {
+          "given": "The report contains tasks with different dates",
+          "when": "The user sets a Date Range in the Date Range filter",
+          "then": "Only tasks whose date falls inside the selected range are listed in the report table"
+        },
+        {
+          "given": "The report contains tasks with titles 'Pay invoice' and 'Write report'",
+          "when": "The user types 'invoice' in the title search",
+          "then": "Only the task titled 'Pay invoice' is listed in the report table"
+        },
+        {
+          "given": "The report table lists several tasks with different Due Dates",
+          "when": "The user selects the Due Date column to sort the table",
+          "then": "The tasks are listed in Due Date order"
+        },
+        {
+          "given": "The report table lists several tasks with different Creation Dates, Statuses and Priorities",
+          "when": "The user selects Creation Date, Status or Priority as the sort field",
+          "then": "The tasks are listed in the order of the selected field"
+        },
+        {
+          "given": "A status filter, a priority filter, a date range, a title search and a sort field are applied on the report page",
+          "when": "The report data is requested from the backend",
+          "then": "The backend returns only the tasks matching all applied filters and the search, in the requested sort order"
+        }
+      ],
+      "edge_cases": [
+        "The PRD does not state which date the Date Range filter applies to (Creation Date, Due Date or Completion Date). This is an open question.",
+        "The PRD does not state whether the Date Range start and end dates are inclusive. This is an open question.",
+        "The PRD does not state how multiple filters combine when more than one is applied. This is an open question.",
+        "The PRD does not state the sort direction (ascending or descending) or the order of Status and Priority values when sorting. This is an open question.",
+        "The PRD does not state where tasks with an empty Due Date or Completion Date are placed when sorting. This is an open question.",
+        "The PRD does not state whether the title search ignores letter case or matches partial text. The example implies partial matching; case handling is an open question."
+      ],
+      "dependencies": [
+        "US-view-task-report"
+      ],
+      "definition_of_done": [
+        "The report table shows only tasks that match the selected Status, Priority and Date Range filters",
+        "The title search narrows the report table to tasks whose title contains the search text",
+        "Sorting by Creation Date, Due Date, Status and Priority reorders the report table",
+        "The report query accepts filter, search and sort parameters and returns matching tasks in the requested order",
+        "Open questions about the date field for the Date Range, sort direction, filter combination and empty dates are recorded for the product owner"
+      ],
+      "requirement_ids": [
+        "R-5f4ef76c",
+        "R-48e39a9d",
+        "R-f214002a",
+        "R-8007d6b5"
+      ],
+      "labels": [
+        "type:story",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "US-export-report-excel",
+      "title": "Download the filtered task report as an Excel file",
+      "as_a": "user",
+      "i_want": "download the filtered, searched and sorted task report as an Excel file",
+      "so_that": "I can work with the task data in a spreadsheet outside the application",
+      "business_description": "Users can export the task report to Excel. The exported file reflects the rows, order and filters the user has applied on the report page, so the user gets the same view of the data as on screen.",
+      "business_value": "Task data can be reviewed and used outside the application in a spreadsheet, using the same filters and sort order the user already set.",
+      "acceptance_criteria": [
+        {
+          "given": "The task report page shows 12 tasks with no filters applied",
+          "when": "The user selects the Excel export action",
+          "then": "An Excel file is downloaded that contains 12 data rows, one per task"
+        },
+        {
+          "given": "The report has the Status filter set to Open and is sorted by Due Date ascending",
+          "when": "The user selects the Excel export action",
+          "then": "The downloaded file contains only tasks with status Open, in ascending Due Date order"
+        },
+        {
+          "given": "The report has a title search term applied that matches 3 tasks, combined with the Status filter set to Open",
+          "when": "The user selects the Excel export action",
+          "then": "The downloaded file contains only the tasks that match both the search term and the Open status, in the same order as on the report page"
+        },
+        {
+          "given": "The user exports the report at a given moment",
+          "when": "The file is downloaded",
+          "then": "The file name contains the timestamp of the moment the file was generated"
+        },
+        {
+          "given": "The applied filters match no tasks",
+          "when": "The user selects the Excel export action",
+          "then": "No Excel file is downloaded and a message is shown to the user stating that there is no data to export"
+        },
+        {
+          "given": "A report with at least one task is exported",
+          "when": "The user opens the downloaded Excel file",
+          "then": "The first row contains clear column headers and every date column uses the same date format"
+        }
+      ],
+      "edge_cases": [
+        "The PRD does not define the wording of the no-data message, or whether a file is still produced when there is no data. This is an open question.",
+        "The PRD does not define the timestamp format or time zone used in the file name. This is an open question.",
+        "The PRD does not define the date format for date columns. One format must be chosen and applied to every date column.",
+        "The PRD does not state whether a title search counts as a filter. The export applies the search the same way the report page does.",
+        "A report with exactly one task produces a file with one data row."
+      ],
+      "dependencies": [
+        "US-create-task",
+        "US-view-task-report",
+        "US-filter-search-sort-report"
+      ],
+      "definition_of_done": [
+        "The export action on the task report page downloads a file that matches the filtered, searched and sorted rows shown on the page",
+        "Exporting a result with no rows shows a message and downloads no file",
+        "The Excel file generation location is documented with rationale and trade-offs before generator work starts",
+        "Every exported file has a timestamped name and a header row with clear column headers",
+        "Every date column in an exported file uses one date format",
+        "All acceptance criteria are verified by the export test suite"
+      ],
+      "requirement_ids": [
+        "R-52360b76",
+        "R-09e9d163",
+        "R-fad183b1",
+        "R-d22b9b6a",
+        "R-437992f1",
+        "R-3a63e0ce",
+        "R-8007d6b5"
+      ],
+      "labels": [
+        "type:story",
+        "prd-agent"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "key": "BE-tasks-table-migration",
+      "story_key": "US-create-task",
+      "title": "[BE] Create tasks table with all required fields in the persistence database",
+      "track": "backend",
+      "description": "Add a migration that creates a new tasks table in the existing persistence database with columns for unique ID, Title, Description, Status (Open, In Progress, Completed), Priority (Low, Medium, High), Creation Date, Due Date, Last Updated Date and Completion Date.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [],
+      "requirement_ids": [
+        "R-9675bb49",
+        "R-aaf23206",
+        "R-c9046f7a",
+        "R-576b7e59",
+        "R-9fb58566",
+        "R-1c2262bc",
+        "R-71bdd372",
+        "R-31569dba",
+        "R-34e41747",
+        "R-c55a77b3"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Migration creates the tasks table with every required field and the allowed values for Status and Priority.",
+        "The ID column is unique and assigned by the database.",
+        "Migration runs on the existing database without changing other tables.",
+        "Migration can be rolled back."
+      ],
+      "labels": [
+        "type:task",
+        "area:db",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-create-task-endpoint",
+      "story_key": "US-create-task",
+      "title": "[BE] Add POST /tasks endpoint with title and due date validation",
+      "track": "backend",
+      "description": "Add a POST /tasks endpoint that validates the title is non-empty and the Due Date is not earlier than the Creation Date, sets the Creation Date and Last Updated Date, leaves the Completion Date empty, saves the task and returns the saved task with its ID. Returns a simple error response for invalid input, missing mandatory fields, and internal server or database errors.",
+      "size": "M",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-22f28530",
+        "R-03df7815",
+        "R-efe1e5d4",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-1c2262bc",
+        "R-31569dba"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "POST /tasks saves a task and returns it with its unique ID.",
+        "An empty title returns an error and nothing is saved.",
+        "A Due Date earlier than the Creation Date returns an error and nothing is saved.",
+        "Invalid Status or Priority values return an error.",
+        "A database failure returns a server error and nothing is saved.",
+        "Creation Date and Last Updated Date are set by the server."
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-creation-form",
+      "story_key": "US-create-task",
+      "title": "[FE] Build task creation form with success and error messages",
+      "track": "frontend",
+      "description": "Build the form to create a task with Title, Description, Status, Priority and Due Date fields. Show the mandatory title message, the Due Date error and a success or error message after each submit. Do not show the task as saved until the backend confirms the save.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-create-task-endpoint"
+      ],
+      "requirement_ids": [
+        "R-22f28530",
+        "R-9b30a145",
+        "R-d57336f7",
+        "R-03df7815",
+        "R-efe1e5d4",
+        "R-ab9e9cb0"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "The form contains Title, Description, Status, Priority and Due Date fields.",
+        "An empty title is reported as mandatory and no request is sent.",
+        "A success message is shown only after the backend confirms the save.",
+        "An error message is shown when the backend rejects or fails the request, and the task is not shown as saved.",
+        "The form does not show a Creation Date or Completion Date input."
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "QA-create-task-test-suite",
+      "story_key": "US-create-task",
+      "title": "[QA] Create test suite for task creation",
+      "track": "qa_general",
+      "description": "Create the automated test suite for creating a task, covering the endpoint and the form behaviour for the required fields and validation rules.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-create-task-endpoint",
+        "FE-task-creation-form"
+      ],
+      "requirement_ids": [
+        "R-22f28530",
+        "R-03df7815",
+        "R-efe1e5d4",
+        "R-d57336f7",
+        "R-ab9e9cb0",
+        "R-9dc414dc"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Tests cover a valid create, an empty title, a Due Date earlier than the Creation Date, a server or database failure, and invalid Status or Priority values.",
+        "Tests confirm the Creation Date and Last Updated Date are set and the Completion Date is empty on create.",
+        "Tests confirm the form does not show success when the backend call fails.",
+        "The test suite runs in the continuous integration pipeline and passes."
+      ],
+      "labels": [
+        "type:task",
+        "area:qa",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-tasks-list-endpoint",
+      "story_key": "US-view-task-list",
+      "title": "[BE] Add GET /tasks endpoint that returns all saved tasks",
+      "track": "backend",
+      "description": "Add a GET /tasks endpoint that reads all saved tasks from the tasks table and returns them with their stored values. If the database is unavailable, return an internal server error response with no task data.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-4bed9064",
+        "R-244669c0",
+        "R-9dc414dc"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "GET /tasks returns every stored task with its stored values.",
+        "GET /tasks returns an internal server error and no task data when the database is unavailable.",
+        "Endpoint is covered by unit tests."
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-task-by-id-endpoint",
+      "story_key": "US-view-task-list",
+      "title": "[BE] Add GET /tasks/{id} endpoint returning one task or not-found error",
+      "track": "backend",
+      "description": "Add a GET /tasks/{id} endpoint that returns one saved task with its stored values. If no task has the requested ID, return a not-found error with no task data.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-244669c0",
+        "R-9dc414dc"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "GET /tasks/{id} returns one task with its stored values when the ID exists.",
+        "GET /tasks/{id} returns a not-found error and no task data when the ID does not exist.",
+        "Endpoint is covered by unit tests."
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-list-view",
+      "story_key": "US-view-task-list",
+      "title": "[FE] Build the task list view on the to-do management page",
+      "track": "frontend",
+      "description": "Build the task list view on the to-do management page. Show one row per task from GET /tasks, with a status indicator and a priority indicator in each row.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-tasks-list-endpoint"
+      ],
+      "requirement_ids": [
+        "R-eed06908",
+        "R-60e02b8e",
+        "R-48c89e9e"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "The to-do management page shows the task list with one row per task.",
+        "Each row shows a status indicator and a priority indicator with the stored values.",
+        "The list shows all stored tasks."
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-list-states",
+      "story_key": "US-view-task-list",
+      "title": "[FE] Show loading, empty and error states in the task list",
+      "track": "frontend",
+      "description": "Show a loading state while the task data is being fetched, an empty state when there are no saved tasks, and an error state when the request fails. The error state shows no task rows and no success state.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-tasks-list-endpoint"
+      ],
+      "requirement_ids": [
+        "R-d7e6667f"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "The loading state replaces the list until the data arrives.",
+        "The empty state is shown with no task rows when the list loads successfully with no tasks.",
+        "The error state is shown with no task rows and no success state when the list request fails."
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-list-auto-refresh",
+      "story_key": "US-view-task-list",
+      "title": "[FE] Refresh the task list automatically after task changes",
+      "track": "frontend",
+      "description": "Refresh the task list from the backend after a task is created, updated, deleted or has its status changed, so the change is visible without a page reload.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-tasks-list-endpoint",
+        "FE-task-list-view"
+      ],
+      "requirement_ids": [
+        "R-6a73fa71"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "The list refreshes after a task is created, updated, deleted or has its status changed.",
+        "The change is visible without a manual page reload.",
+        "The list shows only data returned by the backend."
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "QA-task-list-test-suite",
+      "story_key": "US-view-task-list",
+      "title": "[QA] Write the test suite for the task list",
+      "track": "qa_general",
+      "description": "Write the test suite for the task list covering the list display, the status and priority indicators, the loading, empty and error states, the backend read endpoints and the automatic refresh.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-tasks-list-endpoint",
+        "FE-task-list-view",
+        "FE-task-list-states",
+        "FE-task-list-auto-refresh"
+      ],
+      "requirement_ids": [
+        "R-eed06908",
+        "R-4bed9064",
+        "R-60e02b8e",
+        "R-48c89e9e",
+        "R-d7e6667f",
+        "R-6a73fa71",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-d57336f7"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Tests cover every acceptance criterion of the task list story.",
+        "Tests cover the list, the indicators, the loading, empty and error states, and the automatic refresh.",
+        "The test suite passes in the continuous integration pipeline."
+      ],
+      "labels": [
+        "type:task",
+        "area:qa",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-put-task-endpoint-with-validation",
+      "story_key": "US-update-task",
+      "title": "[BE] Add PUT /tasks/{id} endpoint that saves edited task fields with validation",
+      "track": "backend",
+      "description": "Add an endpoint that updates an existing task identified by ID. It stores the submitted edited fields only when the title is non-empty and the due date is not earlier than the creation date. It sets the Last Updated Date on each successful save. It does not change the creation date.",
+      "size": "M",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-bc3213df",
+        "R-244669c0",
+        "R-03df7815",
+        "R-efe1e5d4"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "PUT /tasks/{id} stores the submitted fields for an existing task",
+        "A missing or empty title is rejected with a missing mandatory field error and nothing is stored",
+        "A due date earlier than the creation date is rejected and nothing is stored",
+        "Last Updated Date is set on each successful save",
+        "Automated tests cover a valid update and each validation rejection"
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-put-task-error-responses",
+      "story_key": "US-update-task",
+      "title": "[BE] Return not found, invalid input and internal errors from PUT /tasks/{id}",
+      "track": "backend",
+      "description": "Make PUT /tasks/{id} return a not found error when the task does not exist, an invalid input error when a submitted field value is not accepted, and an error response for internal server or database failures. A failed save must leave no partial changes in the database.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-put-task-endpoint-with-validation",
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-9dc414dc"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Updating a task that does not exist returns a task not found error and stores nothing",
+        "A field value the backend does not accept returns an invalid input error and stores nothing",
+        "An internal server or database error returns an error response and leaves no partial changes",
+        "Automated tests cover each error response"
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-edit-form-prefill",
+      "story_key": "US-update-task",
+      "title": "[FE] Pre-fill the shared task form with stored values when editing a task",
+      "track": "frontend",
+      "description": "Load the stored values of a task by ID and fill the shared task form with them when the user opens a task for editing. If the load fails, show an error message and do not open the edit form.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-task-by-id-endpoint",
+        "FE-task-creation-form"
+      ],
+      "requirement_ids": [
+        "R-9b30a145",
+        "R-bc3213df"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "The edit form shows the stored values of the selected task",
+        "A failed load shows an error message and the edit form does not open",
+        "No success message is shown when the load fails",
+        "Automated tests cover a successful load and a failed load"
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-update-result-messages",
+      "story_key": "US-update-task",
+      "title": "[FE] Show update result messages and keep shown values until save succeeds",
+      "track": "frontend",
+      "description": "After a save, show a success message only when the backend confirms the save and an error message when it fails. Show the title-required and due-date messages in the form for the rejected cases. When a save fails, the task list keeps showing the previous values.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-put-task-endpoint-with-validation",
+        "FE-task-edit-form-prefill"
+      ],
+      "requirement_ids": [
+        "R-d57336f7",
+        "R-ab9e9cb0",
+        "R-03df7815",
+        "R-efe1e5d4"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "A success message appears only after the backend confirms the save",
+        "An error message appears when the backend returns an error and no success message is shown",
+        "The title-required and due-date messages appear in the form for the rejected cases",
+        "After a failed save the task list shows the previous values",
+        "Automated tests cover success, backend error and each validation message"
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-row-edit-action",
+      "story_key": "US-update-task",
+      "title": "[FE] Add edit action to each task row that opens the edit form",
+      "track": "frontend",
+      "description": "Add an edit action to each row of the task list. Selecting it opens the edit form for that task.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": false,
+      "blocked_by": [
+        "FE-task-edit-form-prefill"
+      ],
+      "requirement_ids": [
+        "R-9b30a145"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Each task row has an edit action",
+        "Selecting the edit action opens the edit form with that task's identifier",
+        "Automated tests cover the edit action on a row"
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "QA-task-update-test-suite",
+      "story_key": "US-update-task",
+      "title": "[QA] Test suite for updating an existing task",
+      "track": "qa_general",
+      "description": "Automated tests for editing an existing task across the form, the update endpoint and the task list, covering all acceptance criteria of this story.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-put-task-endpoint-with-validation",
+        "BE-put-task-error-responses",
+        "FE-task-edit-form-prefill",
+        "FE-task-update-result-messages",
+        "FE-task-row-edit-action"
+      ],
+      "requirement_ids": [
+        "R-bc3213df",
+        "R-9b30a145",
+        "R-03df7815",
+        "R-efe1e5d4",
+        "R-d57336f7",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-ab9e9cb0"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Tests cover each acceptance criterion of the story",
+        "Tests confirm that rejected saves leave stored values unchanged",
+        "Tests confirm that no success message is shown after a failed save",
+        "All tests pass in the continuous integration pipeline"
+      ],
+      "labels": [
+        "type:task",
+        "area:qa",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-delete-task-endpoint",
+      "story_key": "US-delete-task",
+      "title": "[BE] Add DELETE /tasks/{id} endpoint with not-found handling",
+      "track": "backend",
+      "description": "Add an endpoint that deletes the task with the given ID. Return a task not found error when the ID does not exist, and return an error response on internal server or database errors without removing the stored task.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-8523b9ec",
+        "R-244669c0",
+        "R-9dc414dc"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "DELETE /tasks/{id} deletes the stored task and returns a success response",
+        "Unknown IDs return a task not found error and change no data",
+        "Database or server errors return an error response and keep the stored task",
+        "Endpoint tests cover success, not-found and error cases"
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-delete-confirmation-prompt",
+      "story_key": "US-delete-task",
+      "title": "[FE] Add delete confirmation prompt and result messages to task actions",
+      "track": "frontend",
+      "description": "Show a confirmation prompt when the user chooses delete on a task. Send the delete request only after the user confirms. Remove the task from the list only after a success response, and show a success or error message with the result.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-delete-task-endpoint",
+        "FE-task-list-view"
+      ],
+      "requirement_ids": [
+        "R-8ef41ba1",
+        "R-8523b9ec",
+        "R-d57336f7",
+        "R-ab9e9cb0"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Choosing delete shows a confirmation prompt and sends no request",
+        "Cancelling the prompt sends no request and leaves the task in the list",
+        "Confirming sends the delete request for that task",
+        "The task is removed from the list only after a success response",
+        "A success message is shown after a successful delete",
+        "An error message is shown and the task stays in the list after a failed delete"
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "QA-delete-task-test-suite",
+      "story_key": "US-delete-task",
+      "title": "[QA] Test suite for task deletion, confirmation and error handling",
+      "track": "qa_general",
+      "description": "Automated tests for the delete flow: the confirmation prompt, cancel, successful delete, not-found and server error responses, and the messages shown to the user.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-delete-task-endpoint",
+        "FE-delete-confirmation-prompt"
+      ],
+      "requirement_ids": [
+        "R-8523b9ec",
+        "R-8ef41ba1",
+        "R-d57336f7",
+        "R-9dc414dc",
+        "R-ab9e9cb0"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Tests cover the confirmation prompt and the cancel path",
+        "Tests cover a successful delete and the success message",
+        "Tests cover a not-found response and confirm that no data changes",
+        "Tests cover a server or database error and confirm that the task is kept",
+        "Tests confirm that the task is not removed from the list before a success response"
+      ],
+      "labels": [
+        "type:task",
+        "area:qa",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-task-status-endpoint",
+      "story_key": "US-change-task-status",
+      "title": "[BE] Add status change endpoint that sets a task to Completed or Open",
+      "track": "backend",
+      "description": "Add a backend endpoint that changes the status of one task to Completed or Open. Setting Completed populates the Completion Date. Return a task not found error for an unknown ID and an invalid input error for a status value outside the allowed values. The status and Completion Date columns are created by the create-task story and are not added here.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-2304218f",
+        "R-959e2960",
+        "R-244669c0",
+        "R-9dc414dc"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Endpoint accepts a task ID and a target status and updates the stored status.",
+        "Setting Completed writes the Completion Date.",
+        "Unknown task ID returns a task not found error and changes nothing.",
+        "Invalid status value returns an invalid input error and changes nothing.",
+        "Database or internal errors return a server error response with a simple message."
+      ],
+      "labels": [
+        "type:task",
+        "area:db",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-status-toggle",
+      "story_key": "US-change-task-status",
+      "title": "[FE] Add Completed and Open status toggle to each task",
+      "track": "frontend",
+      "description": "Add a control on each task that marks the task as Completed or reverts it to Open. The control calls the status change endpoint and waits for the backend response before changing the displayed status.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-task-status-endpoint",
+        "FE-task-list-view"
+      ],
+      "requirement_ids": [
+        "R-2304218f",
+        "R-959e2960",
+        "R-ab9e9cb0"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Each task shows a control to mark it Completed or revert it to Open.",
+        "The displayed status changes only after the backend confirms the change.",
+        "A failed backend call leaves the previous status displayed.",
+        "The control is disabled while the request is in progress."
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-task-status-feedback",
+      "story_key": "US-change-task-status",
+      "title": "[FE] Show success or error message after a task status change",
+      "track": "frontend",
+      "description": "After each status change, show a success message when the backend confirms the change and an error message when the backend call fails.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-task-status-endpoint"
+      ],
+      "requirement_ids": [
+        "R-d57336f7",
+        "R-ab9e9cb0"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "A success message is shown after a confirmed status change.",
+        "An error message is shown after a failed status change.",
+        "The wording of the messages is confirmed with the product owner, because it is not specified."
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "QA-task-status-tests",
+      "story_key": "US-change-task-status",
+      "title": "[QA] Test suite for marking tasks Completed and reverting to Open",
+      "track": "qa_general",
+      "description": "Automated tests for the status change endpoint and the status controls in the frontend, covering success, not found, invalid input, backend failure and the absence of optimistic updates.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-task-status-endpoint",
+        "FE-task-status-toggle",
+        "FE-task-status-feedback"
+      ],
+      "requirement_ids": [
+        "R-2304218f",
+        "R-959e2960",
+        "R-d57336f7",
+        "R-244669c0",
+        "R-9dc414dc",
+        "R-ab9e9cb0"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Tests cover marking a task Completed and reverting it to Open.",
+        "Tests cover Completion Date population when a task is marked Completed.",
+        "Tests cover not found, invalid input and backend failure responses.",
+        "Tests confirm the displayed status does not change before the backend confirms it.",
+        "All tests pass in the continuous integration pipeline."
+      ],
+      "labels": [
+        "type:task",
+        "area:qa",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-report-metrics-endpoint",
+      "story_key": "US-view-task-report",
+      "title": "[BE] Add GET endpoint returning Total, Open and Completed task counts",
+      "track": "backend",
+      "description": "Add a read-only GET endpoint that counts all stored tasks, tasks with status Open and tasks with status Completed, and returns the three counts. Tasks with status In Progress count only toward Total. The endpoint accepts no filter parameters in this story. The task rows themselves come from the existing task list endpoint.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-8007d6b5"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "GET endpoint returns Total, Open and Completed counts as integers.",
+        "Counts are computed from the stored tasks and return 0 when no tasks exist.",
+        "Invalid or unsupported parameters return a clear error response.",
+        "Unit tests cover zero tasks, mixed statuses and In Progress tasks."
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-report-page-table",
+      "story_key": "US-view-task-report",
+      "title": "[FE] Build Task Reporting page with a table of all tasks",
+      "track": "frontend",
+      "description": "Build the Task Reporting page with a table that lists every task returned by the existing task list endpoint. The table shows one row per task. It shows an empty state when there are no rows. The wording of the empty-state message is not specified.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-tasks-list-endpoint"
+      ],
+      "requirement_ids": [
+        "R-d0e0fe7a",
+        "R-a1b267a3"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "The Task Reporting page is reachable and shows a table with one row per stored task.",
+        "The table reads data from the task list endpoint without a second request path for the same rows.",
+        "An empty state is shown when no tasks are stored.",
+        "A failed request shows an error state and does not show stale rows as current data."
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-report-metrics-cards",
+      "story_key": "US-view-task-report",
+      "title": "[FE] Show Total, Open and Completed metrics on the Task Reporting page",
+      "track": "frontend",
+      "description": "Show three metric values on the Task Reporting page: Total Tasks, Open Tasks and Completed Tasks. The values come from the metrics endpoint.",
+      "size": "S",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-report-metrics-endpoint"
+      ],
+      "requirement_ids": [
+        "R-4ffbfafa"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Total Tasks, Open Tasks and Completed Tasks are displayed with the values returned by the metrics endpoint.",
+        "All three values show 0 when no tasks are stored.",
+        "A failed metrics request shows an error state instead of a value."
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "QA-report-test-suite",
+      "story_key": "US-view-task-report",
+      "title": "[QA] Add test suite for the task report table and metrics",
+      "track": "qa_general",
+      "description": "Automated test suite covering the Task Reporting page table, the three metrics and the metrics endpoint. It covers all tasks being shown, correct counts for mixed statuses, and the empty case.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "FE-report-page-table",
+        "FE-report-metrics-cards",
+        "BE-report-metrics-endpoint"
+      ],
+      "requirement_ids": [
+        "R-d0e0fe7a",
+        "R-a1b267a3",
+        "R-4ffbfafa",
+        "R-8007d6b5"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Tests verify one table row per stored task.",
+        "Tests verify Total, Open and Completed counts with Open, In Progress and Completed tasks.",
+        "Tests verify that all values are 0 and the table has no rows when no tasks are stored.",
+        "The suite runs in the team's continuous integration pipeline and passes."
+      ],
+      "labels": [
+        "type:task",
+        "area:qa",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-report-query-filter-search-sort",
+      "story_key": "US-filter-search-sort-report",
+      "title": "[BE] Add filter, title search and sort parameters to the report query",
+      "track": "backend",
+      "description": "Extend the existing task report query with optional Status, Priority and Date Range filter parameters, a title search parameter and a sort field and direction parameter. Return only the matching tasks in the requested order. Invalid parameter values are rejected with the standard error response. Do not add a second endpoint that returns the same task list.",
+      "size": "M",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration"
+      ],
+      "requirement_ids": [
+        "R-5f4ef76c",
+        "R-48e39a9d",
+        "R-f214002a",
+        "R-8007d6b5"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Status, Priority and Date Range filters are applied to the stored task data",
+        "Title search matches part of the task title",
+        "Sort supports Creation Date, Due Date, Status and Priority",
+        "Invalid filter, search or sort values return the standard error response",
+        "Filters, search and sort can be combined in one request",
+        "No second endpoint returns the same task list as the report query"
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-report-filter-controls",
+      "story_key": "US-filter-search-sort-report",
+      "title": "[FE] Add Status, Priority and Date Range filter controls to the task report page",
+      "track": "frontend",
+      "description": "Add Status, Priority and Date Range filter controls to the task report page. Each control sends its selection to the report data request and updates the table with the response.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-report-query-filter-search-sort"
+      ],
+      "requirement_ids": [
+        "R-5f4ef76c"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Status filter offers Open and Completed",
+        "Priority filter offers Low, Medium and High",
+        "Date Range filter accepts a start and end date",
+        "Selecting a filter updates the report table from the backend response",
+        "A clear way to remove each filter is available"
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-report-search-and-sort-ui",
+      "story_key": "US-filter-search-sort-report",
+      "title": "[FE] Add title search box and sortable column headers to the task report table",
+      "track": "frontend",
+      "description": "Add a title search box above the report table and make the Creation Date, Due Date, Status and Priority column headers selectable as sort fields. Each change sends the search text or sort field to the report data request and updates the table with the response.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-report-query-filter-search-sort"
+      ],
+      "requirement_ids": [
+        "R-48e39a9d",
+        "R-f214002a"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Title search box filters the table as the user types or submits the search",
+        "Creation Date, Due Date, Status and Priority column headers can be selected to sort the table",
+        "The current sort field is visibly indicated in the table header",
+        "Search and sort results come from the backend response"
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "QA-report-filter-search-sort-tests",
+      "story_key": "US-filter-search-sort-report",
+      "title": "[QA] Add test suite for report filtering, title search and sorting",
+      "track": "qa_general",
+      "description": "Write automated tests for the report filters, title search and sorting, covering the page behaviour and the report query parameters.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-report-query-filter-search-sort",
+        "FE-report-filter-controls",
+        "FE-report-search-and-sort-ui"
+      ],
+      "requirement_ids": [
+        "R-5f4ef76c",
+        "R-48e39a9d",
+        "R-f214002a",
+        "R-8007d6b5"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Tests cover each filter, the title search and each sort field",
+        "Tests cover combined filters, search and sort in one request",
+        "Tests cover invalid filter, search and sort values",
+        "The test suite runs in the team's standard test pipeline and passes"
+      ],
+      "labels": [
+        "type:task",
+        "area:qa",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-excel-export-generation-decision",
+      "story_key": "US-export-report-excel",
+      "title": "[BE] Decide and document where the task report Excel file is generated",
+      "track": "backend",
+      "description": "Choose whether the Excel file is generated on the frontend or the backend, and record the rationale and trade-offs. The generator and export action tasks start only after this decision is documented.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": false,
+      "blocked_by": [],
+      "requirement_ids": [
+        "R-3a63e0ce"
+      ],
+      "derived_reason": "decision_spike",
+      "definition_of_done": [
+        "A decision record states whether the Excel file is generated on the frontend or the backend, with rationale and trade-offs",
+        "The decision record states which component produces the file and what the frontend receives when a file is produced",
+        "The decision record is shared with the team before the generator and export action tasks start"
+      ],
+      "labels": [
+        "type:spike",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "BE-task-report-excel-generator",
+      "story_key": "US-export-report-excel",
+      "title": "[BE] Add report Excel generator producing a timestamped file",
+      "track": "backend",
+      "description": "Produce an Excel file from the task report rows, in the applied sort order, using the filter, search and sort parameters of the report query. Column headers are clear and every date column uses one date format. The file name includes the generation timestamp. If the documented decision places generation in the frontend, the scope of this task changes before work starts.",
+      "size": "M",
+      "consumes_api": false,
+      "touches_db": true,
+      "blocked_by": [
+        "BE-tasks-table-migration",
+        "BE-excel-export-generation-decision"
+      ],
+      "requirement_ids": [
+        "R-52360b76",
+        "R-09e9d163",
+        "R-d22b9b6a",
+        "R-fad183b1",
+        "R-8007d6b5"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "The generator accepts the same filter, search and sort parameters as the report query and adds no new filter parameters",
+        "Exported rows match the report query result for the same parameters, one row per task, in the same order",
+        "The file name follows one fixed pattern and includes the timestamp of generation",
+        "The first row holds column headers and every date column uses the same date format",
+        "The generator is called only with rows to export; the no-data case is handled by the frontend export action",
+        "Unit tests cover headers, date format, row order and file name"
+      ],
+      "labels": [
+        "type:task",
+        "area:backend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-report-excel-download-action",
+      "story_key": "US-export-report-excel",
+      "title": "[FE] Add Excel export action that downloads the filtered and sorted report",
+      "track": "frontend",
+      "description": "Add an Excel export action to the task report page. The action sends the currently applied filters, search term and sort order to the generator and downloads the returned file. Starts after the generator endpoint is available.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-task-report-excel-generator",
+        "FE-report-filter-controls",
+        "FE-report-search-and-sort-ui"
+      ],
+      "requirement_ids": [
+        "R-52360b76",
+        "R-09e9d163"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "The export action is available on the task report page",
+        "The request carries the currently applied filters, title search term and sort order",
+        "The downloaded file uses the file name returned by the generator, including its timestamp",
+        "The no-data check runs before any file request is made",
+        "If the generator call fails, an error message is shown and no success state is displayed"
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "FE-report-export-no-data-message",
+      "story_key": "US-export-report-excel",
+      "title": "[FE] Show a no-data message instead of producing an empty Excel file",
+      "track": "frontend",
+      "description": "Add the no-data check to the export action. When the currently loaded filtered report has no rows, show a message to the user and do not request or download a file. This is the only place where the no-data case is handled. The wording of the message is not specified in the PRD; this is an open question to confirm with the product owner.",
+      "size": "S",
+      "consumes_api": false,
+      "touches_db": false,
+      "blocked_by": [
+        "FE-report-excel-download-action"
+      ],
+      "requirement_ids": [
+        "R-437992f1"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Exporting a report with zero rows after filters are applied shows a message and requests no file",
+        "The message wording is confirmed with the product owner before release",
+        "Exporting a report with at least one row does not show the no-data message"
+      ],
+      "labels": [
+        "type:task",
+        "area:frontend",
+        "prd-agent"
+      ]
+    },
+    {
+      "key": "QA-excel-export-test-suite",
+      "story_key": "US-export-report-excel",
+      "title": "[QA] Add test suite for the task report Excel export",
+      "track": "qa_general",
+      "description": "Test suite for the Excel export covering row contents, row order, filters, title search, file name timestamp, column headers, date format and the no-data behaviour. Runs after the export action and the generator are in place.",
+      "size": "M",
+      "consumes_api": true,
+      "touches_db": false,
+      "blocked_by": [
+        "BE-task-report-excel-generator",
+        "FE-report-excel-download-action",
+        "FE-report-export-no-data-message"
+      ],
+      "requirement_ids": [
+        "R-52360b76",
+        "R-09e9d163",
+        "R-d22b9b6a",
+        "R-437992f1",
+        "R-fad183b1",
+        "R-8007d6b5"
+      ],
+      "derived_reason": null,
+      "definition_of_done": [
+        "Tests cover export with no filters, with a status filter, and with a title search",
+        "Tests check the row count, the row order and that exported rows match the report on screen",
+        "Tests check the file name timestamp and the header row",
+        "Tests check that every date column uses the same date format",
+        "Tests check that no file is downloaded and a message is shown when there are no rows",
+        "The test suite runs in the project's automated test run and passes"
+      ],
+      "labels": [
+        "type:task",
+        "area:qa",
+        "prd-agent"
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "R-a62b5beb",
+      "unit_ids": [
+        "U-d5f152-a62b5beb"
+      ],
+      "source_quote": "A personal task management system that allows users to track daily tasks and generate status reports.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Product Overview"
+      ],
+      "kind": "context_only",
+      "statement": "The system is a personal task management system for tracking daily tasks and generating status reports.",
+      "applies_to_requirement_ids": [],
+      "context_reason": "Introductory product description that states no testable requirement on its own."
+    },
+    {
+      "id": "R-f7f96b9a",
+      "unit_ids": [
+        "U-d5f152-f7f96b9a"
+      ],
+      "source_quote": "The system consists of two main pages.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Product Overview"
+      ],
+      "kind": "context_only",
+      "statement": "The system is composed of two main pages.",
+      "applies_to_requirement_ids": [],
+      "context_reason": "Descriptive statement that names the page count but does not define the pages; their content is specified elsewhere in the PRD."
+    },
+    {
+      "id": "R-eed06908",
+      "unit_ids": [
+        "U-2d1f94-eed06908"
+      ],
+      "source_quote": "This page allows the user to manage their personal task list.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management"
+      ],
+      "kind": "functional",
+      "statement": "The to-do management page lets the user manage their personal task list.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-22f28530",
+      "unit_ids": [
+        "U-5c5015-22f28530"
+      ],
+      "source_quote": "Create a new task.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "Users can create a new task.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-4bed9064",
+      "unit_ids": [
+        "U-5c5015-4bed9064"
+      ],
+      "source_quote": "View the task list.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "Users can view the task list.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-bc3213df",
+      "unit_ids": [
+        "U-5c5015-bc3213df"
+      ],
+      "source_quote": "Update an existing task.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "Users can update an existing task.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-8523b9ec",
+      "unit_ids": [
+        "U-5c5015-8523b9ec"
+      ],
+      "source_quote": "Delete a task.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "Users can delete a task.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-2304218f",
+      "unit_ids": [
+        "U-5c5015-2304218f"
+      ],
+      "source_quote": "Mark a task as 'Completed'.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "Users can mark a task as 'Completed'.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-959e2960",
+      "unit_ids": [
+        "U-5c5015-959e2960"
+      ],
+      "source_quote": "Revert a 'Completed' task back to 'Open'.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "Users can revert a 'Completed' task back to 'Open'.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-82fe7dda",
+      "unit_ids": [
+        "U-261460-82fe7dda"
+      ],
+      "source_quote": "Each task must contain:",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "context_only",
+      "statement": "Each task must contain the listed fields.",
+      "applies_to_requirement_ids": [],
+      "context_reason": "Introductory sentence that lists the fields; the listed items are the requirements."
+    },
+    {
+      "id": "R-9675bb49",
+      "unit_ids": [
+        "U-261460-9675bb49"
+      ],
+      "source_quote": "Unique ID",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a unique ID field.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-aaf23206",
+      "unit_ids": [
+        "U-261460-aaf23206"
+      ],
+      "source_quote": "Title",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a Title field.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-c9046f7a",
+      "unit_ids": [
+        "U-261460-c9046f7a"
+      ],
+      "source_quote": "Description",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a Description field.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-576b7e59",
+      "unit_ids": [
+        "U-261460-576b7e59"
+      ],
+      "source_quote": "Status (Open, In Progress, Completed)",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a Status field whose allowed values are Open, In Progress and Completed.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-9fb58566",
+      "unit_ids": [
+        "U-261460-9fb58566"
+      ],
+      "source_quote": "Priority (Low, Medium, High)",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a Priority field whose allowed values are Low, Medium and High.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-1c2262bc",
+      "unit_ids": [
+        "U-261460-1c2262bc"
+      ],
+      "source_quote": "Creation Date",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a Creation Date field.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-71bdd372",
+      "unit_ids": [
+        "U-261460-71bdd372"
+      ],
+      "source_quote": "Due Date",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a Due Date field.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-31569dba",
+      "unit_ids": [
+        "U-261460-31569dba"
+      ],
+      "source_quote": "Last Updated Date",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a Last Updated Date field.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-34e41747",
+      "unit_ids": [
+        "U-261460-34e41747"
+      ],
+      "source_quote": "Completion Date (if completed)",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Task Data Model"
+      ],
+      "kind": "data_model",
+      "statement": "Each task has a Completion Date field, populated when the task is completed.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-03df7815",
+      "unit_ids": [
+        "U-5f2cc4-03df7815"
+      ],
+      "source_quote": "Task titles are mandatory; cannot be empty.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Validation Rules & Edge Cases"
+      ],
+      "kind": "validation_rule",
+      "statement": "A task cannot be saved unless its title is non-empty.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-efe1e5d4",
+      "unit_ids": [
+        "U-5f2cc4-efe1e5d4"
+      ],
+      "source_quote": "Due Date cannot be earlier than the Creation Date.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Validation Rules & Edge Cases"
+      ],
+      "kind": "validation_rule",
+      "statement": "The system rejects a task whose Due Date is earlier than its Creation Date.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-8ef41ba1",
+      "unit_ids": [
+        "U-5f2cc4-8ef41ba1"
+      ],
+      "source_quote": "Deleting a task requires a prompt confirmation.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Validation Rules & Edge Cases"
+      ],
+      "kind": "functional",
+      "statement": "Deleting a task requires the user to confirm the deletion first.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-d57336f7",
+      "unit_ids": [
+        "U-5f2cc4-d57336f7"
+      ],
+      "source_quote": "Success or error messages must be displayed after create/update/delete actions.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Validation Rules & Edge Cases"
+      ],
+      "kind": "frontend",
+      "statement": "The UI displays a success or error message after every create, update and delete action.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-ab9e9cb0",
+      "unit_ids": [
+        "U-5f2cc4-ab9e9cb0"
+      ],
+      "source_quote": "Optimistic UI updates are not allowed: if a Backend action fails, the Frontend must not reflect a successful state.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Validation Rules & Edge Cases"
+      ],
+      "kind": "constraint",
+      "statement": "The Frontend must not show a successful state for an action whose Backend call has failed; optimistic UI updates are not allowed.",
+      "applies_to_requirement_ids": [
+        "R-22f28530",
+        "R-bc3213df",
+        "R-8523b9ec",
+        "R-2304218f",
+        "R-959e2960"
+      ],
+      "context_reason": null
+    },
+    {
+      "id": "R-60e02b8e",
+      "unit_ids": [
+        "U-b46f2e-60e02b8e"
+      ],
+      "source_quote": "Task list view.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Frontend Requirements"
+      ],
+      "kind": "frontend",
+      "statement": "The system provides a task list view that displays the user's tasks.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-9b30a145",
+      "unit_ids": [
+        "U-b46f2e-9b30a145"
+      ],
+      "source_quote": "Task creation/editing form.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Frontend Requirements"
+      ],
+      "kind": "frontend",
+      "statement": "The system provides a form to create a new task and to edit an existing task.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-48c89e9e",
+      "unit_ids": [
+        "U-b46f2e-48c89e9e"
+      ],
+      "source_quote": "Status and Priority indicators.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Frontend Requirements"
+      ],
+      "kind": "frontend",
+      "statement": "The system shows a status indicator and a priority indicator for each task.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-d7e6667f",
+      "unit_ids": [
+        "U-b46f2e-d7e6667f"
+      ],
+      "source_quote": "Loading, Empty, and Error states.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Frontend Requirements"
+      ],
+      "kind": "frontend",
+      "statement": "The task list view shows a loading state, an empty state and an error state.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-6a73fa71",
+      "unit_ids": [
+        "U-b46f2e-6a73fa71"
+      ],
+      "source_quote": "List auto-refresh upon task changes.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Frontend Requirements"
+      ],
+      "kind": "frontend",
+      "statement": "The task list refreshes automatically when a task is changed.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-c55a77b3",
+      "unit_ids": [
+        "U-4d98e0-c55a77b3"
+      ],
+      "source_quote": "The Todos should be saved in persistence DB – assume the DB already exits but there will be a need for a new table",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Backend Requirements (API)"
+      ],
+      "kind": "backend",
+      "statement": "Todo items must be saved in the persistence database in a new table, assuming the database already exists.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-244669c0",
+      "unit_ids": [
+        "U-4d98e0-244669c0"
+      ],
+      "source_quote": "Endpoints for Create, Read (All & By ID), Update, Delete, and Status Change.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Backend Requirements (API)"
+      ],
+      "kind": "backend",
+      "statement": "The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of todo items.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-9dc414dc",
+      "unit_ids": [
+        "U-4d98e0-9dc414dc"
+      ],
+      "source_quote": "Error handling for: Task Not Found, Invalid Input, Missing Mandatory Fields, Deleting/Updating Non-Existent Tasks, and Internal Server/Database Errors. For error handling - Keep it simple",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 1: To-Do Management",
+        "Backend Requirements (API)"
+      ],
+      "kind": "backend",
+      "statement": "The backend must handle task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-d0e0fe7a",
+      "unit_ids": [
+        "U-4e4582-d0e0fe7a"
+      ],
+      "source_quote": "This page presents an aggregated view of the user's tasks.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting"
+      ],
+      "kind": "frontend",
+      "statement": "The Task Reporting page presents an aggregated view of the user's tasks.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-a1b267a3",
+      "unit_ids": [
+        "U-36c353-a1b267a3"
+      ],
+      "source_quote": "Tabular display of all tasks.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Required Features"
+      ],
+      "kind": "frontend",
+      "statement": "The reporting page displays all tasks in a table.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-5f4ef76c",
+      "unit_ids": [
+        "U-36c353-5f4ef76c"
+      ],
+      "source_quote": "Filters: Status, Priority, Date Range.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "The reporting page lets users filter tasks by Status, Priority, and Date Range.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-48e39a9d",
+      "unit_ids": [
+        "U-36c353-48e39a9d"
+      ],
+      "source_quote": "Search: By Title.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "The reporting page lets users search tasks by title.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-f214002a",
+      "unit_ids": [
+        "U-36c353-f214002a"
+      ],
+      "source_quote": "Sort: By Creation Date, Due Date, Status, or Priority.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "The reporting page lets users sort tasks by Creation Date, Due Date, Status, or Priority.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-4ffbfafa",
+      "unit_ids": [
+        "U-36c353-4ffbfafa"
+      ],
+      "source_quote": "Metrics: Total Tasks, Open Tasks, Completed Tasks.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Required Features"
+      ],
+      "kind": "frontend",
+      "statement": "The reporting page shows the Total Tasks, Open Tasks, and Completed Tasks metrics.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-52360b76",
+      "unit_ids": [
+        "U-36c353-52360b76"
+      ],
+      "source_quote": "Export: Download data to Excel.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Required Features"
+      ],
+      "kind": "functional",
+      "statement": "Users can download the task report data as an Excel file.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-09e9d163",
+      "unit_ids": [
+        "U-bd5481-09e9d163"
+      ],
+      "source_quote": "The file must reflect the currently applied filters and sorting.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Excel Export Requirements"
+      ],
+      "kind": "functional",
+      "statement": "The exported Excel file must contain only the rows matching the currently applied filters, in the currently applied sort order.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-fad183b1",
+      "unit_ids": [
+        "U-bd5481-fad183b1"
+      ],
+      "source_quote": "Clear column headers and consistent date formatting.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Excel Export Requirements"
+      ],
+      "kind": "constraint",
+      "statement": "Every exported Excel file must have clear column headers and use one consistent date format across all date columns.",
+      "applies_to_requirement_ids": [
+        "R-52360b76"
+      ],
+      "context_reason": null
+    },
+    {
+      "id": "R-d22b9b6a",
+      "unit_ids": [
+        "U-bd5481-d22b9b6a"
+      ],
+      "source_quote": "Filename must include the generation timestamp.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Excel Export Requirements"
+      ],
+      "kind": "functional",
+      "statement": "The name of each exported Excel file must include the timestamp at which the file was generated.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-437992f1",
+      "unit_ids": [
+        "U-bd5481-437992f1"
+      ],
+      "source_quote": "User-friendly message if there is no data to export.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Excel Export Requirements"
+      ],
+      "kind": "frontend",
+      "statement": "When there is no data to export, the system must show a message to the user instead of producing an empty file. The PRD does not define the message wording or whether a file is still produced; this is an open question.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-8007d6b5",
+      "unit_ids": [
+        "U-862852-8007d6b5"
+      ],
+      "source_quote": "APIs to support filtering, searching, sorting, and metric aggregation.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Backend & Data Requirements for Reporting"
+      ],
+      "kind": "backend",
+      "statement": "The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    },
+    {
+      "id": "R-3a63e0ce",
+      "unit_ids": [
+        "U-862852-3a63e0ce"
+      ],
+      "source_quote": "The architectural decision of whether to generate the Excel file on the Frontend or Backend is left to the development team.",
+      "section_path": [
+        "PRD: To-Do Management System",
+        "Page 2: Task Reporting",
+        "Backend & Data Requirements for Reporting"
+      ],
+      "kind": "decision_open",
+      "statement": "The development team decides whether the Excel file is generated on the frontend or the backend.",
+      "applies_to_requirement_ids": [],
+      "context_reason": null
+    }
+  ],
+  "reviewer_decisions": [
+    {
+      "check_id": "G1-FEEDBACK",
+      "severity": "blocking",
+      "item_key": "US-view-task-list",
+      "requirement_ids": [],
+      "message": "US-view-task-list: The system has a single user and no sign-in; the list shows all stored tasks.",
+      "suggested_fix": null,
+      "open_question": null,
+      "finding_id": null
+    },
+    {
+      "check_id": "G1-FEEDBACK",
+      "severity": "blocking",
+      "item_key": "US-update-task",
+      "requirement_ids": [],
+      "message": "US-update-task: Keep the per-row edit action; it is how the user opens the editing form the PRD requires. Keep 'the task list shows the previous values' after a failed update; it follows from the no-optimistic-UI rule.",
+      "suggested_fix": null,
+      "open_question": null,
+      "finding_id": null
+    },
+    {
+      "check_id": "G1-FEEDBACK",
+      "severity": "blocking",
+      "item_key": "US-update-task",
+      "requirement_ids": [],
+      "message": "US-update-task: If loading the task into the edit form fails, show an error message and do not open the form.",
+      "suggested_fix": null,
+      "open_question": null,
+      "finding_id": null
+    }
+  ]
+}

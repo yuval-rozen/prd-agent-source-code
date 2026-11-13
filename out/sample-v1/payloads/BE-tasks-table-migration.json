@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Create tasks table with all required fields in the persistence database",
+  "body": "**Parent:** `US-create-task`\n\n**Track:** backend · **Size:** S · touches DB\n\n## Description\n\nAdd a migration that creates a new tasks table in the existing persistence database with columns for unique ID, Title, Description, Status (Open, In Progress, Completed), Priority (Low, Medium, High), Creation Date, Due Date, Last Updated Date and Completion Date.\n\n## Blocked by\n\n- Nothing.\n\n## Definition of Done\n\n- [ ] Migration creates the tasks table with every required field and the allowed values for Status and Priority.\n- [ ] The ID column is unique and assigned by the database.\n- [ ] Migration runs on the existing database without changing other tables.\n- [ ] Migration can be rolled back.\n\n## Requirements\n\n- `R-9675bb49` (data_model) Each task has a unique ID field.\n- `R-aaf23206` (data_model) Each task has a Title field.\n- `R-c9046f7a` (data_model) Each task has a Description field.\n- `R-576b7e59` (data_model) Each task has a Status field whose allowed values are Open, In Progress and Completed.\n- `R-9fb58566` (data_model) Each task has a Priority field whose allowed values are Low, Medium and High.\n- `R-1c2262bc` (data_model) Each task has a Creation Date field.\n- `R-71bdd372` (data_model) Each task has a Due Date field.\n- `R-31569dba` (data_model) Each task has a Last Updated Date field.\n- `R-34e41747` (data_model) Each task has a Completion Date field, populated when the task is completed.\n- `R-c55a77b3` (backend) Todo items must be saved in the persistence database in a new table, assuming the database already exists.\n\n<!-- prd-agent:key=BE-tasks-table-migration;hash=b9cbfa143dc1d50d -->\n",
+  "labels": [
+    "type:task",
+    "area:db",
+    "prd-agent"
+  ]
+}

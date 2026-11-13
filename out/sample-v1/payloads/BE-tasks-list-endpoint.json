@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add GET /tasks endpoint that returns all saved tasks",
+  "body": "**Parent:** `US-view-task-list`\n\n**Track:** backend · **Size:** S · touches DB\n\n## Description\n\nAdd a GET /tasks endpoint that reads all saved tasks from the tasks table and returns them with their stored values. If the database is unavailable, return an internal server error response with no task data.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] GET /tasks returns every stored task with its stored values.\n- [ ] GET /tasks returns an internal server error and no task data when the database is unavailable.\n- [ ] Endpoint is covered by unit tests.\n\n## Requirements\n\n- `R-4bed9064` (functional) Users can view the task list.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of todo items.\n- `R-9dc414dc` (backend) The backend must handle task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n\n<!-- prd-agent:key=BE-tasks-list-endpoint;hash=ff92be797d6c28b7 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

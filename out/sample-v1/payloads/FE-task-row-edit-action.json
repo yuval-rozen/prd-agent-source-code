@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add edit action to each task row that opens the edit form",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** frontend · **Size:** S\n\n## Description\n\nAdd an edit action to each row of the task list. Selecting it opens the edit form for that task.\n\n## Blocked by\n\n- `FE-task-edit-form-prefill`\n\n## Definition of Done\n\n- [ ] Each task row has an edit action\n- [ ] Selecting the edit action opens the edit form with that task's identifier\n- [ ] Automated tests cover the edit action on a row\n\n## Requirements\n\n- `R-9b30a145` (frontend) The system provides a form to create a new task and to edit an existing task.\n\n<!-- prd-agent:key=FE-task-row-edit-action;hash=e7fba94bd7faab43 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

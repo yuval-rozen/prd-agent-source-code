@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Add Excel export action that downloads the filtered and sorted report",
+  "body": "**Parent:** `US-export-report-excel`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nAdd an Excel export action to the task report page. The action sends the currently applied filters, search term and sort order to the generator and downloads the returned file. Starts after the generator endpoint is available.\n\n## Blocked by\n\n- `BE-task-report-excel-generator`\n- `FE-report-filter-controls`\n- `FE-report-search-and-sort-ui`\n\n## Definition of Done\n\n- [ ] The export action is available on the task report page\n- [ ] The request carries the currently applied filters, title search term and sort order\n- [ ] The downloaded file uses the file name returned by the generator, including its timestamp\n- [ ] The no-data check runs before any file request is made\n- [ ] If the generator call fails, an error message is shown and no success state is displayed\n\n## Requirements\n\n- `R-52360b76` (functional) Users can download the task report data as an Excel file.\n- `R-09e9d163` (functional) The exported Excel file must contain only the rows matching the currently applied filters, in the currently applied sort order.\n\n<!-- prd-agent:key=FE-report-excel-download-action;hash=ca08466e1d9d3c00 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

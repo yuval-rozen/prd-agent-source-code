@@ -1,0 +1,25 @@
+{
+  "prd_sha256": "c185b4211e51bfb39017a76cf438b8866ef7b4cc6e62b2e231d66cff019face2",
+  "g1": [
+    {
+      "action": "feedback",
+      "text": "US-view-task-list: The system has a single user and no sign-in; the list shows all stored tasks."
+    },
+    {
+      "action": "feedback",
+      "text": "US-update-task: Keep the per-row edit action; it is how the user opens the editing form the PRD requires. Keep 'the task list shows the previous values' after a failed update; it follows from the no-optimistic-UI rule."
+    },
+    {
+      "action": "feedback",
+      "text": "US-update-task: If loading the task into the edit form fails, show an error message and do not open the form."
+    },
+    {
+      "action": "approve"
+    }
+  ],
+  "g2": [
+    {
+      "action": "confirm"
+    }
+  ]
+}

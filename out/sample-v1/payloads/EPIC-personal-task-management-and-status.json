@@ -1,0 +1,8 @@
+{
+  "title": "Personal task management and status reporting",
+  "body": "## Scope\n\nA personal task management system where a user manages a personal task list on a To-Do page and views an aggregated, filterable task report with metrics and Excel export on a Task Reporting page. The backend stores tasks in a new table in the existing persistence database.\n\n## Business goals\n\n- Let a user track daily tasks\n- Generate status reports from the user's tasks\n\n## User stories\n\n- [ ] `US-create-task` Create a new task with its required fields\n- [ ] `US-view-task-list` View all my tasks in a task list\n- [ ] `US-update-task` Update an existing task's details\n- [ ] `US-delete-task` Delete a task after confirming the deletion\n- [ ] `US-change-task-status` Mark a task as Completed or revert it to Open\n- [ ] `US-view-task-report` View all tasks and totals in a report table\n- [ ] `US-filter-search-sort-report` Filter, search and sort tasks in the report\n- [ ] `US-export-report-excel` Download the filtered task report as an Excel file\n\n## Requirements\n\n- `R-a62b5beb` (context_only) The system is a personal task management system for tracking daily tasks and generating status reports.\n- `R-f7f96b9a` (context_only) The system is composed of two main pages.\n- `R-eed06908` (functional) The to-do management page lets the user manage their personal task list.\n- `R-d0e0fe7a` (frontend) The Task Reporting page presents an aggregated view of the user's tasks.\n\n<!-- prd-agent:key=EPIC-personal-task-management-and-status;hash=154b8985c98aeb18 -->\n",
+  "labels": [
+    "type:epic",
+    "prd-agent"
+  ]
+}

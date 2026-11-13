@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add DELETE /tasks/{id} endpoint with not-found handling",
+  "body": "**Parent:** `US-delete-task`\n\n**Track:** backend · **Size:** S · touches DB\n\n## Description\n\nAdd an endpoint that deletes the task with the given ID. Return a task not found error when the ID does not exist, and return an error response on internal server or database errors without removing the stored task.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] DELETE /tasks/{id} deletes the stored task and returns a success response\n- [ ] Unknown IDs return a task not found error and change no data\n- [ ] Database or server errors return an error response and keep the stored task\n- [ ] Endpoint tests cover success, not-found and error cases\n\n## Requirements\n\n- `R-8523b9ec` (functional) Users can delete a task.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of todo items.\n- `R-9dc414dc` (backend) The backend must handle task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n\n<!-- prd-agent:key=BE-delete-task-endpoint;hash=a7e58d6083e451f6 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

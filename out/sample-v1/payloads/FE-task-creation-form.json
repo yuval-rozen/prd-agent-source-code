@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Build task creation form with success and error messages",
+  "body": "**Parent:** `US-create-task`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nBuild the form to create a task with Title, Description, Status, Priority and Due Date fields. Show the mandatory title message, the Due Date error and a success or error message after each submit. Do not show the task as saved until the backend confirms the save.\n\n## Blocked by\n\n- `BE-create-task-endpoint`\n\n## Definition of Done\n\n- [ ] The form contains Title, Description, Status, Priority and Due Date fields.\n- [ ] An empty title is reported as mandatory and no request is sent.\n- [ ] A success message is shown only after the backend confirms the save.\n- [ ] An error message is shown when the backend rejects or fails the request, and the task is not shown as saved.\n- [ ] The form does not show a Creation Date or Completion Date input.\n\n## Requirements\n\n- `R-22f28530` (functional) Users can create a new task.\n- `R-9b30a145` (frontend) The system provides a form to create a new task and to edit an existing task.\n- `R-d57336f7` (frontend) The UI displays a success or error message after every create, update and delete action.\n- `R-03df7815` (validation_rule) A task cannot be saved unless its title is non-empty.\n- `R-efe1e5d4` (validation_rule) The system rejects a task whose Due Date is earlier than its Creation Date.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend call has failed; optimistic UI updates are not allowed.\n\n<!-- prd-agent:key=FE-task-creation-form;hash=8e69e1a6cd05c19d -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

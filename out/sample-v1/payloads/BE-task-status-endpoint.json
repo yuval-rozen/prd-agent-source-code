@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add status change endpoint that sets a task to Completed or Open",
+  "body": "**Parent:** `US-change-task-status`\n\n**Track:** backend · **Size:** S · touches DB\n\n## Description\n\nAdd a backend endpoint that changes the status of one task to Completed or Open. Setting Completed populates the Completion Date. Return a task not found error for an unknown ID and an invalid input error for a status value outside the allowed values. The status and Completion Date columns are created by the create-task story and are not added here.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] Endpoint accepts a task ID and a target status and updates the stored status.\n- [ ] Setting Completed writes the Completion Date.\n- [ ] Unknown task ID returns a task not found error and changes nothing.\n- [ ] Invalid status value returns an invalid input error and changes nothing.\n- [ ] Database or internal errors return a server error response with a simple message.\n\n## Requirements\n\n- `R-2304218f` (functional) Users can mark a task as 'Completed'.\n- `R-959e2960` (functional) Users can revert a 'Completed' task back to 'Open'.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of todo items.\n- `R-9dc414dc` (backend) The backend must handle task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n\n<!-- prd-agent:key=BE-task-status-endpoint;hash=685a5881dce178f2 -->\n",
+  "labels": [
+    "type:task",
+    "area:db",
+    "prd-agent"
+  ]
+}

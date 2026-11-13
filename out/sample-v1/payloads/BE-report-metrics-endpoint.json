@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add GET endpoint returning Total, Open and Completed task counts",
+  "body": "**Parent:** `US-view-task-report`\n\n**Track:** backend · **Size:** S · touches DB\n\n## Description\n\nAdd a read-only GET endpoint that counts all stored tasks, tasks with status Open and tasks with status Completed, and returns the three counts. Tasks with status In Progress count only toward Total. The endpoint accepts no filter parameters in this story. The task rows themselves come from the existing task list endpoint.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] GET endpoint returns Total, Open and Completed counts as integers.\n- [ ] Counts are computed from the stored tasks and return 0 when no tasks exist.\n- [ ] Invalid or unsupported parameters return a clear error response.\n- [ ] Unit tests cover zero tasks, mixed statuses and In Progress tasks.\n\n## Requirements\n\n- `R-8007d6b5` (backend) The system exposes APIs that support filtering, searching, sorting, and metric aggregation for task reporting.\n\n<!-- prd-agent:key=BE-report-metrics-endpoint;hash=4ea1b21d11b446b3 -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

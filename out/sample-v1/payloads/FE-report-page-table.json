@@ -1,0 +1,9 @@
+{
+  "title": "[FE] Build Task Reporting page with a table of all tasks",
+  "body": "**Parent:** `US-view-task-report`\n\n**Track:** frontend · **Size:** M · consumes API\n\n## Description\n\nBuild the Task Reporting page with a table that lists every task returned by the existing task list endpoint. The table shows one row per task. It shows an empty state when there are no rows. The wording of the empty-state message is not specified.\n\n## Blocked by\n\n- `BE-tasks-list-endpoint`\n\n## Definition of Done\n\n- [ ] The Task Reporting page is reachable and shows a table with one row per stored task.\n- [ ] The table reads data from the task list endpoint without a second request path for the same rows.\n- [ ] An empty state is shown when no tasks are stored.\n- [ ] A failed request shows an error state and does not show stale rows as current data.\n\n## Requirements\n\n- `R-d0e0fe7a` (frontend) The Task Reporting page presents an aggregated view of the user's tasks.\n- `R-a1b267a3` (frontend) The reporting page displays all tasks in a table.\n\n<!-- prd-agent:key=FE-report-page-table;hash=cf4eed5ee3af16a9 -->\n",
+  "labels": [
+    "type:task",
+    "area:frontend",
+    "prd-agent"
+  ]
+}

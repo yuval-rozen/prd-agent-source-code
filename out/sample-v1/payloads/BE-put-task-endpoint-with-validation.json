@@ -1,0 +1,9 @@
+{
+  "title": "[BE] Add PUT /tasks/{id} endpoint that saves edited task fields with validation",
+  "body": "**Parent:** `US-update-task`\n\n**Track:** backend · **Size:** M · touches DB\n\n## Description\n\nAdd an endpoint that updates an existing task identified by ID. It stores the submitted edited fields only when the title is non-empty and the due date is not earlier than the creation date. It sets the Last Updated Date on each successful save. It does not change the creation date.\n\n## Blocked by\n\n- `BE-tasks-table-migration`\n\n## Definition of Done\n\n- [ ] PUT /tasks/{id} stores the submitted fields for an existing task\n- [ ] A missing or empty title is rejected with a missing mandatory field error and nothing is stored\n- [ ] A due date earlier than the creation date is rejected and nothing is stored\n- [ ] Last Updated Date is set on each successful save\n- [ ] Automated tests cover a valid update and each validation rejection\n\n## Requirements\n\n- `R-bc3213df` (functional) Users can update an existing task.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of todo items.\n- `R-03df7815` (validation_rule) A task cannot be saved unless its title is non-empty.\n- `R-efe1e5d4` (validation_rule) The system rejects a task whose Due Date is earlier than its Creation Date.\n\n<!-- prd-agent:key=BE-put-task-endpoint-with-validation;hash=223c95979307628c -->\n",
+  "labels": [
+    "type:task",
+    "area:backend",
+    "prd-agent"
+  ]
+}

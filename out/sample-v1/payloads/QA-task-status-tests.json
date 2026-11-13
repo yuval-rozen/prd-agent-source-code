@@ -1,0 +1,9 @@
+{
+  "title": "[QA] Test suite for marking tasks Completed and reverting to Open",
+  "body": "**Parent:** `US-change-task-status`\n\n**Track:** qa_general · **Size:** S · consumes API\n\n## Description\n\nAutomated tests for the status change endpoint and the status controls in the frontend, covering success, not found, invalid input, backend failure and the absence of optimistic updates.\n\n## Blocked by\n\n- `BE-task-status-endpoint`\n- `FE-task-status-toggle`\n- `FE-task-status-feedback`\n\n## Definition of Done\n\n- [ ] Tests cover marking a task Completed and reverting it to Open.\n- [ ] Tests cover Completion Date population when a task is marked Completed.\n- [ ] Tests cover not found, invalid input and backend failure responses.\n- [ ] Tests confirm the displayed status does not change before the backend confirms it.\n- [ ] All tests pass in the continuous integration pipeline.\n\n## Requirements\n\n- `R-2304218f` (functional) Users can mark a task as 'Completed'.\n- `R-959e2960` (functional) Users can revert a 'Completed' task back to 'Open'.\n- `R-d57336f7` (frontend) The UI displays a success or error message after every create, update and delete action.\n- `R-244669c0` (backend) The backend must expose endpoints to create, read all, read by ID, update, delete, and change the status of todo items.\n- `R-9dc414dc` (backend) The backend must handle task not found, invalid input, missing mandatory fields, deleting or updating non-existent tasks, and internal server or database errors, using a simple error handling approach.\n- `R-ab9e9cb0` (constraint) The Frontend must not show a successful state for an action whose Backend call has failed; optimistic UI updates are not allowed.\n\n<!-- prd-agent:key=QA-task-status-tests;hash=45ebf029ab0a1d19 -->\n",
+  "labels": [
+    "type:task",
+    "area:qa",
+    "prd-agent"
+  ]
+}

@@ -2,7 +2,7 @@
  "llm_output": {
   "container": null,
   "diagnostics": null,
-  "id": "msg_011CgyS913BCmkq5TgV2L6Gw",
+  "id": "msg_011Ch1SSiqbgNvt7Z9chrwQZ",
   "model": "claude-haiku-5-5",
   "model_name": "claude-haiku-5-5",
   "stop_details": null,
@@ -17,7 +17,7 @@
    "cache_read_input_tokens": 2144,
    "inference_geo": "global",
    "input_tokens": 4,
-   "output_tokens": 437,
+   "output_tokens": 419,
    "output_tokens_details": {
     "thinking_tokens": 0
    },
@@ -30,7 +30,7 @@
   {
    "data": {
     "additional_kwargs": {},
-    "content": "{\"requirements\":[{\"unit_ids\":[\"u1\"],\"source_quote\":\"Task titles are mandatory; cannot be empty.\",\"kind\":\"validation_rule\",\"statement\":\"The system rejects a task whose title is empty, so task titles are mandatory.\"},{\"unit_ids\":[\"u2\"],\"source_quote\":\"Due Date cannot be earlier than the Creation Date.\",\"kind\":\"validation_rule\",\"statement\":\"The system rejects a task whose Due Date is earlier than its Creation Date.\"},{\"unit_ids\":[\"u3\"],\"source_quote\":\"Deleting a task requires a prompt confirmation.\",\"kind\":\"frontend\",\"statement\":\"Deleting a task requires the user to confirm the deletion through a prompt before it is performed.\"},{\"unit_ids\":[\"u4\"],\"source_quote\":\"Success or error messages must be displayed after create/update/delete actions.\",\"kind\":\"frontend\",\"statement\":\"A success or error message is displayed after each create, update and delete task action.\"},{\"unit_ids\":[\"u5\"],\"source_quote\":\"Optimistic UI updates are not allowed: if a Backend action fails, the Frontend must not reflect a successful state.\",\"kind\":\"constraint\",\"statement\":\"The frontend does not show a successful state for a task action unless the backend action has succeeded; optimistic UI updates are not allowed.\"}]}",
+    "content": "{\"requirements\":[{\"unit_ids\":[\"u1\"],\"source_quote\":\"Task titles are mandatory; cannot be empty.\",\"kind\":\"validation_rule\",\"statement\":\"A task cannot be saved unless its title is non-empty.\"},{\"unit_ids\":[\"u2\"],\"source_quote\":\"Due Date cannot be earlier than the Creation Date.\",\"kind\":\"validation_rule\",\"statement\":\"The system rejects a task whose Due Date is earlier than its Creation Date.\"},{\"unit_ids\":[\"u3\"],\"source_quote\":\"Deleting a task requires a prompt confirmation.\",\"kind\":\"functional\",\"statement\":\"Deleting a task requires the user to confirm the deletion first.\"},{\"unit_ids\":[\"u4\"],\"source_quote\":\"Success or error messages must be displayed after create/update/delete actions.\",\"kind\":\"frontend\",\"statement\":\"The UI displays a success or error message after every create, update and delete action.\"},{\"unit_ids\":[\"u5\"],\"source_quote\":\"Optimistic UI updates are not allowed: if a Backend action fails, the Frontend must not reflect a successful state.\",\"kind\":\"constraint\",\"statement\":\"The Frontend must not show a successful state for an action whose Backend call has failed; optimistic UI updates are not allowed.\"}]}",
     "id": null,
     "invalid_tool_calls": [],
     "name": null,
@@ -50,8 +50,8 @@
      "output_token_details": {
       "reasoning": 0
      },
-     "output_tokens": 437,
-     "total_tokens": 2775
+     "output_tokens": 419,
+     "total_tokens": 2757
     }
    },
    "type": "ai"
