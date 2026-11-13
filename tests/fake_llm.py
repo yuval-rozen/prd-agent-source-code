@@ -27,6 +27,9 @@ from schemas import (
     StorySkeletonDraft,
     StoryUpdateDraft,
     StoryRepairDraft,
+    BusinessGoalDraft,
+    EpicRepairDraft,
+    GoalEditDraft,
     StoryEditsDraft,
     CriterionEditDraft,
     LineEditDraft,
@@ -62,6 +65,7 @@ class FakeLLM:
         self.open_seen: list[list[str]] = []  # the open-finding IDs each critic call was asked to verify
         # repair_mode for StoryRepairDraft: revise_allowed | rogue (also edits a task it may not) | new_task | close_new
         self.repair_mode = repair_mode
+        self.epic_uncited = False  # the plan's epic cites no requirements (P13 must repair it)
         self.calls: list[tuple[str, str]] = []
         self.roles: list[str] = []
         self.critic_findings = list(critic_findings or [])
@@ -95,6 +99,11 @@ class FakeLLM:
             return self._repair(user)
         if schema is PlainRewriteDraft:
             return self._plain(user)
+        if schema is EpicRepairDraft:  # cite the first requirement for the scope and every goal; keep the text
+            first = re.findall(r"^\[(R-[0-9a-f-]+)\]", user, re.MULTILINE)[:1]
+            goals = [GoalEditDraft(number=int(n), requirement_ids=first)
+                     for n in re.findall(r"^GOAL (\d+):", user, re.MULTILINE)]
+            return EpicRepairDraft(scope_requirement_ids=first, goals=goals)
         raise AssertionError(f"unexpected schema {schema}")
 
     def _extract(self, user: str) -> RequirementDraftList:
@@ -112,8 +121,7 @@ class FakeLLM:
             reqs.append(RequirementDraft(unit_ids=[uid], source_quote=text, kind=kind, statement=text, context_reason=reason))
         return RequirementDraftList(requirements=reqs)
 
-    @staticmethod
-    def _plan(user: str) -> StoryPlanDraft:
+    def _plan(self, user: str) -> StoryPlanDraft:
         by_section: dict[str, list[str]] = {}
         constraints = []
         for rid, kind, section in _REQ.findall(user):
@@ -127,7 +135,10 @@ class FakeLLM:
             for sec, ids in by_section.items()
         ]
         return StoryPlanDraft(
-            epic=EpicDraft(title="Sample Product", scope="Everything in the PRD.", business_goals=["Ship it"]),
+            epic=EpicDraft(title="Sample Product", scope="Everything in the PRD.",
+                           scope_requirement_ids=[] if self.epic_uncited else [rid for rid, *_ in _REQ.findall(user)][:1],
+                           business_goals=[BusinessGoalDraft(goal="Ship it", requirement_ids=[] if self.epic_uncited
+                                                             else [rid for rid, *_ in _REQ.findall(user)][:1])]),
             stories=stories,
             constraint_scopes=[ConstraintScopeDraft(constraint_id=c, applies_to_requirement_ids=[]) for c in constraints],
         )

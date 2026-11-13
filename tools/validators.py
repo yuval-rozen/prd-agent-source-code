@@ -106,7 +106,7 @@ def check_p1_coverage(plan: TicketPlan) -> list[ReviewFinding]:
 def check_p2_citations(plan: TicketPlan) -> list[ReviewFinding]:
     known = {r.id for r in plan.requirements}
     out = []
-    for item in [*plan.stories, *plan.tasks]:
+    for item in [plan.project, *plan.stories, *plan.tasks]:
         unknown = [i for i in item.requirement_ids if i not in known]
         if unknown:
             out.append(_f("P2", f"Cites unknown requirement IDs: {', '.join(unknown)}", item_key=item.key, requirement_ids=unknown))
@@ -313,10 +313,28 @@ def check_p12_plain_language(plan: TicketPlan) -> list[ReviewFinding]:
     return out
 
 
+def check_p13_epic_grounding(plan: TicketPlan) -> list[ReviewFinding]:
+    """The epic is traced like a story: it cites the requirements its scope and goals come from, and every business
+    goal is grounded in at least one existing requirement that the epic cites."""
+    epic = plan.project
+    known = {r.id for r in plan.requirements}
+    fix = ("Cite, for each business goal, the requirements it comes from (usually the product overview), or drop a "
+           "goal the PRD does not state or directly imply.")
+    out = []
+    if not epic.requirement_ids:
+        out.append(_f("P13", "The epic cites no requirements.", item_key=epic.key, suggested_fix=fix))
+    for i, goal in enumerate(epic.business_goals, 1):
+        grounded = [r for r in goal.requirement_ids if r in known and r in epic.requirement_ids]
+        if not grounded:
+            out.append(_f("P13", f"Business goal {i} is not grounded in a cited requirement: {goal.text[:160]!r}",
+                          item_key=epic.key, suggested_fix=fix))
+    return out
+
+
 PLAN_CHECKS = (
     check_p1_coverage, check_p2_citations, check_p3_acceptance_criteria, check_p4_tracks, check_p5_labels,
     check_p7_dependencies, check_p8_constraints, check_p9_decisions, check_p10_sizing, check_p11_titles,
-    check_p12_plain_language,
+    check_p12_plain_language, check_p13_epic_grounding,
 )
 
 
@@ -325,5 +343,5 @@ def check_plan(plan: TicketPlan, duplicate_threshold: float = 90.0) -> list[Revi
     for check in PLAN_CHECKS:
         findings += check(plan)
     findings += check_p6_duplicate_titles(plan, duplicate_threshold)
-    order = {f"P{i}": i for i in range(1, 13)}
+    order = {f"P{i}": i for i in range(1, 14)}
     return sorted(findings, key=lambda f: (order.get(f.check_id, 99), f.item_key or ""))

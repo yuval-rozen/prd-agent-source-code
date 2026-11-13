@@ -299,3 +299,14 @@ def test_g1_feedback_is_authoritative_and_never_rolled_back(prd_file, tmp_path):
     assert len(repairs_after) == 2  # the feedback repair and the critic-driven repair both carry the decision
     final = graph.invoke(Command(resume={"action": "approve"}), config)
     assert final["status"] is Status.PASS
+
+
+def test_p13_epic_finding_goes_to_the_epic_repair_not_a_story(prd_file, tmp_path):
+    llm = FakeLLM()
+    llm.epic_uncited = True
+    _, _, state = _run_to_gate(prd_file, tmp_path / "out", llm)
+    names = [n for n, _ in llm.calls]
+    assert names.count("EpicRepairDraft") == 1 and "StoryRepairDraft" not in names
+    assert names.count("StoryDetailDraft") == len(state["plan"].stories)  # no story regenerated for the epic
+    assert state["status"] is Status.PASS and state["plan"].project.requirement_ids
+    assert state["plan_rounds"] == 1 and state["plan"].project.key in state["repaired_keys"]

@@ -74,8 +74,9 @@ def plan(reqs):
               [Label.type_spike, Label.area_backend, Label.prd_agent], derived_reason=DerivedReason.decision_spike,
               definition_of_done=["Decision documented with rationale and trade-offs"]),
     ]
-    project = ParentProject(key="EPIC-library", title="Library lending", scope="Loans", business_goals=["More loans"],
-                            story_keys=["US-borrow-book"])
+    project = ParentProject(key="EPIC-library", title="Library lending", scope="Loans",
+                            business_goals=[{"text": "More loans", "requirement_ids": [reqs[0].id]}],
+                            requirement_ids=[reqs[0].id], story_keys=["US-borrow-book"])
     return TicketPlan(prd_hash="h", project=project, stories=[story], tasks=tasks, requirements=reqs)
 
 
@@ -244,3 +245,28 @@ def test_p11(plan):
     assert _ids(v.check_p11_titles(prefix)) == ["P11"]
     generic = _task_update(plan, "BE-borrow-endpoint", title="[BE] Backend work")
     assert _ids(v.check_p11_titles(generic)) == ["P11"]
+
+
+def test_p13_every_business_goal_is_grounded_in_a_cited_requirement(plan):
+    from schemas import BusinessGoal
+
+    epic = plan.project
+    assert v.check_p13_epic_grounding(plan) == []
+    ungrounded = epic.model_copy(update={"business_goals": [*epic.business_goals, BusinessGoal(text="Win awards")]})
+    ungrounded = TicketPlan.model_validate({**plan.model_dump(), "project": ungrounded.model_dump()})
+    findings = v.check_p13_epic_grounding(ungrounded)
+    assert _ids(findings) == ["P13"] and "Business goal 2" in findings[0].message and findings[0].item_key == epic.key
+    uncited = TicketPlan.model_validate({**plan.model_dump(), "project": {**epic.model_dump(), "requirement_ids": []}})
+    assert len(v.check_p13_epic_grounding(uncited)) == 2  # no epic citation, and the goal's ID is not cited by it
+    unknown = {**epic.model_dump(), "requirement_ids": ["R-00000000"],
+               "business_goals": [{"text": "More loans", "requirement_ids": ["R-00000000"]}]}
+    bad = TicketPlan.model_validate({**plan.model_dump(), "project": unknown})
+    assert "P2" in _ids(v.check_plan(bad)) and "P13" in _ids(v.check_plan(bad))
+
+
+def test_old_plans_with_plain_string_goals_still_load(plan):
+    data = plan.model_dump(mode="json")
+    data["project"]["business_goals"] = ["More loans"]
+    data["project"].pop("requirement_ids")
+    old = TicketPlan.model_validate(data)
+    assert old.project.business_goals[0].text == "More loans" and old.project.requirement_ids == []

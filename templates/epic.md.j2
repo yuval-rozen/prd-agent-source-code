@@ -5,11 +5,17 @@
 ## Business goals
 
 {% for goal in project.business_goals %}
-- {{ goal }}
+- {{ goal.text }}
 {% endfor %}
 
 ## User stories
 
 {% for story in stories %}
 - [ ] {{ ref(story.key) }} {{ story.title }}
+{% endfor %}
+
+## Requirements
+
+{% for req in requirements %}
+- `{{ req.id }}` ({{ req.kind.value }}) {{ req.statement }}
 {% endfor %}

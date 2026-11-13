@@ -9,7 +9,7 @@ A reusable CLI agent that runs on any PRD (PDF / DOCX / MD / TXT) and:
 5. Publishes to GitHub idempotently. Re-running on a modified PRD updates the existing issues (create / update / close), with no duplicates.
 
 Required ticket content:
-- Parent Project: scope, business goals, list of linked stories.
+- Parent Project: scope, business goals, list of linked stories, and the requirements its scope and goals come from (each goal cites its own).
 - User Story: As a / I want / So that, business description & value, ACs strictly in Given-When-Then (no vague ACs), edge cases, dependencies, Definition of Done.
 - Technical Task: child of a story, track = frontend | backend | qa_general, description, "Blocked by" dependencies written in the body.
 - Titles: clear and specific (rules in S5 and P11). Tickets are appropriately sized (P10).
@@ -73,7 +73,7 @@ S3 check_requirements (code: validators R1–R2)
 S4 plan_stories (LLM, structured → ParentProject + story skeletons + constraint scopes)
 - Input: all requirements, plus the previous plan as an anchor in an update run ("reuse existing keys for unchanged or modified scope; create new keys only for new scope").
 - Output:
-  - The Epic (scope, and business goals grounded in the PRD overview).
+  - The Epic (scope, and business goals grounded in the PRD overview). The Epic is traced like a story: `scope_requirement_ids` and, per business goal, the `requirement_ids` it comes from (usually the overview, which may be context_only). Code keeps existing IDs only; the Epic's requirement_ids are the scope's and the goals' IDs, and its issue lists them under Requirements.
   - Stories with stable keys (US-<slug>), titles, and requirement_ids.
   - For every constraint, applies_to_requirement_ids (empty = applies globally).
 - Stories must be logically scoped: not one per bullet, not one giant story.
@@ -90,7 +90,7 @@ S5 detail_stories (LLM, structured → UserStory + TechnicalTask[], one call per
 - Every decision_open requirement becomes a type:spike task. Its DoD requires a documented decision with rationale and trade-offs, plus any specific aspects the PRD says must be documented.
 
 S5 in an update run — task-level update rules (code decides as much as possible; the LLM decides only where an added requirement goes):
-- Story level (S4 + code): unchanged requirements keep their previous story and constraint scope; removed requirements drop out; a changed requirement takes its old version's place. S4's output decides only where ADDED requirements go (an existing story or a new story key). A story whose requirements and applicable constraints are unchanged is carried over byte-for-byte without an LLM call; an unchanged story keeps its title, a story whose scope changed takes S4's new title. The epic keeps its key and text.
+- Story level (S4 + code): unchanged requirements keep their previous story and constraint scope; removed requirements drop out; a changed requirement takes its old version's place. S4's output decides only where ADDED requirements go (an existing story or a new story key). A story whose requirements and applicable constraints are unchanged is carried over byte-for-byte without an LLM call; an unchanged story keeps its title, a story whose scope changed takes S4's new title. The epic keeps its key and text; its citations follow the requirement diff (changed IDs map to the new ID, removed IDs are dropped).
 - Task level, for every task of an affected story, code decides:
   - KEEP: the task cites no changed or removed requirement → copied byte-for-byte by code.
   - REVISE: the task cites a changed or removed requirement → must be revised (keeps its key, story, track and blockers; removed IDs are dropped and changed IDs mapped to their new ID by code).
@@ -126,7 +126,7 @@ S8 render_preview (code: tools/renderer.py)
   - plan.json
   - plan.md
   - requirements.md: a table grouped by kind and coverage counts. In an update run, it also shows the requirement diff: added / changed / removed.
-  - validation_report.md: a coverage matrix (requirement → tickets), the findings per round, and the final status.
+  - validation_report.md: a coverage matrix (requirement → tickets, the Epic included), the findings per round, and the final status.
   - payloads/*.json
 - Also prints a Rich tree.
 
@@ -179,6 +179,7 @@ All checks are blocking unless marked (warning).
 - P9 every decision_open requirement has a spike task whose DoD requires a documented rationale.
 - P10 (warning) a story with > 8 tasks, or a task of size L, gets a split suggestion.
 - P12 plain language: story and task text (titles, user story, business description and value, ACs, edge cases, descriptions, DoD) contains no requirement IDs, no ticket keys and no references to the agent's own process ("requirement ID", "reviewer decision", "finding", "critic", "the PRD text"). Requirement IDs live only in requirement_ids. An open question is stated plainly; "The PRD does not state ..." is product language and allowed. The story prompts carry the same rule. P12 is repaired field by field, in every run: one small call that names the notes to remove in each text (one retry for a text whose rewrite still has one) (`PlainRewriteDraft`, prompt `plain_language.md`, revision role) rewrites only the flagged texts (one AC part, edge case, DoD line, description, title or business field) with the same meaning; code puts each back in its place, so the rest of the item and every other item stay byte-for-byte. A requirement ID that a flagged text named is added by code to that item's requirement_ids (existing IDs only). The change cause shown at G2 is "finding P12".
+- P13 epic grounding: the Epic cites at least one requirement, and every business goal cites at least one existing requirement that the Epic cites. Unknown IDs on the Epic are P2. Blocking findings on the Epic (P13 or a critic finding) are repaired by one small call (`EpicRepairDraft`, prompt `repair_epic.md`, revision role) that returns the citations of the scope and of each numbered goal, and new text or removal of a goal only where a finding needs it; code applies it, keeps the key and title, keeps every text not named byte-for-byte, and never removes the last goal. They never trigger a story regeneration. The critic sees each goal with its citations.
 - P11 titles:
   - non-empty and ≤ 80 chars.
   - task titles start with the prefix that matches their track ([FE] / [BE] / [QA]).

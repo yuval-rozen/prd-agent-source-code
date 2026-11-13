@@ -8,7 +8,11 @@ and a set of user stories.
 You receive every extracted requirement with its ID, kind, section and statement. Return:
 
 - `epic`: a title, the scope, and the business goals. Ground goals in the PRD overview; do not invent
-  goals the PRD does not state or directly imply.
+  goals the PRD does not state or directly imply. The epic is traced like a story:
+  - `scope_requirement_ids`: the requirements the scope is drawn from (usually the product overview, which
+    may be `context_only`).
+  - each business goal cites in `requirement_ids` the requirements it comes from. A goal that no
+    requirement states or directly implies is not a goal; leave it out.
 - `stories`: user stories with
   - `key`: `US-<kebab-case-slug>` naming the capability (lowercase letters, digits, hyphens).
   - `title`: follows the title rules.

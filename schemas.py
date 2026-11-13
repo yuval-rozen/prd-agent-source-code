@@ -239,11 +239,23 @@ class AcceptanceCriterion(_Model):
     then: NonEmpty
 
 
+class BusinessGoal(_Model):
+    text: NonEmpty
+    requirement_ids: list[ReqId] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_text(cls, value):  # plans written before goals cited requirements stored plain strings
+        return {"text": value} if isinstance(value, str) else value
+
+
 class ParentProject(_Model):
     key: EpicKey
     title: Title
     scope: NonEmpty
-    business_goals: list[NonEmpty] = Field(min_length=1)
+    business_goals: list[BusinessGoal] = Field(min_length=1)
+    requirement_ids: list[ReqId] = Field(default_factory=list,
+                                         description="Requirements the scope and business goals are drawn from.")
     story_keys: list[StoryKey] = Field(default_factory=list)
     labels: Labels = Field(default_factory=lambda: [Label.type_epic, Label.prd_agent])
 
@@ -371,10 +383,31 @@ class RequirementDraftList(_Model):
     requirements: list[RequirementDraft]
 
 
+class BusinessGoalDraft(_Model):
+    goal: str = Field(description="One business goal stated or directly implied by the PRD.")
+    requirement_ids: list[str] = Field(description="IDs of the requirements (often the overview) this goal comes from.")
+
+
 class EpicDraft(_Model):
     title: str
     scope: str = Field(description="What the project covers, in 2-4 sentences, grounded in the PRD.")
-    business_goals: list[str] = Field(description="Business goals stated or directly implied by the PRD overview.")
+    scope_requirement_ids: list[str] = Field(description="IDs of the requirements the scope is drawn from.")
+    business_goals: list[BusinessGoalDraft] = Field(description="Business goals, each citing its requirements.")
+
+
+class GoalEditDraft(_Model):
+    number: int = Field(description="Number of the business goal in the input.")
+    requirement_ids: list[str] = Field(description="All requirement IDs this goal comes from.")
+    text: str | None = Field(default=None, description="New goal text, only if a finding needs it; null keeps it.")
+    remove: bool = Field(default=False, description="true drops a goal the PRD does not state or directly imply.")
+
+
+class EpicRepairDraft(_Model):
+    """Epic repair: citations per goal; text only where a finding needs it. Everything not named stays as it is."""
+
+    scope_requirement_ids: list[str] = Field(description="IDs of the requirements the scope is drawn from.")
+    scope: str | None = Field(default=None, description="New scope, only if a finding needs it; null keeps it.")
+    goals: list[GoalEditDraft] = Field(description="One entry per business goal in the input.")
 
 
 class StorySkeletonDraft(_Model):

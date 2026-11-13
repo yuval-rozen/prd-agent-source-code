@@ -33,7 +33,10 @@ from rich.table import Table
 from schemas import (
     TASK_KEY_RE,
     short_hash,
+    BusinessGoal,
     DependencyPlanDraft,
+    EpicDraft,
+    EpicRepairDraft,
     Label,
     ParentProject,
     ParsedPRD,
@@ -507,14 +510,37 @@ def apply_story_plan(draft: StoryPlanDraft, requirements: list[Requirement], fin
                                               "REF-REQ", c.constraint_id, "applies-to requirement ID(s)", findings)
     updated = [r.model_copy(update={"applies_to_requirement_ids": scopes.get(r.id, [])}) if r.id in constraints else r
                for r in requirements]
-    project = ParentProject(
-        key=f"EPIC-{slugify(draft.epic.title, max_words=5)}",
-        title=draft.epic.title.strip(),
-        scope=draft.epic.scope.strip(),
-        business_goals=[g.strip() for g in draft.epic.business_goals if g.strip()] or ["(no business goal stated)"],
-        story_keys=[s.key for s in skeletons],
-    )
+    project = project_from_draft(draft.epic, known, findings).model_copy(
+        update={"story_keys": [s.key for s in skeletons]})
     return project, skeletons, updated
+
+
+def remap_project(project: ParentProject, diff: RequirementDiff | None) -> ParentProject:
+    """Update runs keep the epic's text; its citations follow the requirement diff (changed IDs map to the new
+    ID, removed IDs are dropped). A goal left with no citation is flagged by P13 and repaired."""
+    if diff is None:
+        return project
+    changed, removed = dict(diff.changed), set(diff.removed)
+
+    def remap(ids: list[str]) -> list[str]:
+        return list(dict.fromkeys(changed.get(i, i) for i in ids if i not in removed))
+
+    goals = [g.model_copy(update={"requirement_ids": remap(g.requirement_ids)}) for g in project.business_goals]
+    return project.model_copy(update={"business_goals": goals, "requirement_ids": remap(project.requirement_ids)})
+
+
+def project_from_draft(epic: EpicDraft, known: set[str], findings: Findings, key: str | None = None) -> ParentProject:
+    """The epic cites requirements like a story: each business goal cites the requirements it comes from, and the
+    epic's requirement_ids are the scope's and the goals' IDs (existing IDs only; unknown ones are dropped)."""
+    key = key or f"EPIC-{slugify(epic.title, max_words=5)}"
+    goals = [BusinessGoal(text=g.goal.strip(), requirement_ids=_known_only(
+        list(dict.fromkeys(g.requirement_ids)), known, "REF-REQ", key, "business goal requirement ID(s)", findings))
+             for g in epic.business_goals if g.goal.strip()]
+    scope_ids = _known_only(list(dict.fromkeys(epic.scope_requirement_ids)), known, "REF-REQ", key,
+                            "scope requirement ID(s)", findings)
+    ids = list(dict.fromkeys([*scope_ids, *(i for g in goals for i in g.requirement_ids)]))
+    return ParentProject(key=key, title=epic.title.strip(), scope=epic.scope.strip(),
+                         business_goals=goals or [BusinessGoal(text="(no business goal stated)")], requirement_ids=ids)
 
 
 def plan_stories(requirements: list[Requirement], llm: StructuredLLM, previous_plan: TicketPlan | None = None,
@@ -802,7 +828,10 @@ def map_dependencies(plan: TicketPlan, llm: StructuredLLM, findings: Findings, e
 
 
 def compact_plan(plan: TicketPlan) -> str:
-    lines = [f"EPIC {plan.project.key}: {plan.project.title}", f"  Scope: {plan.project.scope}"]
+    lines = [f"EPIC {plan.project.key}: {plan.project.title} (requirements: "
+             f"{', '.join(plan.project.requirement_ids) or '-'})", f"  Scope: {plan.project.scope}"]
+    lines += [f"  Goal: {g.text} (requirements: {', '.join(g.requirement_ids) or '-'})"
+              for g in plan.project.business_goals]
     for s in plan.stories:
         lines.append(f"STORY {s.key}: {s.title} (requirements: {', '.join(s.requirement_ids) or '-'}; "
                      f"depends on: {', '.join(s.dependencies) or '-'})")
@@ -1303,8 +1332,8 @@ def change_causes(plan: TicketPlan, previous: TicketPlan, diff: RequirementDiff 
 
 
 def changed_keys(plan: TicketPlan, previous: TicketPlan) -> list[str]:
-    old = {i.key: i for i in [*previous.stories, *previous.tasks]}
-    return [i.key for i in [*plan.stories, *plan.tasks] if old.get(i.key) != i]
+    old = {i.key: i for i in [previous.project, *previous.stories, *previous.tasks]}
+    return [i.key for i in [plan.project, *plan.stories, *plan.tasks] if old.get(i.key) != i]
 
 
 
@@ -1474,6 +1503,58 @@ def _set_unit(item, path: tuple, text: str):
     values = list(getattr(item, path[0]))
     values[path[1]] = text if len(path) == 2 else values[path[1]].model_copy(update={path[2]: text})
     return item.model_copy(update={path[0]: values})
+
+
+def repairable(findings: Findings, plan: TicketPlan, skeletons: list[StorySkeleton]) -> bool:
+    """A repair round can act: a blocking finding is on the epic, or can be tied to a story or task."""
+    if any(f.item_key == plan.project.key and f.severity is Severity.blocking for f in findings):
+        return True
+    return bool(resolve_repair_targets(findings, plan, skeletons)[0])
+
+
+def repair_epic(plan: TicketPlan, findings: Findings, llm: StructuredLLM, ref_findings: Findings
+                ) -> tuple[TicketPlan, list[str]]:
+    """Epic findings (P13 grounding, or a critic finding on the epic): one small call returns the citations of the
+    scope and of every goal, and new text only where a finding needs it. Code applies it; the key, the title and
+    every text not named stay byte-for-byte. At least one goal is kept."""
+    epic = plan.project
+    if not findings:
+        return plan, []
+    reqs = "\n".join(f"[{r.id}] ({r.kind.value}) {' > '.join(r.section_path[1:]) or 'Document'}: {r.statement}"
+                     for r in plan.requirements)
+    goals = "\n".join(f"GOAL {i}: {g.text} (requirements: {', '.join(g.requirement_ids) or '-'})"
+                      for i, g in enumerate(epic.business_goals, 1))
+    issues = "\n".join(f"FINDING [{f.check_id}] {f.message}" + (f" Suggested fix: {f.suggested_fix}" if f.suggested_fix
+                                                                 else "") for f in findings)
+    user = (f"Requirements:\n{_prd_block(reqs)}\n\nEpic {epic.key}: {epic.title}\nScope: {epic.scope} (requirements: "
+            f"{', '.join(epic.requirement_ids) or '-'})\n{goals}\n\nFindings to fix:\n{issues}")
+    draft = llm.structured(EpicRepairDraft, system_prompt("repair_epic"), user, role="revision")
+    known = {r.id for r in plan.requirements}
+    edits = {g.number: g for g in draft.goals if 1 <= g.number <= len(epic.business_goals)}
+    new_goals = []
+    for i, goal in enumerate(epic.business_goals, 1):
+        e = edits.get(i)
+        if e is None:
+            new_goals.append(goal)
+            continue
+        if e.remove:
+            continue
+        ids = _known_only(e.requirement_ids, known, "REF-REQ", epic.key, "business goal requirement ID(s)",
+                          ref_findings)
+        text = e.text.strip() if e.text and e.text.strip() else goal.text
+        new_goals.append(goal.model_copy(update={"text": text, "requirement_ids": ids}))
+    if not new_goals:
+        ref_findings.append(_finding("REF-RESTORE", "The epic repair removed every goal; code kept them.",
+                                     item_key=epic.key))
+        new_goals = list(epic.business_goals)
+    scope_ids = _known_only(draft.scope_requirement_ids, known, "REF-REQ", epic.key, "scope requirement ID(s)",
+                            ref_findings)
+    ids = list(dict.fromkeys([*scope_ids, *(i for g in new_goals for i in g.requirement_ids)]))
+    scope = draft.scope.strip() if draft.scope and draft.scope.strip() else epic.scope
+    new_epic = epic.model_copy(update={"scope": scope, "business_goals": new_goals, "requirement_ids": ids})
+    if new_epic == epic:
+        return plan, []
+    return TicketPlan.model_validate(plan.model_copy(update={"project": new_epic}).model_dump()), [epic.key]
 
 
 def plain_rewrite(plan: TicketPlan, skeletons: list[StorySkeleton], findings: Findings, llm: StructuredLLM,
@@ -1744,7 +1825,8 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
             carried = carried_story_keys(skeletons, previous, reqs)
             # The epic is the same project: keep its key and text (only its story list follows the plan), so an LLM
             # rephrasing of the overview does not cause a noisy update.
-            project = previous.project.model_copy(update={"story_keys": [s.key for s in skeletons]})
+            project = remap_project(previous.project, diff).model_copy(
+                update={"story_keys": [s.key for s in skeletons]})
             removed = [s.key for s in previous.stories if s.key not in {k.key for k in skeletons}]
             console.print(f"Requirement diff: {len(diff.added)} added · {len(diff.changed)} changed · "
                           f"{len(diff.removed)} removed")
@@ -1836,7 +1918,7 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         report = ReviewReport(stage="check_plan", round=round_no, verdict=Verdict.pass_, findings=deterministic + critic)
         history = state["plan_blocking_history"] + [report.blocking_count]
         repair, reason = should_repair(report, state["plan_rounds"], history, max_repair_rounds)
-        if repair and not resolve_repair_targets(report.findings, plan, state["skeletons"])[0]:
+        if repair and not repairable(report.findings, plan, state["skeletons"]):
             reason = "stopped: the remaining blocking findings cannot be tied to a story or task to regenerate"
         best = state.get("best_plan")
         update: dict = {}
@@ -1869,7 +1951,7 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
 
     def route_plan(state: AgentState) -> str:
         repair, _ = should_repair(state["plan_report"], state["plan_rounds"], state["plan_blocking_history"], max_repair_rounds)
-        if repair and not resolve_repair_targets(state["plan_report"].findings, state["plan"], state["skeletons"])[0]:
+        if repair and not repairable(state["plan_report"].findings, state["plan"], state["skeletons"]):
             repair = False
         return "repair_plan" if repair else "render_preview"
 
@@ -1879,8 +1961,12 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         all_findings = list(state["plan_report"].findings) + list(state.get("feedback_findings") or [])
         # P12 (plain language) is repaired field by field: only the flagged texts are rewritten.
         plain = [f for f in all_findings if f.check_id == "P12" and f.severity is Severity.blocking]
-        findings = [f for f in all_findings if f not in plain]
+        epic_key = state["plan"].project.key  # epic findings get their own small repair, never a story's
+        on_epic = [f for f in all_findings if f.item_key == epic_key and f.severity is Severity.blocking
+                   and f not in plain]
+        findings = [f for f in all_findings if f not in plain and f not in on_epic]
         plan, skeletons, plain_keys = plain_rewrite(state["plan"], state["skeletons"], plain, llm, found)
+        plan, epic_keys = repair_epic(plan, on_epic, llm, found)
         previous = state.get("previous_plan")
         if previous is not None:  # update run: task-level repair (revise only what is named; keep the rest)
             plan, skeletons, repaired, unroutable = repair_update(
@@ -1889,11 +1975,15 @@ def build_graph(llm: StructuredLLM, console: Console | None = None, checkpointer
         else:
             plan, skeletons, repaired, unroutable = repair_plan(plan, skeletons, findings, llm, found,
                                                                 state.get("reviewer_decisions") or [])
-        finding_keys, repaired = repaired, list(dict.fromkeys([*plain_keys, *repaired]))
+        finding_keys, repaired = repaired, list(dict.fromkeys([*plain_keys, *epic_keys, *repaired]))
         repair_causes = dict(state.get("repair_causes") or {})
         for key in plain_keys:
             if "finding P12" not in repair_causes.setdefault(key, []):
                 repair_causes[key].append("finding P12")
+        for key in epic_keys:
+            for label in dict.fromkeys(f"finding {f.check_id}" for f in on_epic):
+                if label not in repair_causes.setdefault(key, []):
+                    repair_causes[key].append(label)
         if previous is not None:  # ... and a repair may not cause churn either: each change needs a cause
             plan = match_old_keys(plan, previous, state.get("requirement_diff"), found)
             targets_by_story = resolve_repair_targets(findings, state["plan"], state["skeletons"])[0]

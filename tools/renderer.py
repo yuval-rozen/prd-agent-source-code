@@ -71,7 +71,9 @@ def render_bodies(plan: TicketPlan, issue_numbers: dict[str, int] | None = None,
     ref = _ref_fn(issue_numbers)
     reqs = {r.id: r for r in plan.requirements}
     bodies = {
-        plan.project.key: _env.get_template("epic.md.j2").render(project=plan.project, stories=plan.stories, ref=ref)
+        plan.project.key: _env.get_template("epic.md.j2").render(
+            project=plan.project, stories=plan.stories, ref=ref,
+            requirements=[reqs[i] for i in plan.project.requirement_ids if i in reqs])
     }
     for story in plan.stories:
         bodies[story.key] = _env.get_template("story.md.j2").render(
@@ -102,9 +104,9 @@ def build_payloads(plan: TicketPlan, issue_numbers: dict[str, int] | None = None
 
 
 def citations(plan: TicketPlan) -> dict[str, list[str]]:
-    """Requirement ID -> keys of the stories and tasks that cite it."""
+    """Requirement ID -> keys of the epic, stories and tasks that cite it."""
     cited: dict[str, list[str]] = defaultdict(list)
-    for item in [*plan.stories, *plan.tasks]:
+    for item in [plan.project, *plan.stories, *plan.tasks]:
         for rid in item.requirement_ids:
             cited[rid].append(item.key)
     return cited
