@@ -1,7 +1,7 @@
 """Read-only PRD lookups (SPEC §12): search_prd, get_section, verify_quote, get_requirement.
 
-These are plain code helpers. The critic is one structured call that receives the whole PRD and plan, so
-no LLM calls these tools; validators (R1) and the critic's input builder use them.
+These are plain code helpers; no LLM calls them. They started as tools for a planned ReAct critic; the critic is
+now one structured call that receives the whole PRD and plan. The R1 grounding check uses verify_quote.
 """
 
 from __future__ import annotations

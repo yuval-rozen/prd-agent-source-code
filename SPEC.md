@@ -256,7 +256,7 @@ AgentState (agent.py): prd_path, units, requirements, requirement_diff, req_repo
 - examples/todo_prd_v2.<ext>
 - .cache/llm/ (committed for the sample run)
 - tests/
-- out/sample-v1/ and out/sample-v2/ (the committed sample recordings: the v1 run and the v2 update run, each with gate_answers.json). out/sample-v1-old/ and out/sample-v2-old/ hold the earlier recordings only until the new ones are committed. Provider and model comparison runs are not kept as folders; their numbers are in the README model comparison.
+- out/sample-v1/ and out/sample-v2/ (the committed sample recordings: the v1 run and the v2 update run, each with gate_answers.json). Provider and model comparison runs are not kept as folders; their numbers are in the README and docs/DESIGN.md.
 - README.md, .env.example, .gitignore, pyproject.toml
 
 ## 13. CLI
