@@ -6,6 +6,9 @@ responses and reviewer answers from `.cache/llm/`, so it needs no API key and co
 exactly the committed plans in [`out/sample-v1/`](../out/sample-v1/) and
 [`out/sample-v2/`](../out/sample-v2/).
 
+Sections 1–4 are the reproducible replay walkthrough. Section 5 is the live demo, where the
+interviewers bring their own change to the PRD.
+
 ## 0. Prepare
 
 1. **Create an empty issues repository**, for example `owner/prd-agent-demo-2`. One repository holds
@@ -16,12 +19,12 @@ exactly the committed plans in [`out/sample-v1/`](../out/sample-v1/) and
 
    ```
    GITHUB_TOKEN=<the token>
-   ANTHROPIC_API_KEY=<only needed for the fallbacks in section 5>
+   ANTHROPIC_API_KEY=<needed for the live demo (section 5) and the fallbacks (section 6)>
    MAX_RUN_COST_USD=1.00
    ```
 
-   `MAX_RUN_COST_USD=1.00` matters only for a live fallback; the replay steps cost $0. Pass the
-   repository with `--repo` in every command, so `GITHUB_REPO` can stay unset.
+   The replay steps cost $0. `MAX_RUN_COST_USD=1.00` is needed for the live demo and the live
+   fallbacks: the default cap of $0.30 can stop a live update run. Pass the repository with `--repo` in every command, so `GITHUB_REPO` can stay unset.
 4. **Use a fresh output folder** such as `out/demo`. If it already has a `plan.json`, the first run
    becomes an update run. `out/` is not gitignored, so do not commit `out/demo`.
 
@@ -103,7 +106,53 @@ uv run main.py run examples/todo_prd_v2.md --out out/demo --replay --publish --r
 
 At G1, type `approve`. S9 reports `unchanged 45`, and nothing is written.
 
-## 5. Fallbacks
+## 5. Live demo: the interviewers' PRD change
+
+**Before you start:** `ANTHROPIC_API_KEY` and `MAX_RUN_COST_USD=1.00` must be in `.env`. A live update
+takes about 2–4 minutes and costs about $0.15–0.50, so the default $0.30 cap can stop it.
+
+**Steps 1 and 2: as in sections 1 and 2.**
+
+- Publish v1 from the recording into a fresh `out/demo` and a fresh repository.
+- Run it again to show 0 changes.
+
+**Step 3 (live): the update.**
+
+1. **Save the file.** Save the interviewers' modified PRD as `prd/live.<ext>`, keeping their format
+   (PDF, DOCX, MD or TXT).
+2. **Run it.** Run it without `--replay` and without `--gate-answers`, into the same out folder and
+   repository:
+
+   ```bash
+   uv run main.py run prd/live.pdf --out out/demo --publish --repo owner/prd-agent-demo-2
+   ```
+
+   Use the real extension in place of `.pdf`. `out/demo/plan.json` from step 1 makes this an update
+   run.
+3. **Watch the run.**
+   - Sections whose text did not change are served from the cache; everything else calls the API.
+   - G1 shows the requirement diff (added / changed / removed), which stories are carried over and
+     which are affected, and the critic's blocking findings.
+4. **At G1,** review the findings in `out/demo/validation_report.md` and `out/demo/plan.md`, then type
+   `approve` or `feedback`.
+   - With `feedback`, enter all decisions in one line, and name the ticket keys they apply to. For
+     example: `US-create-task: the title limit applies on create and on update. US-update-task: ...`
+   - The decisions are applied, and G1 is shown again. Type `approve` when the plan is right.
+5. **At G2,** show the cause next to each create / update / close: the requirement change, the critic
+   finding or the G1 decision that caused it. The churn count should be 0. Type `confirm`, and S10
+   writes the changes.
+
+**Step 4 (live): run it again.**
+
+```bash
+uv run main.py run prd/live.pdf --out out/demo --publish --repo owner/prd-agent-demo-2
+```
+
+This is the same command. At G1, type `approve`. G2 shows 0 changes, and nothing is written.
+
+**Afterwards:** `prd/live.*` and `out/demo/` are not gitignored, so do not commit them.
+
+## 6. Fallbacks
 
 - **Without `--replay`.** Drop `--replay` (and `--gate-answers`) from a command, and the run needs
   `ANTHROPIC_API_KEY`.
