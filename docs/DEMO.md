@@ -27,6 +27,16 @@ interviewers bring their own change to the PRD.
    fallbacks: the default cap of $0.30 can stop a live update run. Pass the repository with `--repo` in every command, so `GITHUB_REPO` can stay unset.
 4. **Use a fresh output folder** such as `out/demo`. If it already has a `plan.json`, the first run
    becomes an update run. `out/` is not gitignored, so do not commit `out/demo`.
+5. **If `uv` is not found** (Windows PowerShell: "The term 'uv' is not recognized"), run the
+   project's virtual environment directly: replace `uv run` with `.venv\Scripts\python.exe` in every
+   command below. For example, step 1 into `out/test-run` and the repository
+   `yuval-rozen/prd-agent-demo2`:
+
+   ```powershell
+   .venv\Scripts\python.exe main.py run "prd/PRD To-Do Management System (1).pdf" --out out/test-run --replay --gate-answers out/sample-v1/gate_answers.json --publish --repo yuval-rozen/prd-agent-demo2
+   ```
+
+   Every later step of the same demo uses the same `--out` folder and `--repo`.
 
 ## 1. Publish v1
 
